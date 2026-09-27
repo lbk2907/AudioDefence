@@ -102,8 +102,7 @@ class BrickManager:
         # init does not - it is built with the brick manager and lives as long as the app - so the card
         # is spent here rather than there, and only the first drop of the game is the free one.
         from .modifiers import GameModifiers
-        if GameModifiers.shared().earlyPowerUp:
-            self.power_up_manager.powerup_cool_down = 0.0
+        self.power_up_manager.forced_first_drop = GameModifiers.shared().earlyPowerUp
 
     @property
     def mode(self) -> int:                                      # 0x1000c301c

@@ -74,11 +74,26 @@ def _explosion_sign(r: int) -> int:
 class PowerUpManager:
     def __init__(self):                                   # -[ADPowerUpManager init] 0x10004b524
         self.powerup_cool_down = 0.0
+        #: PORT ADDITION: Air Drop Inbound owes this game a drop.  Set once a game by BrickManager.reset
+        #: 0x1000c1a38; see `update` for why the card has to make its own drop rather than wait for one.
+        self.forced_first_drop = False
         self.reset_power_up_cooldown()
 
     def update(self, dt: float) -> None:                  # 0x10004b5a4
         from .brick_manager import BrickManager
         if not BrickManager.shared().player_is_dead:
+            # PORT ADDITION: Air Drop Inbound drops one itself, rather than shortening the wait for one.
+            # The cooldown only decides whether a drop is allowed; what asks for one is the wave, through
+            # its `PowerUp` block (`Brick.update` -> `tryToPopPowerUpContainer` 0x1000c7b4c).  No level-1
+            # wave has that block, and an endless game's first wave is always a level-1 one - its second
+            # is four times in five - so nothing asks until the third wave or so, by which time the
+            # cooldown has run out on its own and a card that only zeroed it would have given nothing.
+            # `popPowerUpWithType:` 0x10004b8c4 ends by resetting the cooldown, so the drops after this
+            # one keep the spacing the player paid for.
+            if self.forced_first_drop:
+                self.forced_first_drop = False
+                log.info('Air Drop Inbound: dropping this game\'s first power-up')
+                self.pop_power_up_with_type(0)
             self.powerup_cool_down = self.powerup_cool_down - dt
 
     def reset_power_up_cooldown(self) -> None:            # 0x10004b640

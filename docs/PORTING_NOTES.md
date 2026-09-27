@@ -1219,13 +1219,25 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   already has, which is `new_key`'s counterpart for the plists that are lists.
 
   Level 3: **Quick Hands** (`fasterReloadTime`) and **Heavy Hands** (`slowerReloadTime`), the two flags
-  below.  Level 1: **Air Drop Inbound** (`earlyPowerUp`) starts the game with the power-up cooldown at 0
-  so the first drop is waiting, which is set in `BrickManager.reset` 0x1000c1a38 because that runs once a
-  game where `-[ADPowerUpManager init]` 0x10004b524 runs once an app; **Lucky Night** (`luckyNight`) pays
+  below.  Level 1: **Air Drop Inbound** (`earlyPowerUp`) drops this game's first power-up itself, owed by
+  `BrickManager.reset` 0x1000c1a38 - which runs once a game, where `-[ADPowerUpManager init]` 0x10004b524
+  runs once an app - and paid by the manager's next `update`, through `popPowerUpWithType:` 0x10004b8c4,
+  which ends by resetting the cooldown so the drops after it keep the spacing the player paid for;
+  **Lucky Night** (`luckyNight`) pays
   the two diamonds a full moon pays, on any night, through `-[ADDiamondDropper die]` 0x10007e800's own
   line; **Supply Delay** (`lessPowerUps`) adds ten seconds to the cooldown where More Power Ups! takes ten
   off, the same line in `resetPowerUpCooldown` 0x10004b640; and **Holes In Your Pockets** (`lessCoins`)
   takes 15% of the coins where Metal Detector adds 15%, the same line in `endLevel` 0x1000b89f0.
+
+  Air Drop Inbound drops one itself rather than shortening the wait for one, which is what it did at
+  first and what does not work.  The cooldown only decides whether a drop is *allowed*; what asks for one
+  is the wave, through the `PowerUp` block in its own plist (`Brick.update` ->
+  `tryToPopPowerUpContainer` 0x1000c7b4c), and a request made while the cooldown is running is refused.
+  No level-1 wave carries that block - none of the seventeen - and an endless game's first wave is always
+  a level-1 one and its second is four times in five (`brick_chance`), so nothing asks until the third
+  wave or so.  By then the cooldown has run out by itself, and a card that only zeroed it gave a player
+  nothing at all: the same fault as Powered Power Ups, found the same way, by asking what a player would
+  actually notice rather than what the number says.
 
   The four new flags are `modifiers.PORT_FLAGS`, kept apart from `FLAGS` so that list stays the
   thirty-two the original's class has, in its order.  Everything that reads one reads the other: they are
