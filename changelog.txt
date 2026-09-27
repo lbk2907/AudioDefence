@@ -11,6 +11,7 @@ A shuffle rolls for the fourth card again, so it can leave you with three or han
 When a card changes, only the new card is read out, not the price of changing it again.
 An explosion that goes off while your ears are still ringing makes the ringing last longer, instead of leaving it silent.
 Going back has a sound of its own now, so leaving a screen no longer sounds the same as pressing a button on it.
+Two tarot cards that do the same thing now add up. Ten per cent more damage from each is twenty per cent, not ten.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.

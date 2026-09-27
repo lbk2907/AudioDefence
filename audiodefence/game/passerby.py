@@ -303,9 +303,10 @@ class DiamondDropper(Enemy):
         from .ingame_stats import notify_stats
         from .modifiers import GameModifiers
         super().die()
-        # PORT ADDITION: Lucky Night pays what a full moon pays, on any night of the month
+        # PORT ADDITION: Lucky Night pays what a full moon pays, on any night of the month, and a second
+        # card asking pays again - a full moon and two Lucky Nights is four diamonds a Dropper.
         mods = GameModifiers.shared()
-        notify_stats('UPDATE_DIAMONDS', 2 if (mods.fullMoon or mods.luckyNight) else 1)
+        notify_stats('UPDATE_DIAMONDS', 1 + (1 if mods.fullMoon else 0) + mods.times('luckyNight'))
         Tracker.shared().diamond_acquired()
         # QUIRK: the original then dispatch_after(5 s) a block whose captured receiver is nil
         # (str xzr at 0x10007e950), i.e. [nil deactivatePlaylist] - nothing happens, so nothing is scheduled.

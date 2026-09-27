@@ -118,11 +118,13 @@ class Weapon:
             self.playlist.activate()
         self.set_state(0)
         mods = GameModifiers.shared()
-        if mods.goldenBullet:
+        # PORT DIVERGENCE: once for each card that asked, where the original asks only whether one did.
+        # The tenth is taken off what is left each time, as the original takes it off the whole.
+        for _ in range(mods.times('goldenBullet')):
             bonus = max(_c_div(self.capacity, 10), 1)
             self.capacity = self.capacity + bonus
             self.bullets_in_clip = self.capacity
-        elif mods.lessBullets:
+        for _ in range(mods.times('lessBullets') if not mods.goldenBullet else 0):
             malus = max(_c_div(self.capacity, 10), 1)
             self.capacity = self.capacity - malus
             if self.capacity == 0:

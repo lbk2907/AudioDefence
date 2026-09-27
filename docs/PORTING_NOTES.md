@@ -1228,6 +1228,30 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   `stopTinnitus` 0x1000b6b4c is untouched: it puts the reverb back and deliberately leaves the sound to run
   out, which is right, because the fade over the last fifth of a ring has taken its gain to nothing by then.
 
+* DIVERGENCE: two cards with the same effect do it twice (user request).  The original's modifiers are
+  booleans, so `applyModifier:` 0x100035da4 setting `moreDamages` twice left it exactly as one card had -
+  Military Grade Weapons in slot 3 and Heavy Artillery in slot 4 gave 10% more damage between them, not
+  20, and Heavy Hands with Heavy Artillery slowed one reload rather than two.  With two decks that was
+  impossible; with four it is common.  Measured: **24 flags can be set twice** and `moreHeadshots` three
+  times, a hand holding one card from each deck.
+
+  `GameModifiers.stacks` counts how many cards asked for each flag and `times()` reads it; the booleans
+  stay beside it, because most of what reads them only asks whether a thing is on at all - the cows are
+  in the arena or they are not - and because everything outside the class goes on working unchanged.  A
+  flag set straight onto the object rather than dealt counts as one, which is what `--endless` and the
+  tests expect.
+
+  Every derived modifier is now the original's own arithmetic written as a base and a step, each reading
+  exactly as the original did at one card: damage 1.0 +/- 0.1 a card, melee +/- 0.25, headshots +/- 0.5,
+  spread +/- 5 degrees, reload +/- 0.2, enemy life -0.1 or +0.2, enemy speed +0.2 or -0.1.
+  `reload_time_modifier` has a floor of 0.2 because it is a divisor and five slow cards would otherwise
+  reach zero; the others have one at 0.1 for the same kind of reason.
+
+  The effects that are not derived modifiers stack too: the coin multiplier is applied once a card,
+  a clip gains or loses its tenth once a card, the power-up cooldown moves ten seconds a card, a
+  power-up climbs a level a card as far as the data goes, Lucky Shot adds its chance a card up to
+  certainty, and a Diamond Dropper pays a diamond for the full moon and one for each Lucky Night.
+
 * PORT ADDITION: going back has a sound of its own (user request).  `back_button` is in the `buttons`
   playlist and on disk at `game/sounds/menu/buttons/back_button.m4a`, and **nothing in the original plays
   it**: `playSound` 0x100073578 and the five other copies of it all ask for `click_button`, so every

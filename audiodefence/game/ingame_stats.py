@@ -102,7 +102,7 @@ class InGameStats:
         self.highest_combo = 0
         self.game_score = 0
         self.set_combo(10)
-        if GameModifiers.shared().baseComboBonus:
+        for _ in range(GameModifiers.shared().times('baseComboBonus')):   # PORT DIVERGENCE: per card
             self.set_combo(20)
         self.melee_hits = 0
         self.melee_swings = 0
@@ -129,9 +129,10 @@ class InGameStats:
             self.total_coins += self.highest_combo
             self.total_coins = self.total_coins + int(((self.time_elapsed * self.time_elapsed) / 200.0)
                                                       * self.current_accuracy())
-        if GameModifiers.shared().metalDetector:
+        mods = GameModifiers.shared()                     # PORT DIVERGENCE: once per card; see `times`
+        for _ in range(mods.times('metalDetector')):
             self.total_coins = int(float(self.total_coins) * 1.15) & 0xFFFFFFFF
-        if GameModifiers.shared().lessCoins:              # PORT ADDITION: Holes in Your Pockets
+        for _ in range(mods.times('lessCoins')):          # PORT ADDITION: Holes in Your Pockets
             self.total_coins = int(float(self.total_coins) * 0.85) & 0xFFFFFFFF
         InGameStats.toggle_on_off(False)
 

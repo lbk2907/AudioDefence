@@ -32,8 +32,12 @@ def _level_dictionary(name: str) -> dict | None:
     d = WeaponManager.shared().dictionary_for_powerup_with_name(name) or {}
     level = Inventory.shared().level_for_power_up(name)
     bonus = 0
-    if GameModifiers.shared().betterPowerUps:
-        bonus = 1 if d.get(f'level_{level + 1}') is not None else 0
+    # PORT DIVERGENCE: a level for each card that asked, as far as the data goes.  The original asks only
+    # whether one did, so two cards lifted a power-up one level between them.
+    for _ in range(GameModifiers.shared().times('betterPowerUps')):
+        if d.get(f'level_{level + bonus + 1}') is None:
+            break
+        bonus += 1
     return d.get(f'level_{bonus + level}')
 
 
@@ -102,10 +106,10 @@ class PowerUpManager:
         d = WeaponManager.shared().dictionary_for_powerup_with_name('frequency')
         level = Inventory.shared().level_for_power_up('frequency')
         self.powerup_cool_down = float(ns_int_value(_get(_get(d, f'level_{level}'), 'cooldownTime')))
-        if GameModifiers.shared().morePowerUps:
-            self.powerup_cool_down = self.powerup_cool_down + -10.0
-        if GameModifiers.shared().lessPowerUps:           # PORT ADDITION: Supply Delay, the mirror of it
-            self.powerup_cool_down = self.powerup_cool_down + 10.0
+        mods = GameModifiers.shared()                     # PORT DIVERGENCE: ten a card, not ten a hand
+        self.powerup_cool_down += -10.0 * mods.times('morePowerUps')
+        self.powerup_cool_down += 10.0 * mods.times('lessPowerUps')   # PORT ADDITION: Supply Delay
+        self.powerup_cool_down = max(0.0, self.powerup_cool_down)
 
     def try_to_pop_power_up(self) -> None:                # 0x10004b868
         if self.powerup_cool_down > 0.0:

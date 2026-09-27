@@ -94,6 +94,16 @@ class GameModifiers:
         return cls._shared
 
     def __init__(self):
+        #: PORT DIVERGENCE (user request): how many cards have asked for each flag, not merely whether one
+        #: has.  A hand holds a card from each deck and the decks overlap - 24 flags can be set twice and
+        #: `moreHeadshots` three times - and the original's modifiers are booleans, so Military Grade
+        #: Weapons and Heavy Artillery together gave 10% more damage rather than 20, and Heavy Hands with
+        #: Heavy Artillery slowed one reload rather than two.  Every card in a hand counts now.
+        #:
+        #: The flags stay as booleans beside this, because most of what reads them only asks whether a
+        #: thing is on at all - cows are in the arena or they are not - and because `resetModifiers` and
+        #: everything outside this class go on working unchanged.
+        self.stacks: dict = {}
         for f in FLAGS + PORT_FLAGS:
             setattr(self, f, False)
         self.fullMoon = False
@@ -101,6 +111,7 @@ class GameModifiers:
         self.difficultyModifier = 0.0
 
     def reset_modifiers(self) -> None:      # 0x1000de1f0
+        self.stacks = {}                    # PORT DIVERGENCE: see __init__
         for f in FLAGS + PORT_FLAGS:
             if f == 'tesla':
                 self.set_tesla(False)
@@ -119,43 +130,53 @@ class GameModifiers:
             self.set_tesla(bool(value))
         else:
             setattr(self, selector, value)
+        if value:                           # PORT DIVERGENCE: one more card asking for it; see __init__
+            self.stacks[selector] = self.stacks.get(selector, 0) + 1
+        else:
+            self.stacks.pop(selector, None)
         # PORT ADDITION: a level-4 card is one flag standing for two; see PAIRED_FLAGS
         for half in PAIRED_FLAGS.get(selector, ()):
             self.apply_setter(half, value)
         return True
 
     # --- derived values --------------------------------------------------------------------------
+    def times(self, flag: str) -> int:
+        """How many cards in this hand asked for `flag`.
+
+        PORT DIVERGENCE (user request): the original asks only whether a flag is on, so two cards with the
+        same effect did the work of one.  Every one below is the original's own arithmetic written as a
+        base and a step - each of them reads exactly as the original did at one card - and a second card
+        takes the step again.
+
+        A flag set straight onto the object rather than dealt by a card counts as one, which is what
+        `--endless`, the tests and anything else that pokes at a modifier expect.
+        """
+        n = self.stacks.get(flag, 0)
+        return n if n else (1 if getattr(self, flag, False) else 0)
+
     def head_shot_modifier(self) -> float:          # 0x1000de51c
-        v = 1.5 if self.moreHeadshots else 1.0
-        return v - 0.5 if self.lessHeadshots else v
+        return max(0.0, 1.0 + 0.5 * self.times('moreHeadshots') - 0.5 * self.times('lessHeadshots'))
 
     def enemi_life_modifier(self) -> float:         # 0x1000de584
-        v = 0.9 if self.weakerEnemies else 1.0
-        if self.strongerEnemies:
-            v += 0.2
-        return v * self.difficultyModifier
+        v = 1.0 - 0.1 * self.times('weakerEnemies') + 0.2 * self.times('strongerEnemies')
+        return max(0.1, v) * self.difficultyModifier
 
     def enemi_speed_modifier(self) -> float:        # 0x1000de610
-        v = 1.2 if self.fasterEnemies else 1.0
-        if self.slowerEnemies:
-            v -= 0.1
-        return v * self.difficultyModifier
+        v = 1.0 + 0.2 * self.times('fasterEnemies') - 0.1 * self.times('slowerEnemies')
+        return max(0.1, v) * self.difficultyModifier
 
     def gun_damages_modifier(self) -> float:        # 0x1000de69c
-        v = 1.1 if self.moreDamages else 1.0
-        return v - 0.1 if self.lessDamages else v
+        return max(0.1, 1.0 + 0.1 * self.times('moreDamages') - 0.1 * self.times('lessDamages'))
 
     def melee_damages_modifier(self) -> float:      # 0x1000de714
-        v = 1.25 if self.moreMeleeDamages else 1.0
-        return v - 0.25 if self.lessMeleeDamages else v
+        return max(0.1, 1.0 + 0.25 * self.times('moreMeleeDamages') - 0.25 * self.times('lessMeleeDamages'))
 
-    def reload_time_modifier(self) -> float:        # 0x1000de77c (only logged by the game)
-        v = 1.2 if self.fasterReloadTime else 1.0
-        return v - 0.2 if self.slowerReloadTime else v
+    def reload_time_modifier(self) -> float:        # 0x1000de77c (the original only logs it)
+        # a divisor in `Weapon.update`, so it has a floor: five slow cards would otherwise reach zero
+        return max(0.2, 1.0 + 0.2 * self.times('fasterReloadTime') - 0.2 * self.times('slowerReloadTime'))
 
     def spread_modifier(self) -> float:             # 0x1000de7f4
-        v = -5.0 if self.narrowedSpread else 0.0
-        return v + 5.0 if self.widerSpread else v
+        return 5.0 * self.times('widerSpread') - 5.0 * self.times('narrowedSpread')
 
     def set_tesla(self, value: bool) -> None:       # 0x1000de904
         if self.tesla == value:
