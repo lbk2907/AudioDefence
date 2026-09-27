@@ -1510,6 +1510,24 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   Extra" and goes there, since "next arena" would be a lie about a challenge in no arena; the overview's
   own Back goes the same way for the same reason.
 
+  Three more screens had to be told the same thing, and were not until a player found them.  Every screen
+  behind a challenge goes back to its list through `goToChallengeSelector` 0x1000816e0, which opens the
+  challenge list of `lastChallengeWorld` - and an arena of the port's belongs to no world, so it never sets
+  that.  The list for no world holds nothing: `challenges_index[None]` is absent, `challenge_files` is
+  empty, and the screen that appears is the challenge selector with no rows in it at all.  It is the one
+  screen of that walk that turns the coins and the diamonds **on**
+  (`Accessible_ADChallengeSelectorViewController` viewDidLoad 0x10005419c), so what a player got was a
+  screen holding nothing but the money, whose own Back went out to the world list.  Reported as "I can see
+  nothing except the dymonds and coins... it bring me to the original challenge screen instead of extra
+  challenge menu".
+
+  The overview's Back had been taught this; the failed screen's Select challenge
+  (`missionSelectButtonPressed` 0x100071e1c), the completed screen's Select challenge (0x100068f64) and the
+  completed screen's Back (0x100048728) had not - so it was reached by finishing an arena or failing one,
+  which is the ordinary way out of every arena and the way nobody had walked.  All four ask
+  `App.go_to_challenge_list_for` now, one place that knows which list a challenge came from, rather than
+  four copies of the test.
+
   Six more arenas, and the seven of them locked in a chain (user request).  In the order they open:
   **Barnyard**, three kinds of zombie in a field with three cows and a jukebox walking through it, and
   forty-five rounds to do it with - QuietZombie is the point of it, 35 life and the softest walk in the

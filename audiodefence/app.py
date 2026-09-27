@@ -121,6 +121,22 @@ class App:
         else:
             self.load_view_controller_named('ADGameOverEndlessViewController')
 
+    def go_to_challenge_list_for(self, challenge_id) -> None:
+        """PORT ADDITION (user request): the list a challenge was chosen from, whichever list that was.
+
+        `goToChallengeSelector` 0x1000816e0 opens the challenge list of `lastChallengeWorld`, and that is
+        where every screen behind a challenge goes back to - the overview, the failed screen's Select
+        challenge, the completed screen's Select challenge and its Back.  A challenge of the port's belongs
+        to no world and so never sets `lastChallengeWorld`, and the list for no world holds nothing: a table
+        with no rows, on a screen showing only the coins and the diamonds, whose own Back went out to the
+        world list.  Every one of those screens asks here now, so the port's own go back to Extra.
+        """
+        from .game.additions import EXTRA_CHALLENGES
+        if challenge_id in EXTRA_CHALLENGES:
+            self.go_to_extra_menu()
+            return
+        self.go_to_challenge_selector()
+
     def go_to_challenge_selector(self) -> None:           # 0x1000816e0
         from .game.parameters import GameParameters
         # DIVERGENCE: the original starts the menu music for the main menu, the play menu and the world

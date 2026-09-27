@@ -411,11 +411,8 @@ class AccessibleChallengeOverviewScreen(ViewControllerScreen):
         App.delegate().go_to_challenge_with_dict(self.challenge_dict)
 
     def back_button_pressed(self) -> None:                # ADChallengeOverviewViewController 0x1000d8cb0
-        from ..game.additions import EXTRA_CHALLENGES     # PORT ADDITION: back where it was chosen
-        if self.challenge_dict.get('challenge_id') in EXTRA_CHALLENGES:
-            App.delegate().go_to_extra_menu()
-            return
-        App.delegate().go_to_challenge_selector()
+        # PORT ADDITION: back to the list it was chosen from (App.go_to_challenge_list_for)
+        App.delegate().go_to_challenge_list_for(self.challenge_dict.get('challenge_id'))
 
     # REMOVED (user request): the magic tap 0x1000403e0 pressed Play, even while Play was disabled.
 
@@ -519,7 +516,8 @@ class ChallengeFailedScreen(ViewControllerScreen):
         # calls playButtonSound - so the two screens answered the same key differently.  Try again above it
         # plays start_level_button from its own playButtonSound 0x1000720c4.
         _play_buttons_sound('click_button')
-        App.delegate().go_to_challenge_selector()
+        # PORT ADDITION: the list it was chosen from, which for the port's own is Extra
+        App.delegate().go_to_challenge_list_for(self.challenge_dict.get('challenge_id'))
         self._deactivate_playlist()
 
     def try_again_button_pressed(self) -> None:           # 0x100071ee8
@@ -677,7 +675,8 @@ class AccessibleChallengeCompletedScreen(AccessibleGameOverEndlessScreen):
 
     def mission_select_button_pressed(self) -> None:      # 0x100068f64
         _play_buttons_sound('click_button')               # playButtonSound 0x100049300, called at 0x048884
-        App.delegate().go_to_challenge_selector()
+        # PORT ADDITION: the list it was chosen from, which for the port's own is Extra
+        App.delegate().go_to_challenge_list_for(self.challenge_dict.get('challenge_id'))
 
     def back_button_pressed(self) -> None:                # 0x100048728
         # DIVERGENCE (user request): `-[ADChallengeCompletedViewController backButtonPressed]` 0x100048728
@@ -689,7 +688,7 @@ class AccessibleChallengeCompletedScreen(AccessibleGameOverEndlessScreen):
         # untouched, and the failed screen keeps the original's route to the main menu.  The navigation is
         # repeated rather than calling missionSelectButtonPressed, which plays the click: the Back button
         # plays its own already, and one press would click twice.
-        App.delegate().go_to_challenge_selector()
+        App.delegate().go_to_challenge_list_for(self.challenge_dict.get('challenge_id'))
 
     def next_mission_button_pressed(self) -> None:        # 0x100069008
         _play_buttons_sound('click_button')               # playButtonSound 0x100049300, called at 0x0489e0
