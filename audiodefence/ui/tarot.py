@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 
-from .. import localization
 from ..app import App
 from ..game import data
 from ..platform import crand
@@ -283,20 +282,22 @@ class TarotCardViewController:
         card.hint = None if (self.locked or not self.cost) else \
             'You have %i diamonds' % Inventory.shared().diamonds
 
-    def accessible_description(self) -> str:             # 0x1000a61a0
-        if self.locked:                                   # PORT DIVERGENCE: see LOCKED_CARD_LEVEL
-            # The note is handed to the layer as a phrase of its own rather than written into the template
-            # around it: a line with a substitution in it is not offered to a translator (PLUMBING, in
-            # tools/verify_localization.py), so a phrase buried inside one would stay English unnoticed.
-            return 'Tarot card number %i : %s \n\n %s \n\n(%s)' % (
-                self.card_level, self.card_dictionary.get('title'), self.card_dictionary.get('description'),
-                localization.translate('this card cannot be changed'))
+    def accessible_description(self, with_action: bool = True) -> str:   # 0x1000a61a0
+        card = 'Tarot card number %i : %s \n\n %s' % (
+            self.card_level, self.card_dictionary.get('title'), self.card_dictionary.get('description'))
+        # PORT DIVERGENCE (user request): a card ends with what pressing Enter would do, and ends with
+        # nothing when the answer is nothing.  A locked card is silent about being locked: there is no
+        # button on it and nothing to press, so a sentence saying so was a sentence explaining an absence.
+        # It read "(this card cannot be changed)" at first, and that came out again.
+        #
+        # `with_action` is False for a card that has this second been changed or shuffled: the price of
+        # changing it again is not what somebody who has just paid wants to hear.
+        if not with_action or self.locked:
+            return card
         if not self.cost:                                 # PORT ADDITION (testing): free, so unpriced
-            return 'Tarot card number %i : %s \n\n %s \n\n(press Enter to change)' % (
-                self.card_level, self.card_dictionary.get('title'), self.card_dictionary.get('description'))
+            return card + ' \n\n(press Enter to change)'
         # PORT INPUT: the original says "(double tap to change for %i diamonds)"; the port names its key
-        return 'Tarot card number %i : %s \n\n %s \n\n(press Enter to change for %i diamonds)' % (
-            self.card_level, self.card_dictionary.get('title'), self.card_dictionary.get('description'), self.cost)
+        return card + ' \n\n(press Enter to change for %i diamonds)' % self.cost
 
     def change_card_button_pressed(self) -> None:         # changeCardButtonPressed: 0x1000a62b8
         from ..game.inventory import Inventory
@@ -342,13 +343,19 @@ class TarotCardViewController:
             self.accessible_card.accessible = True
 
     def announce_card(self) -> None:                      # PORT ADDITION
-        """Read the card out the way the cursor reads it, after it has changed under the cursor."""
-        card = self.accessible_card
-        if card is None:
+        """Read out a card that has just changed, under a cursor that may already be on it.
+
+        The title and the description, and nothing else (user request).  What the cursor would say also
+        carries the price of changing the card again, the count of diamonds in the purse and the word
+        "button" - worth hearing on arriving at a card, not worth hearing to somebody who has this second
+        paid to change it and wants to know what they got.  A shuffle reads two of these in a row, which
+        is twice the reason to say only the card.
+        """
+        if self.accessible_card is None:
             return
         screen = self.tarot_view_controller
         speak = screen.speak if screen is not None else Speech.shared().speak
-        speak(card.spoken())
+        speak(self.accessible_description(with_action=False))
 
     def change_card(self) -> None:                        # 0x1000a65a4
         cards = _cards_for_level(self.card_level)
@@ -493,18 +500,66 @@ class TarotScreen(ViewControllerScreen):
         Rolled once and kept, so leaving this screen and coming back deals the same hand back - which is
         what the stored cards do, and a hand that changed size on the way past would be worse than either.
         """
-        defaults = UserDefaults.standard()
-        kept = defaults.object(HAND_SIZE_KEY)
+        kept = UserDefaults.standard().object(HAND_SIZE_KEY)
         if kept is not None:
             return max(1, min(CARDS_TO_LOAD, int(kept)))
+        return self.roll_hand_size()
+
+    def roll_hand_size(self) -> int:
+        """PORT ADDITION: roll for the fourth card, and remember the answer."""
         rolled = CARDS_TO_LOAD if crand.c_mod(crand.rand(), 100) < FOURTH_CARD_CHANCE \
             else CARDS_TO_LOAD - 1
+        defaults = UserDefaults.standard()
         defaults.set_integer(rolled, HAND_SIZE_KEY)
         defaults.synchronize()
         log.info('this hand holds %d cards', rolled)
         return rolled
 
-    def load_card_with_number(self, number: int) -> None:   # loadCardWithNumber: 0x100035390
+    def place_cards(self) -> None:
+        """Every card's place, from how many there are.
+
+        0x100035390 places one card as it is made, with `cardsToLoad` for the count.  It is a pass over all
+        of them here because a hand can change size after it is dealt - a shuffle rolls for the fourth card
+        again - and the spacing is a function of the count, so one card arriving or leaving moves the rest.
+        """
+        container = self.card_container.frame
+        n = max(1, len(self.tarot_cards))
+        for card in self.tarot_cards:
+            w = card.view.frame[2]
+            t1 = (container[2] - w * float(n)) / float(n + 1)
+            if t1 >= 0.0:
+                cx = (t1 + w * 0.5) + float(card.card_level - 1) * (t1 + w)
+            else:
+                # PORT DIVERGENCE: the original's spacing is a gap it puts between and around the cards,
+                # and at four 140-wide cards in a 460-wide container that gap is -20: the row would hang
+                # off both ends.  The cards are spread across the container instead, first and last flush
+                # with its edges, overlapping each other as much as they must.  Nothing draws them, so
+                # what this protects is the reading order, which follows the frames.
+                step = (container[2] - w) / float(max(1, n - 1))
+                cx = w * 0.5 + float(card.card_level - 1) * step
+            cy = container[3] * 0.5 + -10.0
+            card.set_center(container[0] + cx, container[1] + cy)
+
+    def drop_card_with_number(self, number: int) -> None:
+        """PORT ADDITION: take a card out of the hand, as though it had never been dealt.
+
+        The fourth slot is a chance, so a shuffle rolls for it again and it can come back empty (user
+        request).  The card leaves the hand, its view leaves the container, its key leaves the defaults,
+        and the rest are placed again for the smaller hand.
+        """
+        for card in list(self.tarot_cards):
+            if card.card_level != number:
+                continue
+            if card.view in self.card_container.children:
+                self.card_container.children.remove(card.view)
+            card.view.parent = None
+            self.tarot_cards.remove(card)
+        defaults = UserDefaults.standard()
+        defaults.set_object(None, 'tarotCard%i' % number)
+        defaults.synchronize()
+        self.place_cards()
+
+    def load_card_with_number(self, number: int, dealing: bool = True) -> None:   # 0x100035390
         defaults = UserDefaults.standard()
         key = 'tarotCard%i' % number
         if defaults.object(key) is not None:
@@ -515,24 +570,19 @@ class TarotScreen(ViewControllerScreen):
             defaults.synchronize()
         card.tarot_view_controller = self
         self.tarot_cards.append(card)
-        container = self.card_container.frame
         card_view = card.view                              # loads the card (its viewDidLoad runs here)
         card_view.parent = self.card_container
         self.card_container.children.append(card_view)
-        w = card_view.frame[2]
-        t1 = (container[2] - w * float(self.cards_to_load)) / float(self.cards_to_load + 1)
-        if t1 >= 0.0:
-            cx = (t1 + w * 0.5) + float(number - 1) * (t1 + w)
-        else:
-            # PORT DIVERGENCE: the original's spacing is a gap it puts between and around the cards, and
-            # at four 140-wide cards in a 460-wide container that gap is -20: the row would hang off both
-            # ends.  The cards are spread across the container instead, first and last flush with its
-            # edges, overlapping each other by as much as they must.  Nothing draws them, so what this
-            # protects is the reading order, which follows the frames.
-            step = (container[2] - w) / float(max(1, self.cards_to_load - 1))
-            cx = w * 0.5 + float(number - 1) * step
-        cy = container[3] * 0.5 + -10.0
-        card.set_center(container[0] + cx, container[1] + cy)
+        self.place_cards()
+        if not dealing:
+            # PORT ADDITION: a card a shuffle has just brought in, with the deal long over.  It is here to
+            # be read and used at once; the shuffle's own flip is what announces it.
+            card.reveal()
+            if card.accessible_card is not None:
+                card.accessible_card.enabled = True
+            if card.change_card_button is not None:
+                card.change_card_button.enabled = True
+            return
         # QUIRK: dispatch_after is given the card number as its dispatch_time_t, a time already past, so the
         # block runs on the next pass; it then flips the card after <number> seconds
         # PORT DIVERGENCE: the original flips card N after N seconds; the cards share the same 2 s here,
@@ -609,6 +659,18 @@ class TarotScreen(ViewControllerScreen):
                 status_bar.animate_coins(-coins)
         inv.set_diamonds(inv.diamonds - diamonds)
         inv.set_coins(inv.coins - coins)
+        # PORT ADDITION (user request): the fourth slot is a chance, so a shuffle rolls for it again.  A
+        # hand can come back without it, as though it had never been dealt one, and a hand of three can
+        # come back with it.  Nothing says so out loud: the flips do, one per card the shuffle deals, so
+        # a four-card hand answering with a single flip has lost its fourth and a three-card hand
+        # answering with two has gained one.  That is the language the deal already speaks.
+        was = len(self.tarot_cards)
+        self.cards_to_load = self.roll_hand_size()
+        for number in range(was + 1, self.cards_to_load + 1):
+            self.load_card_with_number(number, dealing=False)      # brand new: already its own card
+        for number in range(self.cards_to_load + 1, was + 1):
+            self.drop_card_with_number(number)
+        cards = [c for c in self.locked_cards() if c.card_level <= was]
         for card in cards:
             card.change_card()                            # a new card, stored under its own key
         # every card's hint carries a count of money that has just moved, and the button's carries both
@@ -616,7 +678,7 @@ class TarotScreen(ViewControllerScreen):
             if card.accessible_card is not None:
                 card.refresh_accessible_text()
         self.refresh_shuffle_button()
-        self._shuffle_lands(cards)
+        self._shuffle_lands(self.locked_cards())
 
     def _shuffle_lands(self, cards: list) -> None:
         """PORT ADDITION (user request): a flip for each card that moved, then both of them read out.

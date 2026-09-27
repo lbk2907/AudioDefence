@@ -1249,6 +1249,28 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   back is the whole reason for paying.  The button is dimmed while a shuffle lands (`shuffling`) so a
   second press cannot be paid for on top of the first.
 
+* PORT ADDITION: a shuffle rolls for the fourth slot again, not only for what is in it (user request).
+  The slot is a chance, so a hand can come back from a shuffle without it - as though it had never been
+  dealt one - and a hand of three can come back with it.  Measured over 60 shuffles of a four-card hand:
+  ten lost the fourth card and nine gained one back.
+
+  Nothing says so out loud.  The flips do: one sounds for each card the shuffle deals, so a four-card hand
+  answering with a single flip has lost its fourth and a three-card hand answering with two has gained
+  one.  That is the language the deal already speaks, and it is why this needed no new sentence.
+
+  What it did need was for the hand to stop being a fixed size.  `place_cards` replaces the placing that
+  0x100035390 did one card at a time: the spacing is a function of the count, so a card arriving or leaving
+  moves the rest, and both have to be able to happen after the deal.  `load_card_with_number` takes
+  `dealing=False` for a card a shuffle brings in - revealed and live at once, with no flip of the deal's
+  own scheduled for it - and `drop_card_with_number` takes one out of the hand, the container and the
+  defaults together.
+
+  The announcement was cut back with it.  A card read out after being changed is now the title and the
+  description and nothing else (`accessible_description(with_action=False)`): what the cursor would say
+  also carries the price of changing it again, the diamonds in the purse and the word "button", none of
+  which is what somebody who has just paid wants to hear.  A shuffle reads two of those in a row, which is
+  twice the reason.
+
 * PORT ADDITION: a Shuffle button, for the cards that cannot be changed one at a time (user request).
   It deals every locked slot again at once - card 3, and card 4 on a hand that has one - at random, and
   what comes back may be worse than what went.  That is the point: the locked cards are there so a hand
@@ -1426,8 +1448,10 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
 
   The third card is dealt and kept, and so is any card after it - the test is `>= LOCKED_CARD_LEVEL`, so
   a fourth slot would be locked the day it arrives.  It has no change button, nothing on it answers Enter,
-  it is read as text rather than as a button - "button" at the end of it would be an offer it does not make - and it
-  says "(this card cannot be changed)" where the other two say what pressing Enter costs.  It gives no
+  it is read as text rather than as a button - "button" at the end of it would be an offer it does not
+  make - and it ends where it ends, while the other two say what pressing Enter costs.  It read "(this
+  card cannot be changed)" at first and that came out again (user request): there is no button on the card
+  and nothing to press, so a sentence saying so was a sentence explaining an absence.  It gives no
   count of diamonds in its hint either, because the count is what you would be spending.  The first two
   cards are untouched: 3 diamonds and 2, changed as often as you can pay for.  The point is that a hand
   always holds one card nobody chose, out of a deck that is a near-even split of good and bad - eight to

@@ -7,6 +7,8 @@ While the cards are being dealt you can no longer change one. They come alive wi
 Each card arrives with its own sound, and you can reach exactly the cards you have heard arrive.
 A Shuffle button deals the cards you cannot change again, for diamonds and coins. It gives you a new set, not a choice, so it may be worse.
 A shuffle sounds once for each card it moves, and reads them out when the last one has landed.
+A shuffle rolls for the fourth card again, so it can leave you with three or hand you a fourth.
+When a card changes, only the new card is read out, not the price of changing it again.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.
