@@ -120,7 +120,8 @@ class AccessibleGameOverEndlessScreen(ViewControllerScreen):
         # would have been dealt once and kept for the rest of the player's life.
         from .tarot import CARDS_TO_LOAD, HAND_SIZE_KEY
         defaults = UserDefaults.standard()
-        for i in range(1, max(4, CARDS_TO_LOAD + 1)):
+        # a couple past the hand, so a key left behind by a hand of another size goes with the rest
+        for i in range(1, max(4, CARDS_TO_LOAD + 3)):
             defaults.set_object(None, 'tarotCard%i' % i)
         defaults.set_object(None, HAND_SIZE_KEY)          # PORT ADDITION: the next hand rolls its own size
         defaults.synchronize()

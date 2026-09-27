@@ -17,7 +17,7 @@ from .viewcontroller import ViewControllerScreen
 
 log = logging.getLogger('ui.tarot')
 
-#: PORT DIVERGENCE (user request): five cards are dealt, not two - `cardsToLoad` is set to 2 in
+#: PORT DIVERGENCE (user request): four cards are dealt, not two - `cardsToLoad` is set to 2 in
 #: -viewDidLoad 0x10003461c.  Tarot.plist ships a third level of twelve cards, six good and six bad, that
 #: the original never deals, and the port adds a fourth of its own (`additions.NEW_CARDS`) where every
 #: card gives and takes at once.  Most of the way to three was already built: the layout maths divides the
@@ -25,7 +25,7 @@ log = logging.getLogger('ui.tarot')
 #: -resetCardsModifiersIfNeeded 0x1000d42a8 already cleared three keys.  The fourth needed the reset
 #: widened (it cleared 1 to 3, so a fourth card would have been dealt once and kept for good) and the
 #: spacing rewritten, which goes negative at four.
-CARDS_TO_LOAD = 5
+CARDS_TO_LOAD = 4
 
 #: PORT DIVERGENCE (user request): the deal takes as long as the original's, whatever is in it.  Both
 #: numbers are the original's own: -viewDidLoad 0x10003461c waits 2.3 s before it lets you play, and its
@@ -43,7 +43,7 @@ DEAL_SECONDS = 2.3
 LOCKED_CARD_LEVEL = 3
 
 #: PORT ADDITION (user request): how often a hand is dealt the last card at all, as a chance per hand.
-#: Most hands hold four; now and then a fifth turns up from the level-5 deck, where every card gives and
+#: Most hands hold three; now and then a fourth turns up from the level-4 deck, where every card gives and
 #: takes at once.  That is what those cards are for - a surprise worth reading, rather than a fixture - and
 #: it is why they can be as strong and as costly as they are.
 #:

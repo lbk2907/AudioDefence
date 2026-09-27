@@ -1425,9 +1425,10 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   A three-card hand is laid out by the original's own spacing, gaps of exactly 10 points, because that
   formula only goes negative at four.
 
-* PORT ADDITION: a fourth deck, and zombies the port deals itself (user request).  Slot 4 is dealt every
-  hand, as slot 3 is, and holds what Dr. Bastard does to the arena rather than to a player's numbers:
-  Chain Reaction, Damp Squib and **Powder Keg**.
+* PORT ADDITION: zombies the port deals itself (`spawner.py`, user request).  It was a tarot card at
+  first - Powder Keg, in a deck of its own at slot 4 - and it is a challenge now, under Play, Extra: the
+  idea outgrew a card.  Chain Reaction and Damp Squib went back to the level-2 deck, whose subject is
+  what the Zombies do, and the tarot is four slots again with the give-and-take cards at slot 4.
 
   Powder Keg is the first thing in the port to put an enemy in the arena outside a wave.  Nothing in the
   original does: a wave is a plist read once when `ADBrick` is built, which is also when the playlists its
