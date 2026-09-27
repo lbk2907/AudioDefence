@@ -18,12 +18,15 @@ from .viewcontroller import ViewControllerScreen
 
 log = logging.getLogger('ui.tarot')
 
-#: PORT DIVERGENCE (user request): three cards are dealt, not two - `cardsToLoad` is set to 2 in
+#: PORT DIVERGENCE (user request): four cards are dealt, not two - `cardsToLoad` is set to 2 in
 #: -viewDidLoad 0x10003461c.  Tarot.plist ships a third level of twelve cards, six good and six bad, that
-#: the original never deals; everything else about it was finished - the layout maths divides the container
-#: by `cardsToLoad` and 140-wide cards leave a 10-point gap either side at three, -viewDidLoad prices a
-#: level-3 change at 1 diamond, and -resetCardsModifiersIfNeeded 0x1000d42a8 already clears three keys.
-CARDS_TO_LOAD = 3
+#: the original never deals, and the port adds a fourth of its own (`additions.NEW_CARDS`) where every
+#: card gives and takes at once.  Most of the way to three was already built: the layout maths divides the
+#: container by `cardsToLoad`, -viewDidLoad prices a level-3 change at 1 diamond, and
+#: -resetCardsModifiersIfNeeded 0x1000d42a8 already cleared three keys.  The fourth needed the reset
+#: widened (it cleared 1 to 3, so a fourth card would have been dealt once and kept for good) and the
+#: spacing rewritten, which goes negative at four.
+CARDS_TO_LOAD = 4
 
 #: PORT DIVERGENCE (user request): the deal takes as long as the original's, whatever is in it.  Both
 #: numbers are the original's own: -viewDidLoad 0x10003461c waits 2.3 s before it lets you play, and its
@@ -125,6 +128,7 @@ class TarotCardViewController:
         if not self.locked:
             self.change_card_button = Button('Button', (15, 141, 100, 25), parent=self.card_front,
                                              actions=[self.change_card_button_pressed], name='#42')
+            self.change_card_button.enabled = False       # PORT DIVERGENCE: until the deal is over
         self.card_back = View('', (0, 0, 130, 190), accessible=False, name='cardBack #75')
         for v in (self.card_front, self.card_title, self.card_description, self.change_card_button,
                   self.card_back):
@@ -162,7 +166,7 @@ class TarotCardViewController:
             self.cost = 3
         if self.card_level == 2:
             self.cost = 2
-        if self.card_level == 3:
+        if self.card_level >= 3:                          # PORT DIVERGENCE: the original knows 1, 2, 3
             self.cost = 1
         if UNLOCK_CARDS_FOR_TESTING:
             self.cost = 0                                 # PORT ADDITION (testing): nothing to pay, on any card
@@ -178,6 +182,13 @@ class TarotCardViewController:
             # to press on it, and "button" at the end of it would be an offer the card does not make.
             self.accessible_card = View('', self._view.frame, traits=STATIC_TEXT if self.locked else BUTTON,
                                         parent=self._view, name='accessibleCard')
+            # PORT DIVERGENCE (user request): a card cannot be changed while the cards are being dealt.
+            # The original dims Back and Armory for those seconds (`deactivateButtons` 0x10001cee4) and
+            # the port dims Play with them, but every card stayed live, so a hand could be paid for and
+            # rerolled mid-deal.  A card is built during the deal and nowhere else, so it starts dimmed
+            # and `_cards_dealt` lets it go.  `View.activate` refuses a dimmed element, and a screen
+            # reader says "dimmed" on the way past, which is what the other three buttons do.
+            self.accessible_card.enabled = False
             self.accessible_card.label_key_words = True   # PORT ADDITION: "press Enter to change", or a button
             self._relative[id(self.accessible_card)] = self._view.frame
             self.refresh_card()
@@ -250,6 +261,9 @@ class TarotCardViewController:
     def change_card_button_pressed(self) -> None:         # changeCardButtonPressed: 0x1000a62b8
         from ..game.inventory import Inventory
         if self.locked:                                   # PORT DIVERGENCE: nothing reaches this on card 3
+            return
+        screen = self.tarot_view_controller               # PORT DIVERGENCE: not while they are dealt
+        if screen is not None and screen.dealing:
             return
         if not Inventory.shared().diamonds >= self.cost:
             self.host.show_no_diamonds_alert()
@@ -393,6 +407,11 @@ class TarotScreen(ViewControllerScreen):
         self.dealing = False
         if self.backbuttonpressed:
             return
+        for card in self.tarot_cards:                     # PORT DIVERGENCE: the cards come alive with Play
+            if card.accessible_card is not None:
+                card.accessible_card.enabled = True
+            if card.change_card_button is not None:
+                card.change_card_button.enabled = True
         sb = self.status_bar_view_controller
         self.play_button.alpha = 1.0                      # 0.5 s animation
         if sb is not None:
@@ -421,7 +440,16 @@ class TarotScreen(ViewControllerScreen):
         self.card_container.children.append(card_view)
         w = card_view.frame[2]
         t1 = (container[2] - w * float(self.cards_to_load)) / float(self.cards_to_load + 1)
-        cx = (t1 + w * 0.5) + float(number - 1) * (t1 + w)
+        if t1 >= 0.0:
+            cx = (t1 + w * 0.5) + float(number - 1) * (t1 + w)
+        else:
+            # PORT DIVERGENCE: the original's spacing is a gap it puts between and around the cards, and
+            # at four 140-wide cards in a 460-wide container that gap is -20: the row would hang off both
+            # ends.  The cards are spread across the container instead, first and last flush with its
+            # edges, overlapping each other by as much as they must.  Nothing draws them, so what this
+            # protects is the reading order, which follows the frames.
+            step = (container[2] - w) / float(max(1, self.cards_to_load - 1))
+            cx = w * 0.5 + float(number - 1) * step
         cy = container[3] * 0.5 + -10.0
         card.set_center(container[0] + cx, container[1] + cy)
         # QUIRK: dispatch_after is given the card number as its dispatch_time_t, a time already past, so the

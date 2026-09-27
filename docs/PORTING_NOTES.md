@@ -1211,6 +1211,38 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   modifier under the same key.  Nothing else moves: `applyAllModifiers` 0x100035a5c still reads the live
   card, and `resetCardsModifiersIfNeeded` 0x1000d42a8 still clears all three keys after an endless game
   lasting over 60 seconds, so a fresh deal still follows a real run.
+* PORT ADDITION: a fourth tarot card, from a deck of the port's own where every card gives with one
+  hand and takes with the other (user request).  `Tarot.plist` has no `level_4`, so the overlay makes one
+  (`new_key`, the level being a key the original does not have) and fills it with twelve: Glass Cannon
+  trades every hit critical for zombies with 20% more hit points, Thunder Luck trades half your shots
+  critical for a storm over your hearing, Berserker melee for guns, Blood Money coins for faster zombies,
+  Hair Trigger a quicker reload for a smaller clip, and so on.  Each is `goodbad` 'both', a value the
+  original never uses; nothing reads it but card art that does not ship and the analytics dimension, where
+  `is_good` coming back False is fair for a card that is half of each.
+
+  A card is one flag that turns on two the game already has - `modifiers.PAIRED_FLAGS` - so the deck
+  needed no new effect written for it at all, and another card is a line there and a line in
+  `additions.NEW_CARDS`.  `apply_setter` turns on both halves, so a paired flag is applied by
+  `applyModifier:` 0x100035da4 and cleared by `resetModifiers` exactly as the original's own flags are.
+  Nothing pairs with `tesla`, which has a setter that starts a playlist.
+
+  Two things had to be put right for a fourth slot to work at all.
+  `resetCardsModifiersIfNeeded` 0x1000d42a8 cleared `tarotCard1` to `tarotCard3`, which was every card the
+  original could deal, so a fourth would have been dealt once and kept for the rest of a player's life; it
+  clears as many as are dealt now.  And the original's spacing is a gap put between and around the cards,
+  `(container - cards x width) / (cards + 1)`, which at four 140-wide cards in a 460-wide container is
+  **-20**: the row would hang off both ends.  Below zero the cards are spread across the container
+  instead, the first and last flush with its edges and overlapping each other as much as they must.
+  Nothing draws them, so what that protects is the reading order, which follows the frames.
+
+* PORT DIVERGENCE: a card cannot be changed while the cards are being dealt (user request).  The original
+  dims Back and Armory for those seconds (`deactivateButtons` 0x10001cee4) and the port dims Play with
+  them, but every card stayed live the whole time, so a hand could be paid for and rerolled mid-deal - on
+  a screen that is about to tell you what you were dealt.  A card is built during the deal and nowhere
+  else, so it is built dimmed and `_cards_dealt` lets it go with Play.  `View.activate` refuses a dimmed
+  element and a screen reader says "dimmed" on the way past, which is what the other three buttons do;
+  `change_card_button_pressed` also returns while `dealing`, so no path round it reaches the money.
+
 * PORT ADDITION: Executioner, a tarot card that makes every hit critical (user request).  It is the
   opposite of Black Cat, which is the original's own and says "Your weapons will land no critical hits";
   that card had no good half, and this is it.  `modifiers.PORT_FLAGS` carries `alwaysCritical`, and

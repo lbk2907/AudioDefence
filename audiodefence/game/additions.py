@@ -130,6 +130,49 @@ NEW_CARDS = {
          'icon': 'Roulette_icon_sonar',
          'description': 'Something is torn. You earn 15% fewer Coins this game.'},
     ),
+    #: A deck of the port's own, which the original has no level for: every card in it gives with one
+    #: hand and takes with the other, which is why it sits in a slot that cannot be changed - the deal is
+    #: taken as offered.  `goodbad` is 'both', a value the original never uses: nothing reads it but the
+    #: card art that does not ship and the analytics dimensions, where `is_good` reading False is right
+    #: enough for a card that is half of each.  The pairs are `modifiers.PAIRED_FLAGS`.
+    'level_4': (
+        {'title': 'Glass Cannon', 'goodbad': 'both', 'selector': 'glassCannon',
+         'icon': 'Roulette_icon_headshot',
+         'description': 'Every hit you land is a critical hit. The Zombies have 20% more hit points.'},
+        {'title': 'Thunder Luck', 'goodbad': 'both', 'selector': 'thunderLuck',
+         'icon': 'Roulette_icon_storm',
+         'description': 'Half your shots deal critical damage. A strong storm will hinder your hearing.'},
+        {'title': 'Berserker', 'goodbad': 'both', 'selector': 'berserker',
+         'icon': 'Roulette_icon_inject',
+         'description': 'Your Melee weapon deals 25% more damage. Your guns deal 10% less.'},
+        {'title': 'Blood Money', 'goodbad': 'both', 'selector': 'bloodMoney',
+         'icon': 'Roulette_icon_sonar',
+         'description': 'You earn 15% more Coins. Zombies move 20% faster.'},
+        {'title': 'Hair Trigger', 'goodbad': 'both', 'selector': 'hairTrigger',
+         'icon': 'Roulette_icon_tripleshot',
+         'description': 'Reloading takes far less time. Your guns hold 10% fewer bullets.'},
+        {'title': 'Heavy Artillery', 'goodbad': 'both', 'selector': 'heavyArtillery',
+         'icon': 'Roulette_icon_target',
+         'description': 'Your guns deal 10% more damage. Reloading takes far longer.'},
+        {'title': 'Cattle Market', 'goodbad': 'both', 'selector': 'cattleMarket',
+         'icon': 'Roulette_icon_cow',
+         'description': 'Diamond Droppers give two Diamonds each. Dr. Bastard releases cows in the arena.'},
+        {'title': 'Steady Breath', 'goodbad': 'both', 'selector': 'steadyBreath',
+         'icon': 'Roulette_icon_zen',
+         'description': 'Hitting enemies will be easier. Landing critical hits is twice as hard.'},
+        {'title': 'Emergency Supplies', 'goodbad': 'both', 'selector': 'emergencySupplies',
+         'icon': 'Roulette_icon_increase',
+         'description': 'All Power Ups go up a level. They take 10 seconds longer to arrive.'},
+        {'title': 'Second Chance', 'goodbad': 'both', 'selector': 'secondChance',
+         'icon': 'Roulette_icon_threezombies',
+         'description': 'You can revive for free on your first death. The horde grows faster and tougher.'},
+        {'title': 'Iron Sights', 'goodbad': 'both', 'selector': 'ironSights',
+         'icon': 'Roulette_icon_headshot',
+         'description': 'Your chance of a critical hit goes up by half. Your accuracy is slightly reduced.'},
+        {'title': 'House Band', 'goodbad': 'both', 'selector': 'houseBand',
+         'icon': 'Roulette_icon_music',
+         'description': 'You start the game with double Combo. An old jukebox plays terrible music.'},
+    ),
     'level_3': (
         {'title': 'Quick Hands', 'goodbad': 'good', 'selector': 'fasterReloadTime',
          'icon': 'Roulette_icon_tripleshot',
@@ -146,9 +189,12 @@ NEW_CARDS = {
 
 @adds_to('Tarot')
 def new_tarot_cards(tarot: dict) -> None:
-    """Deal the port's own cards from the original's decks."""
+    """Deal the port's own cards from the original's decks, and from the deck it adds."""
     for level, cards in NEW_CARDS.items():
         deck = tarot.get(level)
+        if deck is None:
+            new_key(tarot, level, [])                  # a level the original has no cards for at all
+            deck = tarot[level]
         if not isinstance(deck, list):
             continue
         for card in cards:

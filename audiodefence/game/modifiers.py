@@ -47,7 +47,30 @@ EXTRA_SETTERS = ('fullMoon', 'bullshit', 'difficultyModifier')
 #: which effects are Somethin' Else's and which are ours.  Everything that reads FLAGS reads these too:
 #: they are cleared by `reset_modifiers` at the start of every game and accepted by `has_setter`, so a card
 #: carrying one is applied by `applyModifier:` 0x100035da4 exactly as the original's cards are.
-PORT_FLAGS = ('earlyPowerUp', 'luckyNight', 'lessPowerUps', 'lessCoins', 'alwaysCritical')
+#: PORT ADDITION (user request): the level-4 cards, each of which gives with one hand and takes with the
+#: other.  A card here is one flag that turns on two the game already has - a good one and a bad one - so
+#: the deck needed no new effects written for it at all, and another card is a line here and a line in
+#: `additions.NEW_CARDS`.  `apply_setter` does the turning on, so a paired flag is applied by
+#: `applyModifier:` 0x100035da4 like any other and cleared by `resetModifiers` like any other.
+#:
+#: Nothing here pairs with `tesla`, which has a setter of its own (`set_tesla`) that starts a playlist.
+PAIRED_FLAGS = {
+    'glassCannon': ('alwaysCritical', 'strongerEnemies'),
+    'thunderLuck': ('luckyShots', 'storm'),
+    'berserker': ('moreMeleeDamages', 'lessDamages'),
+    'bloodMoney': ('metalDetector', 'fasterEnemies'),
+    'hairTrigger': ('fasterReloadTime', 'lessBullets'),
+    'heavyArtillery': ('moreDamages', 'slowerReloadTime'),
+    'cattleMarket': ('luckyNight', 'cows'),
+    'steadyBreath': ('widerSpread', 'lessHeadshots'),
+    'emergencySupplies': ('betterPowerUps', 'lessPowerUps'),
+    'secondChance': ('freeRevive', 'enragedHorde'),
+    'ironSights': ('moreHeadshots', 'narrowedSpread'),
+    'houseBand': ('baseComboBonus', 'jukebox'),
+}
+
+PORT_FLAGS = ('earlyPowerUp', 'luckyNight', 'lessPowerUps', 'lessCoins',
+              'alwaysCritical') + tuple(PAIRED_FLAGS)
 
 
 class GameModifiers:
@@ -88,6 +111,9 @@ class GameModifiers:
             self.set_tesla(bool(value))
         else:
             setattr(self, selector, value)
+        # PORT ADDITION: a level-4 card is one flag standing for two; see PAIRED_FLAGS
+        for half in PAIRED_FLAGS.get(selector, ()):
+            self.apply_setter(half, value)
         return True
 
     # --- derived values --------------------------------------------------------------------------

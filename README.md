@@ -642,7 +642,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **136 divergences** and **15 original quirks kept on purpose** in the notes, of which 75 are
+There are **138 divergences** and **15 original quirks kept on purpose** in the notes, of which 76 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -827,9 +827,10 @@ replacing them.
   the strength you choose. Each kind of controller keeps its own buttons, and the hints and the tutorial
   can name its buttons instead of the keys. See
   [With a game controller](#with-a-game-controller).
-- **A third tarot card** before an Endless game, from a deck of twelve the original ships and never deals.
-  It cannot be changed at any price, so a hand always holds one card nobody picked. The first two are as
-  they were, at 3 diamonds and 2.
+- **Two more tarot cards** before an Endless game — four in all. The third comes from a deck of twelve the
+  original ships and never deals; the fourth from a deck of the port's own, where every card helps and
+  hurts at once. Neither can be changed at any price, so a hand always holds cards nobody picked. The
+  first two are as they were, at 3 diamonds and 2, and the deal still takes the time it always took.
 - **New tarot cards**, good and bad, dealt from the original's own decks alongside its cards. Each deck
   keeps its subject — the arena, the zombies, your guns — and gains as many good cards as bad, so the
   third card stays an even chance. More will follow.

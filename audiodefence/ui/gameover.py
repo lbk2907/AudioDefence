@@ -116,8 +116,11 @@ class AccessibleGameOverEndlessScreen(ViewControllerScreen):
         from ..game.ingame_stats import InGameStats
         if not InGameStats.singleton().time_elapsed > 60.0:
             return
+        # PORT DIVERGENCE: the original clears three keys, which was every card it could deal.  A fourth
+        # would have been dealt once and kept for the rest of the player's life.
+        from .tarot import CARDS_TO_LOAD
         defaults = UserDefaults.standard()
-        for i in range(1, 4):
+        for i in range(1, max(4, CARDS_TO_LOAD + 1)):
             defaults.set_object(None, 'tarotCard%i' % i)
         defaults.synchronize()
 
