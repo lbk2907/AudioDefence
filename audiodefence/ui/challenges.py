@@ -411,6 +411,10 @@ class AccessibleChallengeOverviewScreen(ViewControllerScreen):
         App.delegate().go_to_challenge_with_dict(self.challenge_dict)
 
     def back_button_pressed(self) -> None:                # ADChallengeOverviewViewController 0x1000d8cb0
+        from ..game.additions import EXTRA_CHALLENGES     # PORT ADDITION: back where it was chosen
+        if self.challenge_dict.get('challenge_id') in EXTRA_CHALLENGES:
+            App.delegate().go_to_extra_menu()
+            return
         App.delegate().go_to_challenge_selector()
 
     # REMOVED (user request): the magic tap 0x1000403e0 pressed Play, even while Play was disabled.

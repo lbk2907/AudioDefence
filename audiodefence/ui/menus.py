@@ -260,7 +260,19 @@ class ExtraMenuScreen(ViewControllerScreen):
 
     @staticmethod
     def challenge_chosen(name: str) -> None:
-        App.delegate().go_to_challenge_with_dict(App.dictionary_for_challenge_with_name(name))
+        """PORT ADDITION (user request): the challenge's own overview first, as the selector gives.
+
+        `ADChallengeOverviewViewController` 0x1000d8178 takes a challenge dictionary and reads out its
+        title, what it asks of you, its tip and its three stars, with Play at the bottom - and it tells a
+        player who has not bought one of its guns to go and buy it.  A challenge of the port's is a
+        challenge dictionary like any other, so it gets all of that for nothing.
+        """
+        app = App.delegate()
+        # The accessible overview whether a screen reader is running or not: the sighted one is a nib the
+        # port never ported, so asking for it hands back a placeholder and a dead end.  This screen is
+        # views like any other and reads the same dictionary.
+        app.go_to_accessible_challenge_overview_with_dictionary(
+            App.dictionary_for_challenge_with_name(name))
 
     def back_button_pressed(self) -> None:
         App.delegate().go_to_play_menu()

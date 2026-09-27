@@ -268,35 +268,57 @@ def extra_power_up_levels(weapons: dict) -> None:
 #: does the rest: it activates the playlists a wave names, so a ring of four kinds is four kinds a player
 #: can hear, and it moves to the next wave when one is cleared, which is what makes three rings a
 #: challenge of three waves.
-def _ring(kinds, count: int, distance: float, rigged: bool) -> dict:
-    """A wave standing in a circle at one distance, the kinds taken in turn round it."""
+def _ring(kinds, count: int, distance: float, rigged: bool, every: float = 0.0) -> dict:
+    """A wave standing in a circle at one distance, the kinds taken in turn round it.
+
+    `every` staggers them: a ring arrives all at once, because a ring is one thing to be set off, while a
+    crowd walks in one at a time, which is what makes it a crowd to be worked through rather than a
+    second ring.
+    """
     enemies = {}
     for i in range(count):
-        enemies['%s %i' % (kinds[i % len(kinds)], i + 1)] = {
-            'spawn_angle': round(i * 360.0 / count, 2),
-            'spawn_distance': distance,
-        }
+        one = {'spawn_angle': round(i * 360.0 / count, 2), 'spawn_distance': distance}
+        if every:
+            one['spawn_time'] = round(i * every, 2)
+        enemies['%s %i' % (kinds[i % len(kinds)], i + 1)] = one
     wave = {'Enemies': enemies}
     wave['Rigged' if rigged else 'NoBlast'] = True
     return wave
 
 
-#: The kinds a ring is dealt from, and the crowd that follows it.  Four kinds so a ring is not ten of one
-#: thing, and all of them ordinary walkers: a ring of Runners at three and a half units would be a death
-#: sentence rather than a puzzle.
-RING_KINDS = ('WeakZombie', 'WeakZombieB', 'Zombie', 'ZombieB')
-CROWD_KINDS = ('WeakZombie', 'Zombie', 'Farty', 'ZombieB')
-
-#: Close enough that the blast reaches a player's ears (a blast rings them from inside 5 units) and far
-#: enough that a zombie is still walking rather than lunging (they turn at 3).
-RING_DISTANCE = 3.5
-CROWD_DISTANCE = 10.0
+#: The three rings, and the crowd after each, getting worse as they go (user request: harder, but a thing
+#: that can be finished).
+#:
+#: A ring is cleared by one kill, whatever is standing in it - the chain does the rest - so what makes a
+#: ring hard is not how tough its zombies are but **how long the first kill takes while the rest close
+#: in**.  That is why the last ring has a Hulk in it at 100 life: the card asks a player to pick the soft
+#: one by ear and shoot that, not to shoot whatever is loudest.  And why no ring holds a Runner, which at
+#: 1.3 speed from three units is not a puzzle but an execution.
+#:
+#: The crowds are the opposite.  Nothing in them explodes, so every one of them has to be killed, and they
+#: walk in one at a time (`every`).  Those are where the Runners go, and the last one is eight of them
+#: with a Hulk at the end.
+#:
+#: 3.5 units, then 3.2, then 3.0.  Inside 5 a blast rings a player's ears; at 3 a zombie stops walking and
+#: starts closing (`squared_distance >= 9` is the test), so 3.0 is as near as a ring can stand and still
+#: give a moment to choose.
+RINGS = (
+    (('WeakZombie', 'WeakZombieB', 'Zombie', 'ZombieB'), 10, 3.5),
+    (('WeakZombie', 'Zombie', 'ZombieB', 'ZombieC'), 12, 3.2),
+    (('WeakZombie', 'Zombie', 'Hulk', 'ZombieB', 'HulkB'), 12, 3.0),
+)
+CROWDS = (
+    (('WeakZombie', 'Zombie', 'Farty', 'ZombieB'), 5, 10.0, 1.5),
+    (('Zombie', 'Runner', 'Farty', 'ZombieB'), 7, 9.0, 1.4),
+    (('Runner', 'Zombie', 'Hulk', 'RunnerB', 'Farty'), 9, 8.0, 1.3),
+)
 
 PLISTS: dict = {}
-for _n in (1, 2, 3):
-    PLISTS['port_keg_ring_%i' % _n] = _ring(RING_KINDS, 10, RING_DISTANCE, rigged=True)
-    PLISTS['port_keg_crowd_%i' % _n] = _ring(CROWD_KINDS, 5, CROWD_DISTANCE, rigged=False)
-del _n
+for _n, (_k, _c, _d) in enumerate(RINGS, start=1):
+    PLISTS['port_keg_ring_%i' % _n] = _ring(_k, _c, _d, rigged=True)
+for _n, (_k, _c, _d, _e) in enumerate(CROWDS, start=1):
+    PLISTS['port_keg_crowd_%i' % _n] = _ring(_k, _c, _d, rigged=False, every=_e)
+del _n, _k, _c, _d, _e
 
 #: The challenge itself.  Shaped as the original's are (`tutorial_5.plist` and the rest): a title, an
 #: objective, the guns it hands you, and the waves in the order they come.  Three rings with a crowd after
@@ -304,14 +326,18 @@ del _n
 PLISTS['port_keg'] = {
     'challenge_id': 'port_keg',
     'title': 'Powder Keg',
-    'objective': 'Clear three rings of rigged Zombies.',
-    'tip': 'They are packed close and every one of them is a bomb. Shoot one and the ring goes with it, '
-           'then deal with what walks in after.',
+    'objective': 'Clear three rings of rigged Zombies, and what walks in after each.',
+    'tip': 'Every Zombie in a ring is a bomb, so one kill takes the lot. Pick the weakest one you can '
+           'hear and be quick, because the rest are already walking in.',
     'icon': 'Challenge_icon_02',
     'icon_title': 'PK',
+    #: A pistol that never runs dry, a Micro SMG that does, and a wok.  The pistol is what makes this
+    #: finishable however badly it goes; the SMG is the thing worth spending well, and 200 rounds is
+    #: enough for the crowds only if the rings are set off with one shot each.  No shotgun: a ring is a
+    #: target a shotgun cannot miss.
     'weapons': [
-        {'name': 'policeshotgun', 'ammo': '999'},
-        {'name': 'microsmg', 'ammo': '999'},
+        {'name': 'pistol', 'ammo': '999'},
+        {'name': 'microsmg', 'ammo': '200'},
         {'name': 'wok'},
     ],
     'bricks': ['port_keg_ring_1', 'port_keg_crowd_1',
@@ -319,7 +345,7 @@ PLISTS['port_keg'] = {
                'port_keg_ring_3', 'port_keg_crowd_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
     'mission_star': {'reward': 500},
-    'time_limit_star': {'reward': 200, 'objective': 120},
+    'time_limit_star': {'reward': 200, 'objective': 180},
     'accuracy_star': {'reward': 200, 'objective': 40},
 }
 
