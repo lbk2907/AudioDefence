@@ -1211,17 +1211,21 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   modifier under the same key.  Nothing else moves: `applyAllModifiers` 0x100035a5c still reads the live
   card, and `resetCardsModifiersIfNeeded` 0x1000d42a8 still clears all three keys after an endless game
   lasting over 60 seconds, so a fresh deal still follows a real run.
-* PORT DIVERGENCE: Lucky Shot lands a critical on one hit in five (user request).  `calculateHitEnemies`
+* PORT DIVERGENCE: Lucky Shot makes half of every hit critical (user request).  `calculateHitEnemies`
   0x1000c2f14 rolls `random() % 100 == 1` - one hit in a hundred, which is a whole game for one extra
-  critical, on a card a player gave a tarot slot to.  `modifiers.LUCKY_SHOT_PERCENT` is 20.
+  critical, on a card a player gave a tarot slot to.  `modifiers.LUCKY_SHOT_PERCENT` is 50.
 
-  What makes that worth more than it reads is where the roll sits.  A weapon's own critical - 5% to 15%,
-  by weapon - is rolled only when the shot is inside `criticalSpread`, a cone of 5 to 10 degrees; this
-  one is rolled on any hit at all, however loosely aimed.  So the card is a chance that does not depend
-  on aim, which is the difference between it and Head-Seeking Bullets, whose own 50% is half again on the
-  weapon's chance (`headShotModifier` 0x1000de51c returns 1.5) and only inside that cone.  50 was tried
-  first and is too much: it beats everything else in the deck several times over, Military Grade Weapons
-  being 10% more damage.  At 20 a hunting rifle, at 2.5x, gains about 30% more damage across a run.
+  What the card is for is the shot that is not lined up.  A weapon's own critical - 5% to 15%, by weapon
+  - is rolled only when the shot is inside `criticalSpread`, a cone of 5 to 10 degrees, so a hit that
+  lands without being aimed at can never be a critical, whatever else is in play.  Head-Seeking Bullets
+  does not change that: `headShotModifier` 0x1000de51c returns 1.5, which multiplies the weapon's own
+  chance inside the same cone, so it pays for good aim and nothing else.  This roll sits outside the cone
+  check and is the only thing in the game that pays for a hit the player did not line up.
+
+  That makes it the strongest card in its deck by some way, Military Grade Weapons being 10% more damage,
+  and 20 was the number first for that reason.  It was raised to 50 knowingly: a game played by ear puts
+  a great many shots into a zombie that was heard rather than aimed at, and a card paying for those is
+  worth more here than one paying for shots already going where they should.
 
   The card names its own odds, so its sentence is built from the number rather than written beside it
   (`data.REWORDED`): "All shots have a 20% chance of dealing critical damage, however you aim."  Tuning

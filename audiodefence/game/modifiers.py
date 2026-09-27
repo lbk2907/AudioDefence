@@ -12,12 +12,19 @@ import time
 
 #: Lucky Shot: the chance, per enemy hit, of a critical.  `calculateHitEnemies` 0x1000c2f14 rolls
 #: `random() % 100 == 1`, one hit in a hundred, which is a whole game for one extra critical on a card a
-#: player gave a tarot slot to.  What makes this worth more than it looks is where the roll sits: a
-#: weapon's own critical (5% to 15%) is rolled only inside `criticalSpread`, a cone of 5 to 10 degrees,
-#: and this one is rolled on any hit however loosely aimed.  50 was tried and is too much - it beats
-#: everything else in the deck several times over.  At 20 a hunting rifle, at 2.5x, gains about 30% more
-#: damage across a run, which stands beside Military Grade Weapons' 10% without burying it.
-LUCKY_SHOT_PERCENT = 20
+#: player gave a tarot slot to.
+#:
+#: What this card is really for is the shot that is not lined up.  A weapon's own critical is rolled only
+#: inside `criticalSpread`, a cone of 5 to 10 degrees, so a hit that lands without being aimed at can
+#: never be a critical, whatever else is in play - Head-Seeking Bullets included, since that one only
+#: multiplies the weapon's chance inside the same cone.  This roll sits outside the cone check, so it is
+#: the only thing in the game that rewards a hit you did not line up.
+#:
+#: Fifty, then (user request).  It makes the card the strongest in its deck by some way - Military Grade
+#: Weapons is 10% more damage - and that was said at the time and decided on anyway: a game played by
+#: ear puts a great many shots into a zombie that was heard rather than aimed at, and a card that pays
+#: for those is worth more here than a card that pays for the ones already going where they should.
+LUCKY_SHOT_PERCENT = 50
 
 #: Rusty Weapons: the chance, per shot, that the clip is emptied.  `resolveShoot` 0x100015b60 rolls
 #: `rand() % 100 == 1`, and because the roll is per shot a small clip is few rolls - a pistol's six rounds
