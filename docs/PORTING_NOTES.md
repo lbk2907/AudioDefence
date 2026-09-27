@@ -1453,38 +1453,35 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   sits after Endless on the play menu, which its frame decides - `reading_order` sorts by a frame's
   vertical centre.
 
-  Powder Keg is the first thing in the port to put an enemy in the arena outside a wave.  Nothing in the
-  original does: a wave is a plist read once when `ADBrick` is built, which is also when the playlists its
-  enemies need are activated (`loadPLaylistWithName:` 0x10009fdec, `onPlaylistActivated:` 0x1000a0a1c) -
-  so a zombie conjured mid-wave is one whose sounds may not be loaded, and a zombie a player cannot hear
-  coming is a death rather than a glitch.  `spawner.py` gets round it by conjuring **the kind of zombie
-  the wave already holds**: its playlist is live by definition, so the crowd is audible the moment it
-  arrives, nothing has to be loaded and nothing waited for.  It reads well too - what comes is more of
-  what you were already fighting.
+  A challenge of the port's is shown before it is played, as the selector shows the original's (user
+  request).  `Accessible_ADChallengeOverviewViewController` 0x1000d8178 takes a challenge dictionary and
+  reads out its title, its objective, its tip and its three stars with Play at the bottom, and tells a
+  player who has not bought one of its guns to go and buy it.  A dictionary is all it wants, so the
+  port's own get every bit of that for nothing.  The accessible one is used whether a screen reader is
+  running or not: the sighted overview is a nib nobody ported, so asking for it hands back a placeholder
+  and a dead end.
 
-  The cycle is a ring of ten dealt at 3.5 units, each of them given an explosion of its own so the ring
-  goes up whatever the other cards say.  At that radius they stand 2.2 apart, inside the 3-unit blast, so
-  one shot takes the whole ring - the original's own chain doing the work.  3.5 is also inside the 5 units
-  a blast needs to reach a player's ears, and outside the 3 at which a zombie stops walking and lunges, so
-  there are a few seconds to find one.  When the ring is gone a crowd of five is dealt at 10 units, where
-  a wave's own zombies come from, and nothing in it explodes - `no_lent_blast` keeps Chain Reaction from
-  lending even those a bomb, the Farties included.  Then another ring, while the crowd is still about.
+  The three rings get worse and the challenge can still be finished (user request).  A ring is cleared by
+  one kill whatever is standing in it, the chain doing the rest, so what makes a ring hard is not how
+  tough it is but **how long the first kill takes while the other eleven close in** - which is why the
+  last ring holds a Hulk at 100 life and the player's job is to pick the soft one by ear.  No ring holds
+  a Runner: 1.3 speed from three units is not a puzzle.  The crowds are the opposite, everything in them
+  having to be killed, so that is where the Runners go, and they walk in one at a time.  Ten at 3.5
+  units, twelve at 3.2, twelve at 3.0, which is as near as a ring can stand and still leave a moment to
+  choose; crowds of five, seven and nine at ten, nine and eight.  The guns are a pistol that never runs
+  dry, a Micro SMG with 200 rounds and a wok - the pistol is what makes it finishable however badly it
+  goes, and there is no shotgun because a ring is a target a shotgun cannot miss.
 
-  A ring is dealt of **every kind the wave holds**, taken in turn round the circle (user request), so a
-  ring of ten from a wave of two is five of each standing alternately rather than ten of one.  The kinds
-  are the wave's own for the reason above - theirs are the playlists that are loaded.
+  Belonging to no world is what the rest of the game had to be told.  `challengeAfter:world:` 0x10001f52c
+  looks a challenge up in its world's list and returns the next one, taking `NSNotFound + 1` wrapping to 0
+  as "then the first"; for a challenge in no world the list comes back empty and `challenges[0]` runs off
+  the end of it, which a player found by pressing Next challenge after Powder Keg.  `hasChallengeAfter:`
+  0x10001f230 answers False for the port's own now, and for any world with no challenges at all - the
+  same crash reached another way, and one that was there before any of this.  The button says "back to
+  Extra" and goes there, since "next arena" would be a lie about a challenge in no arena; the overview's
+  own Back goes the same way for the same reason.
 
-  And the card **pays three times** (`modifiers.POWDER_KEG_REWARD`, user request): three times the coins
-  and three times the score for every kill of the run, and three times what a Diamond Dropper gives, which
-  multiplies whatever a full moon and Lucky Night had already made of it.  It asks a player to stand in a
-  ring of bombs with the ordinary waves still coming, and this is what that is worth.  It is raised to the
-  power of `times('powderKeg')` rather than multiplied by it, so a second card would treble it again -
-  only one deck holds the card, so that cannot happen today and needs no special case if it ever does.
-
-  The waves are untouched: `ADBrick` spawns what its plist says on its own clock, and these are added to
-  the list it already updates, so the ordinary game carries on around them.
-
-* PORT ADDITION: the fifth tarot card, from a deck of the port's own where every card gives with one
+* PORT ADDITION: the fourth tarot card, from a deck of the port's own where every card gives with one
   hand and takes with the other (user request).  `Tarot.plist` has no `level_4`, so the overlay makes one
   (`new_key`, the level being a key the original does not have) and fills it with twelve: Glass Cannon
   trades every hit critical for zombies with 20% more hit points, Thunder Luck trades half your shots

@@ -821,9 +821,11 @@ replacing them.
   and on the pause screen, the keys do nothing and the game's music and ambience are untouched.
 - **Settings → Miscellaneous → Reset all settings** puts every setting back to its default, except your key
   bindings.
-- **Play → Extra**, challenges written for this port rather than ported. The first is **Powder Keg**:
-  three rings of Zombies rigged to blow, standing close enough that one shot takes a whole ring, with a
-  crowd that will not explode walking in between them.
+- **Play → Extra**, challenges written for this port rather than ported. Each is read out first on the
+  game's own challenge screen — objective, tip and stars — as the selector does for the original's. The
+  first is **Powder Keg**: three rings of Zombies rigged to blow, standing close enough that one kill
+  takes a whole ring, with a crowd that will not explode walking in between them. The rings get bigger,
+  closer and harder to set off as they go.
 - **Game controllers**: a DualSense, DualShock, Xbox, Switch Pro or most other pads, in the menus and in
   play, with a stick that turns as fast as it is pushed, vibration for the heartbeat, hits, kills,
   explosions and your death, the phone's shake, and a DualSense's triggers that feel like a gun, each at
