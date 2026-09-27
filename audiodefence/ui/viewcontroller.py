@@ -10,7 +10,7 @@ import logging
 
 from ..platform.cfloat import f32
 from ..platform.runloop import RunLoop
-from .accessibility import AccessibleScreen, Button, View
+from .accessibility import AccessibleScreen, Button, View, play_back_click
 
 log = logging.getLogger('ui.vc')
 
@@ -21,7 +21,10 @@ class StatusBar:
     def __init__(self):                                   # initWithNibName:bundle: 0x10001bd70 / loadView 0x10001c034
         self.screen = None                                # the screen it was made for (`_wanted`)
         self.view = View('', (0, 0, 568, 50), accessible=False, name='#87')
-        self.back_button = Button('Back', (8, 0, 150, 40), parent=self.view, name='#74')
+        # PORT ADDITION (user request): Back has a sound of its own, `back_button`, which the original
+        # ships and never plays; `font_button=False` keeps the general click off it.  See play_back_click.
+        self.back_button = Button('Back', (8, 0, 150, 40), parent=self.view, font_button=False,
+                                  actions=[play_back_click], name='#74')
         self.back_button.text = '  BACK'
         self.currencies_view = View('', (189, 0, 190, 40), accessible=False, parent=self.view,
                                     name='#108 ADSlidingView')

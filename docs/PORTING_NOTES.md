@@ -1228,6 +1228,20 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   `stopTinnitus` 0x1000b6b4c is untouched: it puts the reverb back and deliberately leaves the sound to run
   out, which is right, because the fade over the last fifth of a ring has taken its gain to nothing by then.
 
+* PORT ADDITION: going back has a sound of its own (user request).  `back_button` is in the `buttons`
+  playlist and on disk at `game/sounds/menu/buttons/back_button.m4a`, and **nothing in the original plays
+  it**: `playSound` 0x100073578 and the five other copies of it all ask for `click_button`, so every
+  button in the game makes the one noise, Back among them.  It is another recording the bundle ships and
+  the game never reaches, like the tarot icons and the roulette.
+
+  `play_back_click` is what plays it, and it belongs to going back rather than to a particular button:
+  the Back button in the status bar, Escape and Backspace, and the armory's two Close buttons, which are
+  `backButtonPressed` reached another way and would otherwise have disagreed with Escape on the same
+  screen.  Back is built with `font_button=False` so the general click is not added on top of it.
+
+  Escape is unchanged in when it sounds: `accessibilityPerformEscape` answers False on a screen with
+  nowhere to go - the main menu among them - and nothing is heard, which is how a player can tell.
+
 * PORT ADDITION: Chain Reaction and Damp Squib - every zombie carries a bomb, or the Farties lose theirs
   (user request).  Whether an enemy explodes is a key in `enemies.plist`, and only six things have one:
   Farty, FartyB, Machine and the three Cars, all with the same block - radius 3, 50 damage, dispersal 75.

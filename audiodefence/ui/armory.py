@@ -27,7 +27,7 @@ from ..platform.runloop import RunLoop
 from ..platform.tracker import Tracker
 from ..s3d.engine import S3DEngine
 from .accessibility import (Button, View, _is_inside, cross_axis_key, cross_axis_text, menu_tick,
-                            play_button_click)
+                            play_back_click, play_button_click)
 from .challenges import _TableLoader
 from .host import AlertScreen, register
 from .viewcontroller import ViewControllerScreen
@@ -77,7 +77,7 @@ class WeaponDescriptionView:
         # ADButtonWithFont plays a sound (playSound 0x100073578), so closing the page and equipping a weapon
         # were the two things in the armory that made none.  They click like everything else now.
         Button('Close weapon description', _offset((0, 0, 203, 47), dx, dy), parent=v, font_button=False,
-               actions=[self.back_button_pressed, play_button_click], name='#23')
+               actions=[self.back_button_pressed, play_back_click], name='#23')
         self.weapon_name = View('', _offset((205, 0, 275, 47), dx, dy), parent=v, name='#65')
         self.weapon_description = View('', _offset((8, 55, 464, 47), dx, dy), parent=v, name='#78')
         self.weapon_stats = View('', _offset((8, 110, 464, 47), dx, dy), parent=v, name='#37')
@@ -262,7 +262,8 @@ class PowerUpUpgraderView:
         # page's origin), so both pages read the same way round: the bar first, then the way out, then the
         # page itself.  In the nib this button is at the very top, level with the bar
         self.voice_over_back = Button('Close powerup description', (0, 53.5, 150, 40), parent=v,
-                                      actions=[self.back_button_pressed], name='#103')
+                                      font_button=False,
+                                      actions=[self.back_button_pressed, play_back_click], name='#103')
         self.power_up_title = View('', (95, 70, 380, 40), parent=v, name='#124')
         self.power_up_description = View('', (221, 120, 245, 129), parent=v, name='#9 UITextView')
         self.upgrade_button = Button('UPDATE', (100, 257, 194, 38), parent=v,

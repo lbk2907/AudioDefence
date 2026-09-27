@@ -60,8 +60,23 @@ def menu_toggle() -> None:
 def play_button_click() -> None:
     """-[ADButtonWithFont playSound] 0x100073578 (also ADStatusBarViewController 0x10001cde8 and
     ADPlayMenuViewController 0x1000aba0c, which are the same code)."""
+    _play_button_sound('click_button')
+
+
+def play_back_click() -> None:
+    """PORT ADDITION (user request): the sound of going back.
+
+    `back_button` is in the `buttons` playlist and in `game/sounds/menu/buttons/`, and nothing in the
+    original plays it - every button in the game, Back included, makes the one `click_button` noise.  It
+    is what leaving a screen sounds like here: the Back button itself, Escape, and the armory's two
+    Close buttons, which are the same `backButtonPressed` reached another way.
+    """
+    _play_button_sound('back_button')
+
+
+def _play_button_sound(name: str) -> None:
     pl = S3DEngine.engine().play_list_with_name('buttons')
-    sound = pl.sound('click_button') if pl is not None else None
+    sound = pl.sound(name) if pl is not None else None
     if sound is None:
         return
     sound.set_gain(3.0)
@@ -573,4 +588,4 @@ class AccessibleScreen(Screen):
                 self.focus.activate(shift)
         elif k in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
             if self.accessibility_perform_escape():
-                play_button_click()                       # PORT ADDITION: as pressing Back does
+                play_back_click()                         # PORT ADDITION: as pressing Back does
