@@ -9,7 +9,7 @@ from ..platform.defaults import ns_float_value
 from ..s3d.engine import S3DEngine
 from . import data
 from .ingame_stats import InGameStats, notify_stats
-from .modifiers import GameModifiers
+from .modifiers import LUCKY_SHOT_PERCENT, GameModifiers
 
 log = logging.getLogger('bricks')
 
@@ -101,7 +101,6 @@ class BrickManager:
         # PORT ADDITION: Air Drop Inbound.  This runs once per game, which the power-up manager's own
         # init does not - it is built with the brick manager and lives as long as the app - so the card
         # is spent here rather than there, and only the first drop of the game is the free one.
-        from .modifiers import GameModifiers
         self.power_up_manager.forced_first_drop = GameModifiers.shared().earlyPowerUp
 
     @property
@@ -343,7 +342,8 @@ class BrickManager:
                     notify_stats('UPDATE_CRITICAL_HITS', 1)
                 else:
                     t.next_shot_will_be_precise = True
-            if mods.luckyShots and crand.c_mod(crand.random(), 100) == 1:
+            # PORT DIVERGENCE: 1 in the original; see modifiers.LUCKY_SHOT_PERCENT
+            if mods.luckyShots and crand.c_mod(crand.random(), 100) < LUCKY_SHOT_PERCENT:
                 t.next_shot_will_be_critical = True
             if t.next_shot_will_be_critical and self.gameplay_view_controller is not None:
                 self.gameplay_view_controller.player_did_a_critical_hit()

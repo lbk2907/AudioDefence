@@ -1211,6 +1211,23 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   modifier under the same key.  Nothing else moves: `applyAllModifiers` 0x100035a5c still reads the live
   card, and `resetCardsModifiersIfNeeded` 0x1000d42a8 still clears all three keys after an endless game
   lasting over 60 seconds, so a fresh deal still follows a real run.
+* PORT DIVERGENCE: Lucky Shot lands a critical on one hit in five (user request).  `calculateHitEnemies`
+  0x1000c2f14 rolls `random() % 100 == 1` - one hit in a hundred, which is a whole game for one extra
+  critical, on a card a player gave a tarot slot to.  `modifiers.LUCKY_SHOT_PERCENT` is 20.
+
+  What makes that worth more than it reads is where the roll sits.  A weapon's own critical - 5% to 15%,
+  by weapon - is rolled only when the shot is inside `criticalSpread`, a cone of 5 to 10 degrees; this
+  one is rolled on any hit at all, however loosely aimed.  So the card is a chance that does not depend
+  on aim, which is the difference between it and Head-Seeking Bullets, whose own 50% is half again on the
+  weapon's chance (`headShotModifier` 0x1000de51c returns 1.5) and only inside that cone.  50 was tried
+  first and is too much: it beats everything else in the deck several times over, Military Grade Weapons
+  being 10% more damage.  At 20 a hunting rifle, at 2.5x, gains about 30% more damage across a run.
+
+  The card names its own odds, so its sentence is built from the number rather than written beside it
+  (`data.REWORDED`): "All shots have a 20% chance of dealing critical damage, however you aim."  Tuning
+  the number moves the words with it, which is the fault that had to be fixed by hand twice - once on
+  Powered Power Ups, and once here, where a 50 was left in the sentence after the number came down.
+
 * PORT DIVERGENCE: Rusty Weapons jams three times as often (user request).  `resolveShoot` 0x100015a1c
   rolls `rand() % 100 == 1` at 0x100015b60 - one shot in a hundred - and on most guns that is a whole
   game without noticing, because the roll is per shot and a small clip is few rolls: a pistol's six
@@ -1218,7 +1235,9 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   leaves them all usable.  A clip then jams about 17% of the time on the pistol, 26% on the hunting
   rifle, 46% on the micro SMG, 53% on the tactical rifle and 78% on the machine gun, which has 50 rounds
   to roll and the game's longest reload at 6 seconds.  Five per cent would put the machine gun at 92%,
-  which is not a weapon with a hazard but a weapon that does not work.
+  which is not a weapon with a hazard but a weapon that does not work.  The number is
+  `modifiers.RUSTY_JAM_PERCENT`, beside Lucky Shot's: both are tuning rather than logic, each read in one
+  place, and a card that names its odds builds its sentence from the number that sits there.
 
   Nothing else moves.  A jam still costs the reload and no ammunition - `resolveShoot` zeroes
   `bulletsInClip` and leaves `bulletsTotal` alone, so the rounds come back on the reload - and the

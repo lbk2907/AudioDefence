@@ -8,6 +8,7 @@ from functools import lru_cache
 
 from .. import paths
 from .. import localization
+from .modifiers import LUCKY_SHOT_PERCENT         # a card that names its odds says the number we roll
 
 
 @lru_cache(maxsize=None)
@@ -101,6 +102,12 @@ REWORDED = (
     # "fully levelled up" wrong twice over.  This says the one level it has always given.
     ('All Power Ups are fully levelled up for this game.',
      'All Power Ups go up a level for this game, even beyond the top level you can buy.'),
+    # Lucky Shot.  The card names its own odds, so the sentence is built from the number the game
+    # actually rolls and cannot be left behind when that number is tuned.  "However you aim" is what
+    # separates it from Head-Seeking Bullets, whose 50% is half again on the weapon's own chance and only
+    # inside the critical cone, where this one is rolled on any hit at all.
+    ('All shots have a 1% chance of dealing critical damage.',
+     'All shots have a %d%% chance of dealing critical damage, however you aim.' % LUCKY_SHOT_PERCENT),
 )
 
 

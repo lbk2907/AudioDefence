@@ -4,6 +4,28 @@ from __future__ import annotations
 import datetime
 import time
 
+# ===================================================================== what the port's cards are worth
+#: PORT DIVERGENCE (user request): the numbers behind the cards whose strength the port has changed.
+#: They live here, together, because they are tuning rather than logic - each is read in one place and
+#: meant to be argued about - and because a card that names its own odds builds the sentence it shows
+#: from the number beside it (`data.REWORDED`), so the words cannot drift from the game.
+
+#: Lucky Shot: the chance, per enemy hit, of a critical.  `calculateHitEnemies` 0x1000c2f14 rolls
+#: `random() % 100 == 1`, one hit in a hundred, which is a whole game for one extra critical on a card a
+#: player gave a tarot slot to.  What makes this worth more than it looks is where the roll sits: a
+#: weapon's own critical (5% to 15%) is rolled only inside `criticalSpread`, a cone of 5 to 10 degrees,
+#: and this one is rolled on any hit however loosely aimed.  50 was tried and is too much - it beats
+#: everything else in the deck several times over.  At 20 a hunting rifle, at 2.5x, gains about 30% more
+#: damage across a run, which stands beside Military Grade Weapons' 10% without burying it.
+LUCKY_SHOT_PERCENT = 20
+
+#: Rusty Weapons: the chance, per shot, that the clip is emptied.  `resolveShoot` 0x100015b60 rolls
+#: `rand() % 100 == 1`, and because the roll is per shot a small clip is few rolls - a pistol's six rounds
+#: come through 94 times in 100, so most guns play a whole game without noticing.  At 3 a clip jams about
+#: 17% of the time on the pistol and 78% on the machine gun, which rolls 50 times and takes the game's
+#: longest reload at 6 seconds.  Five would put the machine gun at 92%: not a hazard, a broken gun.
+RUSTY_JAM_PERCENT = 3
+
 FLAGS = ('slowerEnemies', 'weakerEnemies', 'moreDamages', 'moreMeleeDamages', 'moreBullets', 'freeRevive',
          'luckyShots', 'metalDetector', 'tesla', 'goldenBullet', 'widerSpread', 'moreHeadshots',
          'baseComboBonus', 'morePowerUps', 'betterPowerUps', 'jukebox', 'strongerEnemies', 'cows', 'storm',

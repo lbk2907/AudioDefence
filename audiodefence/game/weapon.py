@@ -15,23 +15,9 @@ from ..platform import crand
 from ..platform.defaults import ns_bool_value, ns_float_value, ns_int_value
 from ..platform.tracker import Tracker
 from ..s3d.engine import S3DEngine
-from .modifiers import GameModifiers
+from .modifiers import RUSTY_JAM_PERCENT, GameModifiers
 
 log = logging.getLogger('weapon')
-
-#: PORT DIVERGENCE (user request): how often Rusty Weapons jams, as a chance per shot.  The original rolls
-#: `rand() % 100 == 1` at 0x100015b60, which is one shot in a hundred, and on most guns that is a whole
-#: game without noticing: a pistol empties six shots at a time, so a clip survives 94 times in 100.
-#:
-#: Three in a hundred is the number here.  It is felt on every gun and it still leaves them usable: a
-#: clip jams about 17% of the time on the pistol, 26% on the hunting rifle, 53% on the tactical rifle and
-#: 78% on the machine gun, which has 50 rounds to roll and the longest reload in the game at 6 seconds.
-#: Five would put the machine gun at 92%, which is not a weapon with a hazard, it is a weapon that does
-#: not work.  Raising this is the whole change; the `< n` form matches the original's odds at 1.
-#:
-#: A jam costs the reload and nothing else: `resolveShoot` zeroes the clip and leaves `bulletsTotal`
-#: alone, so the rounds come back when the gun is reloaded.
-RUSTY_JAM_PERCENT = 3
 
 STATE_NAMES = ('Idle', 'Switching', 'Shooting', 'Continuous', 'Continuous to tail', 'Continuous Empty',
                'Reload Down', 'Reload Empty', 'Reload Up')   # 0x1000152d4..0x100015334
@@ -387,6 +373,8 @@ class Weapon:
         self.bullets_in_clip = self.bullets_in_clip - 1
         self.bullets_total = self.bullets_total - 1
         if GameModifiers.shared().rustyWeapons:
+            # PORT DIVERGENCE: 1 in the original; see modifiers.RUSTY_JAM_PERCENT.  Only the clip goes -
+            # bulletsTotal is untouched, so a jam costs the reload and no ammunition.
             if crand.c_mod(crand.rand(), 100) < RUSTY_JAM_PERCENT:
                 self.bullets_in_clip = 0
         if self.continuous_sound is not None:
