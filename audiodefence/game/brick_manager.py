@@ -232,8 +232,12 @@ class BrickManager:
         if self.brick_chance_dictionary is not None:
             name = self.brick_name_for_wave_number(self.current_wave)
             mods = GameModifiers.shared()
-            if self.current_wave > 11 or mods.enragedHorde:
-                mods.difficultyModifier = mods.difficultyModifier + 0.14
+            # PORT DIVERGENCE: a step for each card that asked, with the game's own step past wave 11
+            # counting as one of them rather than another on top - which is what the original does when
+            # both are true.  One card, or wave 12 with no card, is 0.14 exactly as before.
+            steps = max(1 if self.current_wave > 11 else 0, mods.times('enragedHorde'))
+            if steps:
+                mods.difficultyModifier = mods.difficultyModifier + 0.14 * steps
                 log.info('Difficulty ramped to %f', mods.difficultyModifier)
         elif self.brick_scenario is not None:
             name = self.scenario_brick_name_for_wave_number(self.current_wave)

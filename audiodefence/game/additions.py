@@ -79,27 +79,36 @@ def named(entries, name: str):
 
 # ================================================================================ the additions themselves
 
-#: A fifth power-up level, which the Powered Power Ups tarot card is the only way to reach.
+#: How far past level 4 each power-up's own progression is carried.  Two cards can ask for two levels -
+#: Powered Power Ups in the level-1 deck and Emergency Supplies in the level-4 one - and a card that asks
+#: and gets nothing is the fault this project has taken out twice, so the data goes further than the cards
+#: can reach rather than exactly as far (user request).  Four is well past the two that are possible now.
+EXTRA_POWER_UP_LEVELS = 4
+
+#: The power-up levels past the highest that can be bought, which the tarot is the only way to reach.
 #:
-#: The card says "All Power Ups are fully levelled up for this game" and gives one level, and only when
-#: the data has a next one - so a player who has bought every upgrade gets nothing at all from it, while
-#: being told it is one of the best cards in the deck.  They keep it and play a run with one of their two
-#: tarot slots empty.  This is the level that player gets instead (user request).
+#: Powered Power Ups says "All Power Ups are fully levelled up for this game" and gives one level, and only
+#: when the data has a next one - so a player who had bought every upgrade got nothing at all from it while
+#: being told it was one of the best cards in the deck.  These are the levels that player gets instead.
 #:
-#: The numbers carry each power-up's own progression one step: the Minigun's duration goes up by 2.5 a
-#: level, the Tesla's kills by one, and the Fireworks' damage and the Tornado's reach both take the +2
-#: their own last step took.  It cannot be bought: the armory stops at four in three places of its own
-#: (`upgrade_button_pressed` tests `level > 3`, two more test `level >= 4`), which read the inventory.
+#: They cannot be bought: the armory stops at four in three places of its own (`upgrade_button_pressed`
+#: tests `level > 3`, two more test `level >= 4`), all of which read the inventory rather than this data.
 #:
-#: `frequency` is deliberately absent.  `resetPowerUpCooldown` 0x10004b640 reads its level straight from
-#: the inventory rather than through `_level_dictionary`, so the card has never reached the cooldown, in
-#: the original or here; giving it a fifth level would add a tier nothing reads.
-FIFTH_POWER_UP_LEVEL = {
-    'minigun': {'duration': 15},                          # 5, 7.5, 10, 12.5
-    'fireworks': {'damages': 9},                          # 3, 4, 5, 7
-    'tesla': {'kills': 5},                                # 1, 2, 3, 4
-    'tornado': {'blowDistance': 7},                       # 1, 2, 3, 5
-}
+#: How far to carry them: two cards can ask for two levels - Powered Power Ups in the level-1 deck and
+#: Emergency Supplies in the level-4 one - and a card that asks and is given nothing is the fault this
+#: project has taken out twice already.  So the data goes further than any hand can reach rather than
+#: exactly as far (user request).  Four is well past the two that are possible today.
+EXTRA_POWER_UP_LEVELS = 4
+
+#: `frequency` is deliberately left out.  `resetPowerUpCooldown` 0x10004b640 reads its level straight
+#: from the inventory rather than through `_level_dictionary`, so the tarot has never reached the cooldown,
+#: in the original or here; giving it further levels would add tiers nothing reads.
+NO_EXTRA_LEVELS = ('frequency',)
+
+
+def _tidy(value: float):
+    """15.0 as 15 and 17.5 as 17.5, which is how the original's own levels are written."""
+    return int(value) if float(value) == int(value) else float(value)
 
 
 #: The port's own tarot cards, by the deck they are dealt from (user request).
@@ -210,13 +219,30 @@ def new_tarot_cards(tarot: dict) -> None:
 
 
 @adds_to('Weapons')
-def fifth_power_up_level(weapons: dict) -> None:
-    """Give four of the power-ups a `level_5`, which only Powered Power Ups can reach.
+def extra_power_up_levels(weapons: dict) -> None:
+    """Carry each power-up's own progression past the level that can be bought.
 
-    With the level in the data, `_level_dictionary`'s own rule - one level up when `level_<level+1>`
-    exists - does the rest, so the port needs no special case of its own.
+    The step is read from the original's own last two levels rather than written down here, so each
+    power-up carries on as it was going: the Minigun's duration by 2.5 (10 to 12.5), the Fireworks' damage
+    and the Tornado's reach by 2, the Tesla's kills by 1.  That reproduces exactly the hand-written
+    `level_5` this replaced - 15 seconds, 9 damage, 5 kills, 7 of reach - and goes on from there.
+
+    With the levels in the data, `_level_dictionary`'s own rule does the rest: it climbs one level for
+    every card that asked, as far as there is a level to climb to.  The tiers past what any hand can
+    reach are inert, since nothing reads a key nobody asks for, and they are there so that adding a card
+    later cannot quietly leave one doing nothing (user request).
     """
-    for name, level in FIFTH_POWER_UP_LEVEL.items():
-        entry = named(weapons.get('PowerUps'), name)
-        if entry is not None:
-            new_key(entry, 'level_5', dict(level))
+    for entry in weapons.get('PowerUps') or ():
+        if not isinstance(entry, dict) or entry.get('name') in NO_EXTRA_LEVELS:
+            continue
+        third, fourth = entry.get('level_3'), entry.get('level_4')
+        if not isinstance(third, dict) or not isinstance(fourth, dict):
+            continue
+        stats = [k for k in fourth if k != 'upgradeCost' and k in third]
+        if not stats:
+            continue
+        value = {k: float(fourth[k]) for k in stats}
+        step = {k: float(fourth[k]) - float(third[k]) for k in stats}
+        for n in range(5, 5 + EXTRA_POWER_UP_LEVELS):
+            value = {k: value[k] + step[k] for k in stats}
+            new_key(entry, 'level_%i' % n, {k: _tidy(value[k]) for k in stats})

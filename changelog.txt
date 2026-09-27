@@ -12,7 +12,7 @@ When a card changes, only the new card is read out, not the price of changing it
 Explosions that go off while your ears are still ringing add to the ringing, and it keeps sounding for as long as it lasts.
 An explosion is no longer cut off halfway when another one goes off beside it.
 Going back has a sound of its own now, so leaving a screen no longer sounds the same as pressing a button on it.
-Two tarot cards that do the same thing now add up. Ten per cent more damage from each is twenty per cent, not ten.
+Two tarot cards that do the same thing now add up. Ten per cent more damage from each is twenty per cent, not ten, and a card never turns out to be worth nothing because another one got there first.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.

@@ -727,7 +727,7 @@ class GameplayController:
 
     def show_revive_view(self) -> None:                   # 0x10005ba78
         AmbientManager.shared().stop_ambient()
-        free = 1 if GameModifiers.shared().freeRevive else 0
+        free = GameModifiers.shared().times('freeRevive')   # PORT DIVERGENCE: one a card, not one a hand
         cost = int(math.ldexp(1.0, self.nb_revives - free))
         self.revive_view_controller = ReviveController(cost)
         self.revive_view_controller.gameplay_view_controller = self

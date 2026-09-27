@@ -1242,6 +1242,30 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   and then cut.  `overlapping_voice_of` hands out a voice that is free instead, which is the port's own
   answer to exactly this and was already carrying the bullet impacts.
 
+* PORT ADDITION / DIVERGENCE: everything adds in, with nothing left with nowhere to go (user request).
+  Counting the cards was not enough on its own, because three things ran out or shut each other up.
+
+  **The power-up levels go further than any hand can reach.**  Two cards can ask for two levels - Powered
+  Power Ups in the level-1 deck, Emergency Supplies in the level-4 - and the data stopped at the one level
+  the port had added, so a player at level 4 paid Emergency Supplies' ten seconds and got nothing for it:
+  Powered Power Ups had already taken them as high as the data went.  `additions.extra_power_up_levels`
+  carries each progression four levels past what can be bought, reading the step from the original's own
+  last two levels rather than writing numbers down - the Minigun's 2.5 (10 to 12.5), the Fireworks' and the
+  Tornado's 2, the Tesla's 1 - which reproduces exactly the hand-written `level_5` it replaced and goes on.
+  The tiers past what a hand can reach are inert, and they are there so a card added later cannot quietly
+  be given nothing.  `frequency` is still left out, its cooldown being read from the inventory.
+
+  **A clip gains and loses.**  `Weapon.__init__` is an `if/elif`, so Golden Bullet silenced any card taking
+  bullets away - and with four decks that is a real hand: Golden Bullet is in the level-3 deck and Hair
+  Trigger in the level-4 one, so the card a player was told holds 10% fewer bullets held none fewer.  Each
+  card takes its tenth of what is there now, up or down, and two opposite cards cancel out.
+
+  **A revive for each card that offers one**, where `freeRevive` gave one however many asked.
+
+  **The horde ramps once for each card**, `enragedHorde` being in two decks.  The game's own step past wave
+  11 counts as one of them rather than another on top, so one card, or wave 12 with no card, is 0.14 exactly
+  as the original has it, and two cards are 0.28.
+
 * DIVERGENCE: two cards with the same effect do it twice (user request).  The original's modifiers are
   booleans, so `applyModifier:` 0x100035da4 setting `moreDamages` twice left it exactly as one card had -
   Military Grade Weapons in slot 3 and Heavy Artillery in slot 4 gave 10% more damage between them, not
