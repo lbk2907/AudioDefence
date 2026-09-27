@@ -35,9 +35,9 @@ DEAL_LAST_FLIP = 2.0
 DEAL_SECONDS = 2.3
 
 #: PORT DIVERGENCE (user request): the third card is dealt and kept, and so is any card after it.  The
-#: first two can still be bought out of, at 3 diamonds and 2; the level-3 deck is an even split of six
-#: good cards and six bad, so the hand always holds one card the player did not choose and cannot pay to
-#: be rid of.
+#: first two can still be bought out of, at 3 diamonds and 2; the level-3 deck is a near-even split of
+#: good cards and bad, so the hand always holds one card the player did not choose and cannot pay to be
+#: rid of.
 LOCKED_CARD_LEVEL = 3
 
 #: PORT ADDITION (testing, user request): `--free-cards` lets the cards from `LOCKED_CARD_LEVEL` on be

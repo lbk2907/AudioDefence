@@ -106,8 +106,9 @@ FIFTH_POWER_UP_LEVEL = {
 #:
 #: Each deck has a subject the original kept to, and these keep to it as well: level 1 is the arena and
 #: what you brought to it, level 2 is the zombies, and level 3 - the card that is dealt and kept - is your
-#: guns.  Each deck also gains as many good cards as bad ones, so the even split that makes the third card
-#: a coin flip stays even.
+#: guns.  A deck gains as many good cards as bad ones wherever it can, so the near-even split that makes
+#: the third card close to a coin flip stays that way; level 3 stands at eight good to seven bad, because
+#: Executioner's opposite was already in the deck as Black Cat and needed no card of its own.
 #:
 #: Every `selector` here is a flag something reads.  Two are the original's own and were never dealt:
 #: `fasterReloadTime` and `slowerReloadTime` are set by nothing in the original, and `reloadTimeModifier`
@@ -136,6 +137,9 @@ NEW_CARDS = {
         {'title': 'Heavy Hands', 'goodbad': 'bad', 'selector': 'slowerReloadTime',
          'icon': 'Roulette_icon_cogs',
          'description': 'Your hands are like lead. Reloading takes far longer.'},
+        {'title': 'Executioner', 'goodbad': 'good', 'selector': 'alwaysCritical',
+         'icon': 'Roulette_icon_headshot',
+         'description': 'Every hit you land is a critical hit, however you aim.'},
     ),
 }
 

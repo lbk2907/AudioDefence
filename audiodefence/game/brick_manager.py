@@ -342,8 +342,12 @@ class BrickManager:
                     notify_stats('UPDATE_CRITICAL_HITS', 1)
                 else:
                     t.next_shot_will_be_precise = True
-            # PORT DIVERGENCE: 1 in the original; see modifiers.LUCKY_SHOT_PERCENT
-            if mods.luckyShots and crand.c_mod(crand.random(), 100) < LUCKY_SHOT_PERCENT:
+            # PORT DIVERGENCE: 1 in the original; see modifiers.LUCKY_SHOT_PERCENT.  Both of these sit
+            # outside the `criticalSpread` test above, so they are what pays for a hit that was not
+            # lined up - the weapon's own critical never can.  PORT ADDITION: `alwaysCritical` is the
+            # Executioner card, the same thing with no roll at all, and Black Cat's opposite.
+            if mods.alwaysCritical or (mods.luckyShots
+                                       and crand.c_mod(crand.random(), 100) < LUCKY_SHOT_PERCENT):
                 t.next_shot_will_be_critical = True
             if t.next_shot_will_be_critical and self.gameplay_view_controller is not None:
                 self.gameplay_view_controller.player_did_a_critical_hit()

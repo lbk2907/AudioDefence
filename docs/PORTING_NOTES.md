@@ -1211,6 +1211,24 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   modifier under the same key.  Nothing else moves: `applyAllModifiers` 0x100035a5c still reads the live
   card, and `resetCardsModifiersIfNeeded` 0x1000d42a8 still clears all three keys after an endless game
   lasting over 60 seconds, so a fresh deal still follows a real run.
+* PORT ADDITION: Executioner, a tarot card that makes every hit critical (user request).  It is the
+  opposite of Black Cat, which is the original's own and says "Your weapons will land no critical hits";
+  that card had no good half, and this is it.  `modifiers.PORT_FLAGS` carries `alwaysCritical`, and
+  `calculateHitEnemies` 0x1000c2f14 sets the hit critical with no roll, beside Lucky Shot's and outside
+  the `criticalSpread` test, so it pays for a hit however it was aimed.
+
+  Measured through the real hit calculation, on the hunting rifle, 20,000 shots each.  On a shot 20
+  degrees off - inside the gun's spread, outside its 10-degree critical cone - nothing is critical
+  plainly, nothing is critical with Head-Seeking Bullets, 49.4% are with Lucky Shot and all of them are
+  with Executioner.  Dead on: 14.7% plainly against the gun's own 15, 22.9% with Head-Seeking Bullets
+  (1.5 times 15), none with Black Cat, and all of them with Executioner.  That is the whole shape of the
+  four cards in one table, and the reason Head-Seeking Bullets and Lucky Shot are not two sizes of the
+  same thing: one pays only inside the cone, the other only outside it matters.
+
+  Black Cat does not stop every critical in the game, and that is the original's: a direct hit from an
+  explosive weapon sets one in `targetEnemiForExplosiveWeapon` 0x1000c57b8 without consulting the flag.
+  Nothing else can reach it, since all four of these cards are level 3 and a hand holds one of those.
+
 * PORT DIVERGENCE: Lucky Shot makes half of every hit critical (user request).  `calculateHitEnemies`
   0x1000c2f14 rolls `random() % 100 == 1` - one hit in a hundred, which is a whole game for one extra
   critical, on a card a player gave a tarot slot to.  `modifiers.LUCKY_SHOT_PERCENT` is 50.
@@ -1250,7 +1268,7 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
 
 * PORT ADDITION: six tarot cards of the port's own, and more to come (user request).  Each deck keeps
   the subject the original kept it to - level 1 is the arena and what you brought to it, level 2 is the
-  zombies, level 3 is your guns - and each gains as many good cards as bad, so the even split that makes
+  zombies, level 3 is your guns - and each gains as many good cards as bad, so the near-even split that makes
   the third card a coin flip stays even.  They are declared in `additions.NEW_CARDS` and dealt by the
   overlay, so `game/Tarot.plist` is untouched; `additions.new_entry` refuses a title one of their cards
   already has, which is `new_key`'s counterpart for the plists that are lists.
@@ -1306,7 +1324,8 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   says "(this card cannot be changed)" where the other two say what pressing Enter costs.  It gives no
   count of diamonds in its hint either, because the count is what you would be spending.  The first two
   cards are untouched: 3 diamonds and 2, changed as often as you can pay for.  The point is that a hand
-  always holds one card nobody chose, out of a deck that is an even split of good and bad.
+  always holds one card nobody chose, out of a deck that is a near-even split of good and bad - eight to
+  seven as it stands, Executioner having found its opposite already in the deck.
 
   `--free-cards` (`UNLOCK_CARDS_FOR_TESTING`) opens the locked cards and charges nothing for changing
   them, so one can be looked for by pressing Enter rather than by playing hands until it turns up.  It is

@@ -47,7 +47,7 @@ EXTRA_SETTERS = ('fullMoon', 'bullshit', 'difficultyModifier')
 #: which effects are Somethin' Else's and which are ours.  Everything that reads FLAGS reads these too:
 #: they are cleared by `reset_modifiers` at the start of every game and accepted by `has_setter`, so a card
 #: carrying one is applied by `applyModifier:` 0x100035da4 exactly as the original's cards are.
-PORT_FLAGS = ('earlyPowerUp', 'luckyNight', 'lessPowerUps', 'lessCoins')
+PORT_FLAGS = ('earlyPowerUp', 'luckyNight', 'lessPowerUps', 'lessCoins', 'alwaysCritical')
 
 
 class GameModifiers:
