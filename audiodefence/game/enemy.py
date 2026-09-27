@@ -535,6 +535,8 @@ class Enemy:
             return None
         if self.explosion_dictionary is not None:
             return self.explosion_dictionary               # its own, bystander or not
+        if getattr(self, 'no_lent_blast', False):          # PORT ADDITION: a Powder Keg crowd, never
+            return None
         if mods.everythingExplodes and not self.is_a_bystander():
             from .modifiers import CHAIN_REACTION_BLAST
             return CHAIN_REACTION_BLAST

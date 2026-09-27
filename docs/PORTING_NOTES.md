@@ -1363,7 +1363,7 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   back is the whole reason for paying.  The button is dimmed while a shuffle lands (`shuffling`) so a
   second press cannot be paid for on top of the first.
 
-* PORT ADDITION: a shuffle rolls for the fourth slot again, not only for what is in it (user request).
+* PORT ADDITION: a shuffle rolls for the last slot again, not only for what is in it (user request).
   The slot is a chance, so a hand can come back from a shuffle without it - as though it had never been
   dealt one - and a hand of three can come back with it.  Measured over 60 shuffles of a four-card hand:
   ten lost the fourth card and nine gained one back.
@@ -1410,10 +1410,10 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   `shuffle_button_pressed` returns while `dealing` so no path round it reaches the money.  Both wordings
   of the label are written out rather than built with a `%s`, so `verify_localization` can see them.
 
-* PORT ADDITION: the fourth card is a chance, not a fixture (user request).  A quarter of hands are dealt
+* PORT ADDITION: the last card is a chance, not a fixture (user request).  A quarter of hands are dealt
   one; the rest hold three.  That is what the level-4 deck is for - a card worth reading because it is not
   there every time - and it is why those cards can be as strong and as costly as they are.
-  `tarot.FOURTH_CARD_CHANCE` is the number, and rarer reads better on paper than in play: the deck has
+  `tarot.LAST_CARD_CHANCE` is the number, and rarer reads better on paper than in play: the deck has
   twelve cards, and at one hand in ten a player would meet one for the first time after an evening of runs
   with no idea what it was about to do to them.
 
@@ -1425,7 +1425,31 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   A three-card hand is laid out by the original's own spacing, gaps of exactly 10 points, because that
   formula only goes negative at four.
 
-* PORT ADDITION: a fourth tarot card, from a deck of the port's own where every card gives with one
+* PORT ADDITION: a fourth deck, and zombies the port deals itself (user request).  Slot 4 is dealt every
+  hand, as slot 3 is, and holds what Dr. Bastard does to the arena rather than to a player's numbers:
+  Chain Reaction, Damp Squib and **Powder Keg**.
+
+  Powder Keg is the first thing in the port to put an enemy in the arena outside a wave.  Nothing in the
+  original does: a wave is a plist read once when `ADBrick` is built, which is also when the playlists its
+  enemies need are activated (`loadPLaylistWithName:` 0x10009fdec, `onPlaylistActivated:` 0x1000a0a1c) -
+  so a zombie conjured mid-wave is one whose sounds may not be loaded, and a zombie a player cannot hear
+  coming is a death rather than a glitch.  `spawner.py` gets round it by conjuring **the kind of zombie
+  the wave already holds**: its playlist is live by definition, so the crowd is audible the moment it
+  arrives, nothing has to be loaded and nothing waited for.  It reads well too - what comes is more of
+  what you were already fighting.
+
+  The cycle is a ring of ten dealt at 3.5 units, each of them given an explosion of its own so the ring
+  goes up whatever the other cards say.  At that radius they stand 2.2 apart, inside the 3-unit blast, so
+  one shot takes the whole ring - the original's own chain doing the work.  3.5 is also inside the 5 units
+  a blast needs to reach a player's ears, and outside the 3 at which a zombie stops walking and lunges, so
+  there are a few seconds to find one.  When the ring is gone a crowd of five is dealt at 10 units, where
+  a wave's own zombies come from, and nothing in it explodes - `no_lent_blast` keeps Chain Reaction from
+  lending even those a bomb, the Farties included.  Then another ring, while the crowd is still about.
+
+  The waves are untouched: `ADBrick` spawns what its plist says on its own clock, and these are added to
+  the list it already updates, so the ordinary game carries on around them.
+
+* PORT ADDITION: the fifth tarot card, from a deck of the port's own where every card gives with one
   hand and takes with the other (user request).  `Tarot.plist` has no `level_4`, so the overlay makes one
   (`new_key`, the level being a key the original does not have) and fills it with twelve: Glass Cannon
   trades every hit critical for zombies with 20% more hit points, Thunder Luck trades half your shots

@@ -642,7 +642,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **151 divergences** and **15 original quirks kept on purpose** in the notes, of which 76 are
+There are **152 divergences** and **15 original quirks kept on purpose** in the notes, of which 76 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -827,9 +827,9 @@ replacing them.
   the strength you choose. Each kind of controller keeps its own buttons, and the hints and the tutorial
   can name its buttons instead of the keys. See
   [With a game controller](#with-a-game-controller).
-- **A third tarot card** before an Endless game, from a deck of twelve the original ships and never deals,
-  **and a fourth about a quarter of the time**, from a deck of the port's own where every card helps and
-  hurts at once. Neither can be changed at any price, so a hand always holds cards nobody picked. The
+- **Two more tarot cards** before an Endless game — a third from a deck of twelve the original ships and
+  never deals, and a fourth from a deck of the port's own for what Dr. Bastard does to the arena — **and a
+  fifth about a quarter of the time**, from a deck where every card helps and hurts at once. Neither can be changed at any price, so a hand always holds cards nobody picked. The
   first two are as they were, at 3 diamonds and 2, and the deal still takes the time it always took. A
   **Shuffle** button deals the locked cards again together, for 3 diamonds and 2,500 coins — a new set,
   not a choice, so it may be worse than what you had.

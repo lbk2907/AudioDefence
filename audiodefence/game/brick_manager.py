@@ -49,6 +49,8 @@ class BrickManager:
         self.diamonds: list = []
         self.passer_by_manager = PasserByManager()
         self.power_up_manager = PowerUpManager()
+        from .spawner import PowderKeg                   # PORT ADDITION: the zombies a card brings
+        self.powder_keg = PowderKeg()
         self.current_wave = 0
         self.deactivation_list: set = set()
         self.powerup_list = [p.get('name') for p in (data.plist_ro('Weapons').get('PowerUps') or [])
@@ -102,6 +104,7 @@ class BrickManager:
         # init does not - it is built with the brick manager and lives as long as the app - so the card
         # is spent here rather than there, and only the first drop of the game is the free one.
         self.power_up_manager.forced_first_drop = GameModifiers.shared().earlyPowerUp
+        self.powder_keg.reset()                           # PORT ADDITION: a new game owes no rings
 
     @property
     def mode(self) -> int:                                      # 0x1000c301c
@@ -275,6 +278,7 @@ class BrickManager:
         self.passer_by_manager.update(dt)
         if self.mode == 1:
             self.power_up_manager.update(dt)
+            self.powder_keg.update(dt)                    # PORT ADDITION: see spawner.py
             if self.next_diamond_time < 0.0:
                 self.randomize_next_diamond_time()
                 self.add_diamond()

@@ -78,7 +78,7 @@ PAIRED_FLAGS = {
 CHAIN_REACTION_BLAST = {'radius': 3, 'damages': 50, 'dispersal': 75}
 
 PORT_FLAGS = ('earlyPowerUp', 'luckyNight', 'lessPowerUps', 'lessCoins', 'alwaysCritical',
-              'everythingExplodes', 'noFartyBlast') + tuple(PAIRED_FLAGS)
+              'everythingExplodes', 'noFartyBlast', 'powderKeg') + tuple(PAIRED_FLAGS)
 
 
 class GameModifiers:

@@ -139,12 +139,30 @@ NEW_CARDS = {
          'icon': 'Roulette_icon_sonar',
          'description': 'Something is torn. You earn 15% fewer Coins this game.'},
     ),
-    #: A deck of the port's own, which the original has no level for: every card in it gives with one
-    #: hand and takes with the other, which is why it sits in a slot that cannot be changed - the deal is
-    #: taken as offered.  `goodbad` is 'both', a value the original never uses: nothing reads it but the
-    #: card art that does not ship and the analytics dimensions, where `is_good` reading False is right
-    #: enough for a card that is half of each.  The pairs are `modifiers.PAIRED_FLAGS`.
+    #: The fourth deck, which the original has no level for: what Dr. Bastard does to the arena rather
+    #: than to the player's numbers.  These are the cards that change what a run sounds like - things going
+    #: off, and crowds arriving - and slot 4 is dealt every hand, as slot 3 is.
     'level_4': (
+        {'title': 'Chain Reaction', 'goodbad': 'both', 'selector': 'everythingExplodes',
+         'icon': 'Roulette_icon_threezombies',
+         'description': 'Every Zombie explodes when it dies, taking its neighbours with it. '
+                        'The blasts will leave your ears ringing.'},
+        {'title': 'Damp Squib', 'goodbad': 'both', 'selector': 'noFartyBlast',
+         'icon': 'Roulette_icon_glue',
+         'description': 'Farties no longer explode, so nothing will deafen you. '
+                        'They will not clear a crowd for you either.'},
+        {'title': 'Powder Keg', 'goodbad': 'both', 'selector': 'powderKeg',
+         'icon': 'Roulette_icon_threezombies',
+         'description': 'Dr. Bastard rings you with Zombies rigged to blow. '
+                        'Set one off and the whole ring goes, then a crowd that will not arrives.'},
+    ),
+
+    #: The fifth deck, and the only one a hand does not always hold: every card in it gives with one hand
+    #: and takes with the other, which is what a card worth waiting for should do.  `goodbad` is 'both', a
+    #: value the original never uses; nothing reads it but the card art that does not ship and the
+    #: analytics dimension, where `is_good` coming back False is fair for a card that is half of each.
+    #: The pairs are `modifiers.PAIRED_FLAGS`.
+    'level_5': (
         {'title': 'Glass Cannon', 'goodbad': 'both', 'selector': 'glassCannon',
          'icon': 'Roulette_icon_headshot',
          'description': 'Every hit you land is a critical hit. The Zombies have 20% more hit points.'},
@@ -178,14 +196,6 @@ NEW_CARDS = {
         {'title': 'Iron Sights', 'goodbad': 'both', 'selector': 'ironSights',
          'icon': 'Roulette_icon_headshot',
          'description': 'Your chance of a critical hit goes up by half. Your accuracy is slightly reduced.'},
-        {'title': 'Chain Reaction', 'goodbad': 'both', 'selector': 'everythingExplodes',
-         'icon': 'Roulette_icon_threezombies',
-         'description': 'Every Zombie explodes when it dies, taking its neighbours with it. '
-                        'The blasts will leave your ears ringing.'},
-        {'title': 'Damp Squib', 'goodbad': 'both', 'selector': 'noFartyBlast',
-         'icon': 'Roulette_icon_glue',
-         'description': 'Farties no longer explode, so nothing will deafen you. '
-                        'They will not clear a crowd for you either.'},
         {'title': 'House Band', 'goodbad': 'both', 'selector': 'houseBand',
          'icon': 'Roulette_icon_music',
          'description': 'You start the game with double Combo. An old jukebox plays terrible music.'},

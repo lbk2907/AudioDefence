@@ -17,7 +17,7 @@ from .viewcontroller import ViewControllerScreen
 
 log = logging.getLogger('ui.tarot')
 
-#: PORT DIVERGENCE (user request): four cards are dealt, not two - `cardsToLoad` is set to 2 in
+#: PORT DIVERGENCE (user request): five cards are dealt, not two - `cardsToLoad` is set to 2 in
 #: -viewDidLoad 0x10003461c.  Tarot.plist ships a third level of twelve cards, six good and six bad, that
 #: the original never deals, and the port adds a fourth of its own (`additions.NEW_CARDS`) where every
 #: card gives and takes at once.  Most of the way to three was already built: the layout maths divides the
@@ -25,7 +25,7 @@ log = logging.getLogger('ui.tarot')
 #: -resetCardsModifiersIfNeeded 0x1000d42a8 already cleared three keys.  The fourth needed the reset
 #: widened (it cleared 1 to 3, so a fourth card would have been dealt once and kept for good) and the
 #: spacing rewritten, which goes negative at four.
-CARDS_TO_LOAD = 4
+CARDS_TO_LOAD = 5
 
 #: PORT DIVERGENCE (user request): the deal takes as long as the original's, whatever is in it.  Both
 #: numbers are the original's own: -viewDidLoad 0x10003461c waits 2.3 s before it lets you play, and its
@@ -42,15 +42,15 @@ DEAL_SECONDS = 2.3
 #: rid of.
 LOCKED_CARD_LEVEL = 3
 
-#: PORT ADDITION (user request): how often a hand is dealt the fourth card at all, as a chance per hand.
-#: Most hands hold three; now and then a fourth turns up from the level-4 deck, where every card gives and
+#: PORT ADDITION (user request): how often a hand is dealt the last card at all, as a chance per hand.
+#: Most hands hold four; now and then a fifth turns up from the level-5 deck, where every card gives and
 #: takes at once.  That is what those cards are for - a surprise worth reading, rather than a fixture - and
 #: it is why they can be as strong and as costly as they are.
 #:
 #: A quarter is the number.  Rarer reads well on paper and badly in play: the deck has twelve cards, and at
 #: one hand in ten a player would meet a card for the first time after an evening of runs and have no idea
 #: what it was going to do to them.
-FOURTH_CARD_CHANCE = 25
+LAST_CARD_CHANCE = 25
 
 #: PORT ADDITION (user request): how long between the flips of a shuffle.  A shuffle deals every locked
 #: card again, and each one gets a flip of its own, so two cards are two sounds - what a player hears is
@@ -495,7 +495,7 @@ class TarotScreen(ViewControllerScreen):
             sb.set_armory_button_visibility(True)
 
     def cards_this_hand(self) -> int:
-        """PORT ADDITION: three cards, or four when this hand has rolled one (see FOURTH_CARD_CHANCE).
+        """PORT ADDITION: three cards, or four when this hand has rolled one (see LAST_CARD_CHANCE).
 
         Rolled once and kept, so leaving this screen and coming back deals the same hand back - which is
         what the stored cards do, and a hand that changed size on the way past would be worse than either.
@@ -507,7 +507,7 @@ class TarotScreen(ViewControllerScreen):
 
     def roll_hand_size(self) -> int:
         """PORT ADDITION: roll for the fourth card, and remember the answer."""
-        rolled = CARDS_TO_LOAD if crand.c_mod(crand.rand(), 100) < FOURTH_CARD_CHANCE \
+        rolled = CARDS_TO_LOAD if crand.c_mod(crand.rand(), 100) < LAST_CARD_CHANCE \
             else CARDS_TO_LOAD - 1
         defaults = UserDefaults.standard()
         defaults.set_integer(rolled, HAND_SIZE_KEY)
