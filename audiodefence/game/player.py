@@ -7,6 +7,12 @@ from ..s3d.engine import S3DEngine
 
 log = logging.getLogger('player')
 
+#: PORT DIVERGENCE (user request): as long as a ring can last, however many blasts went into it.  One
+#: explosion rings for at most 13 s (`intensity * 10 + 3`) and they add up now, so a crowd of exploding
+#: zombies would otherwise leave a player deafened for minutes.  Twenty is comfortably longer than any
+#: single blast can manage and still ends.
+TINNITUS_MAX = 20.0
+
 
 class Player:
     def __init__(self):                                   # -[ADPlayer init] 0x1000b647c
@@ -72,7 +78,10 @@ class Player:
         # add to a ring, which is what an ear does.
         running = self.tinnitus_duration > 0.0
         if running:
-            duration = max(duration, self.tinnitus_duration - self.tinnitus_timer)
+            # what is left of the ring plus what the new blast is worth, to TINNITUS_MAX (user request):
+            # a second explosion adds to the first rather than replacing it.  The louder of the two gains
+            # is kept, so a distant blast can lengthen a bad ring but never quieten one.
+            duration = min(TINNITUS_MAX, duration + (self.tinnitus_duration - self.tinnitus_timer))
             gain = max(gain, self.tinnitus_intensity)
         # The recording is 14.1 s and the effect is at most 13, so one blast never outlasts its sound.  Two
         # do: the original only starts the sound when no ring is running at all, so a blast that extended a
@@ -82,7 +91,11 @@ class Player:
             self.tinnitus_sound = self.tinnitus_playlist.sound('tinnitus_and_background') \
                 if self.tinnitus_playlist is not None else None
         if self.tinnitus_sound is not None and not self.tinnitus_sound.playing:
-            self.tinnitus_sound.play(False)
+            # PORT DIVERGENCE (user request): looping.  The recording is 14.1 s and a ring can now run to
+            # TINNITUS_MAX, so it has to come round again rather than leave the reverb sitting on every
+            # enemy with nothing over it.  `stop_tinnitus` is what ends it, which the original did not
+            # need to do because its ring could never outlast one playing of the file.
+            self.tinnitus_sound.play(True)
         if self.tinnitus_sound is not None:
             self.tinnitus_sound.set_gain(gain)
         self.tinnitus_intensity = gain
@@ -93,8 +106,13 @@ class Player:
         engine.set_reverb_dampening(10.0)
         engine.set_reverb_volume(gain * 3.0 + 3.0)
 
-    def stop_tinnitus(self) -> None:                      # 0x1000b6b4c (the tinnitus sound itself is not stopped)
+    def stop_tinnitus(self) -> None:                      # 0x1000b6b4c
         log.info('Stop tinnitus')
+        # PORT DIVERGENCE: the original leaves the sound to run itself out, which it always did before the
+        # ring ended.  It loops now, so ending the ring has to end it.  The fade over the last fifth has
+        # taken the gain to nothing by here, so what stops is already silent.
+        if self.tinnitus_sound is not None:
+            self.tinnitus_sound.stop()
         engine = S3DEngine.engine()
         engine.set_reverb_room_size(1.5)
         engine.set_reverb_dampening(50.0)

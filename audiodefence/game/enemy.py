@@ -689,8 +689,14 @@ class Enemy:
         if self._life <= 0.0:
             if self.blast() is not None:                  # PORT ADDITION: see `blast`
                 if not (self.explosion_sound is not None and self.explosion_sound.playing):
-                    self.explosion_sound = (self.voice_of(self.playlist.any_sound_containing('explosion'))
-                                            if self.playlist else None)
+                    # PORT DIVERGENCE (user request): an overlapping voice, not the one voice.  A chain
+                    # puts a zombie inside two blasts, so this runs twice for it, and the second call
+                    # finds the first sound not yet playing - it is scheduled, not started - and plays the
+                    # same voice again, which restarts it where it had got to.  That is the explosion
+                    # heard cut off halfway.  `overlapping_voice_of` hands out a voice that is free.
+                    self.explosion_sound = (
+                        self.overlapping_voice_of(self.playlist.any_sound_containing('explosion'))
+                        if self.playlist else None)
                     if self.explosion_sound is None:
                         # PORT ADDITION: a zombie lent a bomb by Chain Reaction has no bang of its own -
                         # only the Farties and the Cars were ever given one - and damage nobody hears is
@@ -700,7 +706,7 @@ class Enemy:
                         # already in `game/` and already spatialised, and `ADEnemy` reaches into another
                         # playlist by name for the Tesla kill in the same way.
                         pl = S3DEngine.engine().play_list_with_name('Farty')
-                        self.explosion_sound = self.voice_of(
+                        self.explosion_sound = self.overlapping_voice_of(
                             pl.any_sound_containing('explosion')) if pl is not None else None
                     if self.explosion_sound is not None:
                         self.explosion_sound.set_planar((self.position[0], self.position[1], 0.0))

@@ -1225,8 +1225,22 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   sitting on every enemy in the arena with nothing ringing over it - the effect with its cause gone.  The
   sound is started whenever it is not playing, which answers both cases.
 
-  `stopTinnitus` 0x1000b6b4c is untouched: it puts the reverb back and deliberately leaves the sound to run
-  out, which is right, because the fade over the last fifth of a ring has taken its gain to nothing by then.
+  The ring **loops and adds up** (user request).  Rings add rather than replace - what is left of one plus
+  what the new blast is worth, to `TINNITUS_MAX`, twenty seconds - because a crowd of exploding zombies
+  would otherwise deafen a player for minutes, and because one blast can only ever manage thirteen.  The
+  louder gain is still kept, so a distant blast lengthens a bad ring and never quietens it.
+
+  And the recording loops, because a ring can now outrun its 14.1 seconds by some way.  That makes
+  `stopTinnitus` 0x1000b6b4c stop the sound, where the original left it to run itself out - which it could
+  do safely, its ring never outlasting one playing of the file.  What stops is already silent: the fade
+  over the last fifth of a ring has taken the gain to nothing by then.
+
+* DIVERGENCE: an explosion is not cut off by the next one (user request).  An `S3DSound` owns one OpenAL
+  source, so playing it again restarts it where it had got to.  A chain puts a zombie inside two blasts,
+  so `playHitSoundForDamages:` runs twice for it, and the second call finds the first sound not yet
+  playing - scheduled, not started - and plays the same voice again.  That is an explosion heard halfway
+  and then cut.  `overlapping_voice_of` hands out a voice that is free instead, which is the port's own
+  answer to exactly this and was already carrying the bullet impacts.
 
 * DIVERGENCE: two cards with the same effect do it twice (user request).  The original's modifiers are
   booleans, so `applyModifier:` 0x100035da4 setting `moreDamages` twice left it exactly as one card had -
