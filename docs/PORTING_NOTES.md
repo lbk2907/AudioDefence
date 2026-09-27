@@ -1229,8 +1229,10 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   What did need writing was the bang.  `playHitSoundForDamages:` 0x100062db8 plays an explosion from the
   dying enemy's own playlist, and a zombie has none - only the Farties and the Cars were ever given one -
   so the damage would have been silent, which in this game is damage nobody can play around.  The
-  grenade's explosion is borrowed when an enemy has none of its own: a recording already in `game/`, and
-  already spatialised.  `ADEnemy` reaches into another playlist by name for the Tesla kill in the same way.
+  **Farty's** explosion is borrowed when an enemy has none of its own (`Farty_explosion_SPA`): the
+  grenade's was used first and the Farty's is the right one (user request), being what this game already
+  means by a body going off rather than by a weapon.  Either way it is a recording already in `game/` and
+  already spatialised, and `ADEnemy` reaches into another playlist by name for the Tesla kill the same way.
 
 * PORT ADDITION: a card is not there until its own flip has been heard (user request).  The deal is a
   sound per card, and the cursor now reaches exactly the cards that sound has brought in: before the

@@ -694,10 +694,12 @@ class Enemy:
                     if self.explosion_sound is None:
                         # PORT ADDITION: a zombie lent a bomb by Chain Reaction has no bang of its own -
                         # only the Farties and the Cars were ever given one - and damage nobody hears is
-                        # damage nobody can play around.  The grenade's is borrowed, which is a recording
-                        # already in `game/` and already spatialised; `ADEnemy` reaches into another
+                        # damage nobody can play around.  The Farty's is borrowed (user request): the
+                        # grenade's was tried first and a Farty is the right one, being the bang this game
+                        # already means by a body going off rather than by a weapon.  It is a recording
+                        # already in `game/` and already spatialised, and `ADEnemy` reaches into another
                         # playlist by name for the Tesla kill in the same way.
-                        pl = S3DEngine.engine().play_list_with_name('grenade')
+                        pl = S3DEngine.engine().play_list_with_name('Farty')
                         self.explosion_sound = self.voice_of(
                             pl.any_sound_containing('explosion')) if pl is not None else None
                     if self.explosion_sound is not None:
