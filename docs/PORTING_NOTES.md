@@ -1211,6 +1211,23 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   modifier under the same key.  Nothing else moves: `applyAllModifiers` 0x100035a5c still reads the live
   card, and `resetCardsModifiersIfNeeded` 0x1000d42a8 still clears all three keys after an endless game
   lasting over 60 seconds, so a fresh deal still follows a real run.
+* DIVERGENCE: a second explosion makes the ringing last longer, and is heard (user request, found by
+  playing it).  `startTinnitusWithDuration:gain:` 0x1000b6984 has two faults that only show when one blast
+  lands while another is still ringing, which before Chain Reaction meant two Farties and was rare.
+
+  It takes the new duration and gain whole and resets the timer, so a distant blast landing on a bad ring
+  **shortens** it - thirteen seconds left becomes four - and quietens it with the same stroke.  The longer
+  of the two and the louder of the two are kept now, so another explosion can only add to a ring.
+
+  And it starts the sound only when no ring is running at all (`tinnitusDuration == 0.0`).  The recording
+  is 14.1 s and a ring is at most 13 (`intensity * 10 + 3`), so one blast never outlasts its own sound; two
+  do, and the second was extending the ring without restarting anything.  What that left was the reverb
+  sitting on every enemy in the arena with nothing ringing over it - the effect with its cause gone.  The
+  sound is started whenever it is not playing, which answers both cases.
+
+  `stopTinnitus` 0x1000b6b4c is untouched: it puts the reverb back and deliberately leaves the sound to run
+  out, which is right, because the fade over the last fifth of a ring has taken its gain to nothing by then.
+
 * PORT ADDITION: Chain Reaction and Damp Squib - every zombie carries a bomb, or the Farties lose theirs
   (user request).  Whether an enemy explodes is a key in `enemies.plist`, and only six things have one:
   Farty, FartyB, Machine and the three Cars, all with the same block - radius 3, 50 damage, dispersal 75.

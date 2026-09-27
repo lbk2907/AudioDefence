@@ -64,11 +64,25 @@ class Player:
         self.start_tinnitus_with_duration(intensity * 10.0 + 3.0, intensity * 0.8 + 0.1)
 
     def start_tinnitus_with_duration(self, duration: float, gain: float) -> None:   # 0x1000b6984
-        if self.tinnitus_duration == 0.0:
+        # PORT DIVERGENCE (user request): a second blast makes the ringing last longer, and is heard.
+        #
+        # The original takes the new duration and gain whole and resets the timer, so a weak blast landing
+        # while a bad one is still ringing *shortens* it - 13 seconds left becomes 4 - and quietens it.  The
+        # longer of the two and the louder of the two are kept instead, so another explosion can only ever
+        # add to a ring, which is what an ear does.
+        running = self.tinnitus_duration > 0.0
+        if running:
+            duration = max(duration, self.tinnitus_duration - self.tinnitus_timer)
+            gain = max(gain, self.tinnitus_intensity)
+        # The recording is 14.1 s and the effect is at most 13, so one blast never outlasts its sound.  Two
+        # do: the original only starts the sound when no ring is running at all, so a blast that extended a
+        # ring past 14.1 s left the reverb on every enemy with nothing ringing over it.  The sound is
+        # started whenever it is not playing, which covers both.
+        if self.tinnitus_sound is None:
             self.tinnitus_sound = self.tinnitus_playlist.sound('tinnitus_and_background') \
                 if self.tinnitus_playlist is not None else None
-            if self.tinnitus_sound is not None:
-                self.tinnitus_sound.play(False)
+        if self.tinnitus_sound is not None and not self.tinnitus_sound.playing:
+            self.tinnitus_sound.play(False)
         if self.tinnitus_sound is not None:
             self.tinnitus_sound.set_gain(gain)
         self.tinnitus_intensity = gain
