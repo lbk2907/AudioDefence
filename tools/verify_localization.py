@@ -213,6 +213,19 @@ def data_phrases():
                             yield phrase, rel
 
 
+    # The plists the port adds whole (`additions.PLISTS`): its own arenas, title, objective and tip.  These
+    # are in no file in the bundle, so the walk above cannot reach them - and their text is read out by the
+    # challenge overview exactly as the original challenges' text is.
+    for name, tree in sorted(additions.PLISTS.items()):
+        for field, text in _walk_plist(tree):
+            if field.lower() in FIELDS and len(text) > 2 and not is_plumbing(text):
+                for phrase in _as_read(text):
+                    if phrase in seen:
+                        continue
+                    seen.add(phrase)
+                    yield phrase, '%s.plist [port plist] [%s]' % (name, field)
+
+
 def _walk_plist(value, field: str = ''):
     if isinstance(value, dict):
         for key, item in value.items():

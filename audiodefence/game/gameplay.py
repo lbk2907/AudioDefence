@@ -904,8 +904,34 @@ class ChallengeGameplayController(GameplayController):
 
     def view_did_load(self) -> None:                      # 0x1000da420
         super().view_did_load()
+        self.init_challenge_modifiers()                   # PORT ADDITION: see below
         self.timer_view_hidden = False
         self.timer_label_text = '00:00'
+
+    def init_challenge_modifiers(self) -> None:
+        """PORT ADDITION (user request): the modifiers a challenge asks to be played with.
+
+        The original has no such key, and none of its challenges wants one: a challenge is the same arena
+        for everybody, which is the point of its stars.  One of the port's own arenas needs a modifier to
+        be an arena at all - Three Bullets hands out three rounds and expects each to kill, which is only
+        true with `alwaysCritical` - so a challenge may name flags in a `Modifiers` list and get exactly
+        those.
+
+        Exactly those, and nothing else: the modifiers are reset first.  Nothing resets them between the
+        tarot screen (`ui/tarot.py`) and the next game-over screen, so a player who left an endless game
+        without finishing it would otherwise carry their hand into the challenge - and a hand holding Black
+        Cat (`noCritical`) would make this arena unwinnable through no fault of the player's.  A challenge
+        with no `Modifiers` key is left alone, so the original's challenges behave as they always did.
+        """
+        wanted = (self.challenge_dictionary or {}).get('Modifiers')
+        if not wanted:
+            return
+        from .modifiers import GameModifiers
+        mods = GameModifiers.shared()
+        mods.reset_modifiers()
+        for flag in wanted:
+            if not mods.apply_setter(str(flag), True):
+                log.warning('challenge asks for a modifier that does not exist: %s', flag)
 
     def set_game_mode_dimension(self) -> None:            # 0x1000da6ac
         Tracker.shared().set_value_for_dimension('Challenge mode', 'Game mode', 0, 0)

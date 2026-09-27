@@ -1510,6 +1510,71 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   Extra" and goes there, since "next arena" would be a lie about a challenge in no arena; the overview's
   own Back goes the same way for the same reason.
 
+  Six more arenas, and the seven of them locked in a chain (user request).  In the order they open:
+  **Barnyard**, three kinds of zombie in a field with three cows and a jukebox walking through it, and
+  forty-five rounds to do it with - QuietZombie is the point of it, 35 life and the softest walk in the
+  game among things that are also walking and are not zombies.  **Clockwork**, the same four bearings over
+  and over on a beat that tightens from three seconds to one and six, where nothing is hard to kill and the
+  whole of it is noticing that the next one is coming from where the last one did.  **The Survivor**, a
+  rigged ring packed inside the blast's three units with one or two standing outside it, so setting the
+  ring off leaves a player deaf with something still walking in - the arena is the half minute afterwards
+  rather than the shot.  **The Wall**, a revolver against a Hulk at 100 life and a Riot Gear Zombie that
+  hides behind its shield for five seconds the moment it is hit, staggered far enough apart in time to be
+  taken one at a time.  **Stampede**, everything that runs - Runner at 1.3, Chainsaw at 1.45, Clown at 2 -
+  arriving from all round and closer together each wave.  **Three Bullets**, below.  Powder Keg last,
+  because it is all of it at once.
+
+  They are ordered by what they ask of a player rather than by how much life is in them, and each names the
+  one before it in `challenges_requirement` - which is the original's own key, read by
+  `hasChallengeRequirementsForChallengeWithName:` 0x10001ffbc, so the locking needed no code.  The Extra
+  menu reads each button's status out of `statusForChallengeWithDict:` 0x100054960, the selector's own:
+  `locked`, or how many of its three stars are won.  A locked button does nothing and says nothing when it
+  is pressed, which is what the selector's locked rows do.  What is drawn stays the title and what is read
+  is the title and the status, because on that screen there is nothing else to say it.
+
+  Everything is sized against level-one weapons, because an arena only a player who has spent diamonds can
+  finish is not an arena.  Barnyard carries 450 damage against 360 of life, so nine of its forty-five
+  rounds can be wasted and every cow shot is one of the nine.  Every gun named is one the player already
+  has - pistol, Micro SMG, wok, none of which has a price - so no arena sends anybody to the armory first.
+  Nothing spawns further out than 12 units, which is the largest `spawn_distance` in the whole of `game/`,
+  and anything that never walks (the rings, the strays) stands inside the guns' range of 11, since a shot
+  past that cannot land at all.
+
+  **Three Bullets** is the one that is arithmetic.  Three rounds, three rigged rings, and it has to hold at
+  every upgrade level.  A WeakZombie has 20 life; the revolver does 10 a shot at level one and 14 at level
+  four, and a critical doubles it - 20 at the worst, which is exactly enough.  So the arena asks to be
+  played with `alwaysCritical`, which sits outside the aim test in `brick_manager` and therefore turns any
+  hit into a kill rather than only a hit that was lined up: one round, one zombie, one ring, with no luck
+  in it.  The rings stand at 2.8 units and the wok reaches 3 and does 25, so a wasted round is still
+  recoverable - an explosion in this game has never hurt the player, only deafened them, so standing in
+  one to swing is allowed.
+
+  None of the seven says what it wants (user request).  An objective is what a player can hear and a tip is
+  a nudge, and the thing to be worked out is left to be worked out: "Not everything out here is dead, and
+  you were not given much ammunition", "Something out here is keeping time", "They are all standing close
+  together. Except the ones that are not", "Three rounds is all you are given, and there are three crowds
+  out there."  Powder Keg's own was rewritten to match - it used to say the Zombies were rigged and that
+  one kill took the ring, which is the whole of the puzzle given away in the first sentence a player hears.
+
+* PORT ADDITION: a challenge may name the modifiers it is played with (user request).  The original has no
+  such key and none of its challenges wants one: a challenge is the same arena for everybody, which is the
+  point of its stars.  One of the port's own needs a modifier to be an arena at all - Three Bullets hands
+  out three rounds and expects each to kill - so a `Modifiers` list on a challenge dictionary is applied by
+  `ChallengeGameplayController.view_did_load` (0x1000da420) through `applyModifier:` 0x100035da4 like any
+  card's.
+
+  Exactly those modifiers, and nothing else: they are reset first.  Nothing resets them between the tarot
+  screen and the next game-over screen, so a player who walked out of an endless game without finishing it
+  would otherwise carry their hand into the challenge - and a hand holding Black Cat (`noCritical`) would
+  make that arena unwinnable through no fault of theirs.  A challenge with no `Modifiers` key is left
+  alone, so the original's challenges are as they always were.
+
+* PORT ADDITION: `tools/verify_localization.py` could not see the plists the port adds whole.  The walk
+  goes through the files in `game/` and offers each one twice, as it is written and as `additions.apply_to`
+  hands it over - but a whole plist of the port's (`additions.PLISTS`) is in no file there, so its title,
+  objective and tip were never offered to a translator at all.  Powder Keg's text had been invisible since
+  the day it was written.  They are walked now, which is what the tool's own docstring had always promised.
+
 * PORT ADDITION: the fourth tarot card, from a deck of the port's own where every card gives with one
   hand and takes with the other (user request).  `Tarot.plist` has no `level_4`, so the overlay makes one
   (`new_key`, the level being a key the original does not have) and fills it with twelve: Glass Cannon

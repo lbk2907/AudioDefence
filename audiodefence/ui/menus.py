@@ -231,21 +231,38 @@ class ExtraMenuScreen(ViewControllerScreen):
     """PORT ADDITION (user request): the challenges the port wrote, which the original has no screen for.
 
     It is built like the play menu rather than like the challenge selector: the selector is a table of
-    worlds and stars and locks, and these are neither locked nor part of a world.  One button a challenge,
-    Back to the play menu.  What they are is in `additions.PLISTS`, and they are read by name through
-    `data.plist` exactly as the original's challenges are.
+    worlds and stars, and these belong to no world.  One button a challenge, Back to the play menu.  What
+    they are is in `additions.PLISTS`, and they are read by name through `data.plist` exactly as the
+    original's challenges are.
+
+    Locked as the original's are, though (user request): each arena names the one before it in
+    `challenges_requirement`, which is the original's own key, and the status a button reads out is the one
+    `Accessible_ADChallengeSelectorViewController` gives - `locked`, or how many of its three stars are
+    won.  A locked button does nothing and says nothing when it is pressed, which is what the selector's
+    locked rows do.
     """
     page_title = 'Extra'
 
     def load_view(self) -> None:
         from ..game.additions import EXTRA_CHALLENGES
+        from .challenges import AccessibleChallengeSelectorScreen
         v = self.view = View('', (0, 0, 568, 320), accessible=False, name='extraMenu')
         self.buttons = []
         for i, name in enumerate(EXTRA_CHALLENGES):
             d = data.plist(name) or {}
-            b = Button(str(d.get('title') or name), (192, 100 + i * 50, 187, 46), parent=v,
-                       actions=[lambda n=name: self.challenge_chosen(n)], name='extra %s' % name)
-            b.hint = str(d.get('objective') or '')
+            title = str(d.get('title') or name)
+            status = AccessibleChallengeSelectorScreen.status_for_challenge_with_dict(d)
+            locked = status == 'locked'
+            # Seven of them in a view 320 points tall, so they sit closer together than the play
+            # menu's do.  One column: `reading_order` sorts by a frame's vertical centre, and a
+            # column is the order they unlock in.
+            b = Button(title, (192, 34 + i * 38, 187, 34), parent=v, font_button=not locked,
+                       actions=() if locked else [lambda n=name: self.challenge_chosen(n)],
+                       name='extra %s' % name)
+            # What is drawn stays the title; what is read is the title and where the player stands with it,
+            # because on this screen there is nothing else to say it.
+            b.label = '%s, %s' % (title, status)
+            b.hint = None if locked else str(d.get('objective') or '')
             self.buttons.append(b)
         if self.buttons:
             self.first_accessible_element = self.buttons[0]
