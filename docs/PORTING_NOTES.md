@@ -1254,9 +1254,15 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   cards are untouched: 3 diamonds and 2, changed as often as you can pay for.  The point is that a hand
   always holds one card nobody chose, out of a deck that is an even split of good and bad.
 
-  The deal runs 0.3 s past the last card rather than the original's 2.3 s, because card N flips N seconds
-  in, so the third flips at 3 s: the number was a sum, and it is written as one now.  Two decks share a
-  selector - `moreHeadshots` is Bobblehead Zombies on level 2 and Head-Seeking Bullets on level 3 - so
+  The deal still takes the time it always took (user request).  The original holds you 2.3 s and flips
+  card N after N seconds, which for its two cards is the same number twice - the last card at 2 s, the
+  wait 0.3 s later - and the port had read it as the second of those, so the wait grew with the deck and
+  three cards took 3.3 s.  The cards share those two seconds now (`DEAL_LAST_FLIP`): the last one lands
+  at 2 s however many there are, two still flip at 1 s and 2 s exactly as they always did, and nobody
+  waits longer for a bigger hand.
+
+  Two decks share a selector - `moreHeadshots` is Bobblehead Zombies on level 2 and Head-Seeking Bullets
+  on level 3 - so
   about one hand in a hundred draws both and the second is a flag already set.  That is their deck, and
   it is left as it is.
 

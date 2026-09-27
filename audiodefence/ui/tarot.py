@@ -25,6 +25,15 @@ log = logging.getLogger('ui.tarot')
 #: level-3 change at 1 diamond, and -resetCardsModifiersIfNeeded 0x1000d42a8 already clears three keys.
 CARDS_TO_LOAD = 3
 
+#: PORT DIVERGENCE (user request): the deal takes as long as the original's, whatever is in it.  Both
+#: numbers are the original's own: -viewDidLoad 0x10003461c waits 2.3 s before it lets you play, and its
+#: two cards flip a second apart, the last of them 2 s in.  Those are the same number twice - a card
+#: flipping on its own index - and at three cards the port had taken the second reading, so the wait grew
+#: with the deck.  The last card lands at 2 s however many there are, and the deal ends 0.3 s later, so
+#: two cards still flip at 1 s and 2 s exactly as they always did and nobody waits longer for more.
+DEAL_LAST_FLIP = 2.0
+DEAL_SECONDS = 2.3
+
 #: PORT DIVERGENCE (user request): the third card is dealt and kept.  The first two can still be bought
 #: out of, at 3 diamonds and 2; the level-3 deck is an even split of six good cards and six bad, so the
 #: hand always holds one card the player did not choose and cannot pay to be rid of.
@@ -363,9 +372,7 @@ class TarotScreen(ViewControllerScreen):
             n += 1
             if not n < self.cards_to_load:
                 break
-        # card N flips after N seconds, so the deal ends 0.3 s after the last of them - the original's own
-        # 2.3 for its two cards, kept as the sum it is rather than as the number it came to.
-        RunLoop.main().call_later(float(self.cards_to_load) + 0.3, self._cards_dealt)
+        RunLoop.main().call_later(DEAL_SECONDS, self._cards_dealt)
 
     def _cards_dealt(self) -> None:                       # viewDidLoad_block_invoke 0x100034e84
         self.dealing = False
@@ -404,8 +411,11 @@ class TarotScreen(ViewControllerScreen):
         card.set_center(container[0] + cx, container[1] + cy)
         # QUIRK: dispatch_after is given the card number as its dispatch_time_t, a time already past, so the
         # block runs on the next pass; it then flips the card after <number> seconds
+        # PORT DIVERGENCE: the original flips card N after N seconds; the cards share the same 2 s here,
+        # so the last of them lands where the original's last one did.  See DEAL_LAST_FLIP.
+        after = DEAL_LAST_FLIP * float(number) / float(max(1, self.cards_to_load))
         RunLoop.main().call_soon(
-            lambda: RunLoop.main().call_later(float(number), lambda: card.flip_card(False)))
+            lambda: RunLoop.main().call_later(after, lambda: card.flip_card(False)))
 
     def reroll_card_with_number(self, number: int) -> None:   # 0x100035a48
         self.record_card_reload_with_number(number)
