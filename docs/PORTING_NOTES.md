@@ -1211,6 +1211,20 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   modifier under the same key.  Nothing else moves: `applyAllModifiers` 0x100035a5c still reads the live
   card, and `resetCardsModifiersIfNeeded` 0x1000d42a8 still clears all three keys after an endless game
   lasting over 60 seconds, so a fresh deal still follows a real run.
+* PORT DIVERGENCE: Rusty Weapons jams three times as often (user request).  `resolveShoot` 0x100015a1c
+  rolls `rand() % 100 == 1` at 0x100015b60 - one shot in a hundred - and on most guns that is a whole
+  game without noticing, because the roll is per shot and a small clip is few rolls: a pistol's six
+  rounds come through 94 times in 100.  `weapon.RUSTY_JAM_PERCENT` is 3, which is felt on every gun and
+  leaves them all usable.  A clip then jams about 17% of the time on the pistol, 26% on the hunting
+  rifle, 46% on the micro SMG, 53% on the tactical rifle and 78% on the machine gun, which has 50 rounds
+  to roll and the game's longest reload at 6 seconds.  Five per cent would put the machine gun at 92%,
+  which is not a weapon with a hazard but a weapon that does not work.
+
+  Nothing else moves.  A jam still costs the reload and no ammunition - `resolveShoot` zeroes
+  `bulletsInClip` and leaves `bulletsTotal` alone, so the rounds come back on the reload - and the
+  Minigun power-up still cannot jam, because `shotWithSpecialWeapon` 0x1000c4b38 never goes through
+  `resolveShoot` at all.  The `< n` form has the original's odds at n = 1.
+
 * PORT ADDITION: six tarot cards of the port's own, and more to come (user request).  Each deck keeps
   the subject the original kept it to - level 1 is the arena and what you brought to it, level 2 is the
   zombies, level 3 is your guns - and each gains as many good cards as bad, so the even split that makes
