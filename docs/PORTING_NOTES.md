@@ -1211,6 +1211,21 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   modifier under the same key.  Nothing else moves: `applyAllModifiers` 0x100035a5c still reads the live
   card, and `resetCardsModifiersIfNeeded` 0x1000d42a8 still clears all three keys after an endless game
   lasting over 60 seconds, so a fresh deal still follows a real run.
+* PORT ADDITION: the fourth card is a chance, not a fixture (user request).  A quarter of hands are dealt
+  one; the rest hold three.  That is what the level-4 deck is for - a card worth reading because it is not
+  there every time - and it is why those cards can be as strong and as costly as they are.
+  `tarot.FOURTH_CARD_CHANCE` is the number, and rarer reads better on paper than in play: the deck has
+  twelve cards, and at one hand in ten a player would meet one for the first time after an evening of runs
+  with no idea what it was about to do to them.
+
+  The roll is made once and kept, under `tarot.HAND_SIZE_KEY` beside the cards themselves.  It has to be:
+  the armory opens over this screen and the player comes back to it, and a hand that rolled its size again
+  each time would gain and lose a card under them.  `resetCardsModifiersIfNeeded` clears the key with the
+  cards, so the next game rolls its own.  The original has no key for this because it always dealt two.
+
+  A three-card hand is laid out by the original's own spacing, gaps of exactly 10 points, because that
+  formula only goes negative at four.
+
 * PORT ADDITION: a fourth tarot card, from a deck of the port's own where every card gives with one
   hand and takes with the other (user request).  `Tarot.plist` has no `level_4`, so the overlay makes one
   (`new_key`, the level being a key the original does not have) and fills it with twelve: Glass Cannon

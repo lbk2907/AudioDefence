@@ -36,6 +36,12 @@ file, **at the end of that block** - it reads in the order things were done.
   not the two buttons it shipped with.  A changelog line outlives the thing that prompted it, and a
   player reading it later should learn what the game is capable of.  Name the particular language,
   controller or mode in the README, where the list is kept up to date.
+
+  **A tarot card is an example.**  "The Rusty Weapons card jams your gun three times as often" and "the
+  Lucky Shot card makes half your shots critical" both went in and both came out again on 2026-09-27:
+  the deck is something a player is meant to discover, and a changelog that lists what each card does
+  reads like a patch note for a game with a wiki.  Say that the decks have new cards in them, or that a
+  card is worth drawing now, and leave the rest to be found.
 * **A sentence or two, and stop.**  Say what is different now; leave out what it used to do, why it did
   that, how it was measured, and every number that is not the point.  The reasoning, the measurements and
   the addresses belong in `docs/PORTING_NOTES.md`, where they can be looked up by whoever wants them - a

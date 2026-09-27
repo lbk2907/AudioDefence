@@ -43,6 +43,22 @@ DEAL_SECONDS = 2.3
 #: rid of.
 LOCKED_CARD_LEVEL = 3
 
+#: PORT ADDITION (user request): how often a hand is dealt the fourth card at all, as a chance per hand.
+#: Most hands hold three; now and then a fourth turns up from the level-4 deck, where every card gives and
+#: takes at once.  That is what those cards are for - a surprise worth reading, rather than a fixture - and
+#: it is why they can be as strong and as costly as they are.
+#:
+#: A quarter is the number.  Rarer reads well on paper and badly in play: the deck has twelve cards, and at
+#: one hand in ten a player would meet a card for the first time after an evening of runs and have no idea
+#: what it was going to do to them.
+FOURTH_CARD_CHANCE = 25
+
+#: PORT ADDITION: how many cards this hand holds, kept with the hand itself.  The roll has to be made once
+#: and then remembered: the screen is left and come back to - the armory opens over it - and a hand that
+#: rolled its fourth card again each time would gain and lose one under the player.  The original has no
+#: key for this because it always dealt two.  `resetCardsModifiersIfNeeded` clears it with the cards.
+HAND_SIZE_KEY = 'tarotCardsDealt'
+
 #: PORT ADDITION (testing, user request): `--free-cards` lets the cards from `LOCKED_CARD_LEVEL` on be
 #: changed after all, and every card in the hand - locked or not, whatever the slot - costs nothing to
 #: change, so a card can be looked for by pressing Enter instead of by playing hands until it turns up.
@@ -394,7 +410,7 @@ class TarotScreen(ViewControllerScreen):
             self.play_button.user_interaction_enabled = False
         sb.deactivate_buttons()
         self.dealing = True
-        self.cards_to_load = CARDS_TO_LOAD                # PORT DIVERGENCE: 2 in the original
+        self.cards_to_load = self.cards_this_hand()        # PORT DIVERGENCE: always 2 in the original
         n = 0
         while True:
             self.load_card_with_number(n + 1)
@@ -422,6 +438,23 @@ class TarotScreen(ViewControllerScreen):
         if sb is not None:
             sb.armory_loadout_enabled = True
             sb.set_armory_button_visibility(True)
+
+    def cards_this_hand(self) -> int:
+        """PORT ADDITION: three cards, or four when this hand has rolled one (see FOURTH_CARD_CHANCE).
+
+        Rolled once and kept, so leaving this screen and coming back deals the same hand back - which is
+        what the stored cards do, and a hand that changed size on the way past would be worse than either.
+        """
+        defaults = UserDefaults.standard()
+        kept = defaults.object(HAND_SIZE_KEY)
+        if kept is not None:
+            return max(1, min(CARDS_TO_LOAD, int(kept)))
+        rolled = CARDS_TO_LOAD if crand.c_mod(crand.rand(), 100) < FOURTH_CARD_CHANCE \
+            else CARDS_TO_LOAD - 1
+        defaults.set_integer(rolled, HAND_SIZE_KEY)
+        defaults.synchronize()
+        log.info('this hand holds %d cards', rolled)
+        return rolled
 
     def load_card_with_number(self, number: int) -> None:   # loadCardWithNumber: 0x100035390
         defaults = UserDefaults.standard()

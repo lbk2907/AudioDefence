@@ -118,10 +118,11 @@ class AccessibleGameOverEndlessScreen(ViewControllerScreen):
             return
         # PORT DIVERGENCE: the original clears three keys, which was every card it could deal.  A fourth
         # would have been dealt once and kept for the rest of the player's life.
-        from .tarot import CARDS_TO_LOAD
+        from .tarot import CARDS_TO_LOAD, HAND_SIZE_KEY
         defaults = UserDefaults.standard()
         for i in range(1, max(4, CARDS_TO_LOAD + 1)):
             defaults.set_object(None, 'tarotCard%i' % i)
+        defaults.set_object(None, HAND_SIZE_KEY)          # PORT ADDITION: the next hand rolls its own size
         defaults.synchronize()
 
     def dealloc(self) -> None:                           # ADGameOverEndlessViewController dealloc 0x1000d4e18
