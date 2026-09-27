@@ -537,7 +537,8 @@ class TeslaPowerUp(PowerUp):
         self.current_kill_count = self.current_kill_count + 1
         enemy = BrickManager.shared().closest_enemy()
         if enemy is not None:
-            enemy.set_life(0.0)
+            enemy.set_life(0.0)                           # which kills it, and so fires any blast it has
+            enemy.heard_dying()                           # PORT ADDITION: and it is heard; see Enemy
             from ..platform.haptics import Haptics        # PORT ADDITION: the coil's own crack, over
             Haptics.shared().zap()                        # the kill set_life: has just made
             zap = self.playlist.any_sound_containing('zap') if self.playlist is not None else None

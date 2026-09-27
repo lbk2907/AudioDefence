@@ -1235,6 +1235,25 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   do safely, its ring never outlasting one playing of the file.  What stops is already silent: the fade
   over the last fifth of a ring has taken the gain to nothing by then.
 
+* PORT ADDITION: a diamond and a power-up do not go up with the rest (user request).  Chain Reaction says
+  every Zombie explodes, and `DiamondDropper` and `PowerUpContainer` are `ADEnemy` underneath like
+  everything else in the arena, so they were being lent a bomb too - and a diamond that blows up when it
+  is shot takes away the thing a player shoots it for.  `Enemy.is_a_bystander` is the line: a passer-by or
+  a diamond is not lent one.  The Machine and the Cars are bystanders and go on exploding, because their
+  explosion is their own in `enemies.plist` rather than one a card lent them, and it is why a player
+  shoots them.
+
+* DIVERGENCE: a kill that did no damage is still heard (user request).  Almost everything that kills goes
+  through `hitByWeapon:` or `hitByExplosion:`, and both schedule `playHitSoundForDamages:` 0x100062db8,
+  which is where the death sound and any explosion are played.  The two Teslas do not: the tarot card's
+  kill in `aggressive` 0x10005ffd4 and the power-up's `setLife:0` in `-[ADTeslaPowerUp update:]`
+  0x1000d786c both end a zombie without hurting it, so all that could be heard was the zap.
+
+  A Farty killed that way was the tell: `setLife:` calls `die`, `die` fires the blast, and the blast set
+  the player's ears ringing with no bang anywhere to explain it.  `Enemy.heard_dying` is what both paths
+  call now - the death sound, and the explosion if the enemy has one.  The Fireworks needed nothing:
+  `hitByExplosion:` schedules the sound like any other damage.
+
 * DIVERGENCE: an explosion is not cut off by the next one (user request).  An `S3DSound` owns one OpenAL
   source, so playing it again restarts it where it had got to.  A chain puts a zombie inside two blasts,
   so `playHitSoundForDamages:` runs twice for it, and the second call finds the first sound not yet

@@ -323,6 +323,7 @@ class Enemy:
             mods.set_tesla(False)
             self._life = 0.0
             self.die()
+            self.heard_dying()                            # PORT ADDITION: see `heard_dying`
             return
         self.set_state(3)
         self.play_any_sound_containing('_aggressive')
@@ -511,22 +512,45 @@ class Enemy:
     #: taking away the point of shooting them.
     FARTIES = ('Farty', 'FartyB')
 
+    def is_a_bystander(self) -> bool:
+        """PORT ADDITION: something in the arena that is not a zombie - a cow, a jukebox, a diamond, a
+        power-up container.  Chain Reaction says every Zombie explodes, and a diamond or a power-up going
+        up when it is shot would take away the thing a player shoots it for (user request).
+
+        The Machine and the Cars are bystanders too and keep exploding, because the explosion is theirs in
+        `enemies.plist` rather than one the card lent them - it is why a player shoots them.
+        """
+        from .passerby import DiamondDropper, PasserBy
+        return isinstance(self, (PasserBy, DiamondDropper))
+
     def blast(self):
         """PORT ADDITION: the explosion this enemy has as the cards stand, or None for none.
 
         `explosion` is a key in `enemies.plist` and only six things have one.  Chain Reaction lends its
-        own to everything that has not got one (`modifiers.CHAIN_REACTION_BLAST`), and Damp Squib takes
+        own to every zombie that has not got one (`modifiers.CHAIN_REACTION_BLAST`), and Damp Squib takes
         the Farties' away.  Everything that asks whether an enemy explodes asks this.
         """
         mods = GameModifiers.shared()
         if mods.noFartyBlast and self.name in self.FARTIES:
             return None
         if self.explosion_dictionary is not None:
-            return self.explosion_dictionary
-        if mods.everythingExplodes:
+            return self.explosion_dictionary               # its own, bystander or not
+        if mods.everythingExplodes and not self.is_a_bystander():
             from .modifiers import CHAIN_REACTION_BLAST
             return CHAIN_REACTION_BLAST
         return None
+
+    def heard_dying(self) -> None:
+        """PORT ADDITION (user request): the death sound, and the explosion if it has one, for a kill that
+        did no damage.
+
+        Almost everything that kills goes through `hitByWeapon:` or `hitByExplosion:`, and both schedule
+        `playHitSoundForDamages:`, which is where a death sound and an explosion are played.  The two
+        Teslas do not: the tarot card's kill in `aggressive` and the power-up's `setLife:0` both end a
+        zombie without hurting it, so all that could be heard was the zap.  A Farty killed that way set
+        the player's ears ringing - the blast fires, `die` seeing to that - with no bang to explain it.
+        """
+        self.play_hit_sound_for_damages(0.0)
 
     def explode(self) -> None:                            # 0x100061e6c
         from .brick_manager import BrickManager
