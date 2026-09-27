@@ -101,6 +101,19 @@ running it again costs the time it takes and says nothing.  So:
 English.  Run it after changing or adding anything a screen says, and put the new phrase in each language
 file - on 2026-09-26 it caught four that a week of changes had left behind.
 
+**An arena of the port's own is measured, not judged by eye.**  `py tools/arena_pressure.py` prints, for
+each wave of each Extra challenge, how much slack the tightest moment of it leaves.  It exists because this
+game has no player health - one enemy reaching you ends the run - so a wave's difficulty is not the life in
+it but whether each enemy can be killed before its own clock runs out, and a crowd arriving more slowly than
+it can be shot never gets harder however large it is.  Sized by eye on 2026-09-28, one arena could not be
+lost and another could not be won, and neither was visible until it was measured.  Run it after changing any
+wave, and keep the chapter ordered by what it prints.
+
+Two of its numbers are judgement rather than disassembly and say so where they are defined: `DEAF_COST`,
+what a ring in the ears is worth given the game gives tinnitus no mechanical effect at all, and
+`MELEE_COST`, what having only a wok is worth given it reaches three units and a miss ends the run.  Change
+them with a reason, not to make a number look better.
+
 A line with a substitution in it - "Tarot card number %i : %s" - is never offered to a translator: it is a
 template, and the tool drops it whole (`PLUMBING`).  So a phrase written inside one is invisible, and stays
 English without anything saying so.  Hand that phrase to `localization.translate()` on its own and build the

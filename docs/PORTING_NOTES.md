@@ -1528,52 +1528,78 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   `App.go_to_challenge_list_for` now, one place that knows which list a challenge came from, rather than
   four copies of the test.
 
-  Six more arenas, and the seven of them locked in a chain (user request).  In the order they open:
-  **Barnyard**, three kinds of zombie in a field with three cows and a jukebox walking through it, and
-  forty-five rounds to do it with - QuietZombie is the point of it, 35 life and the softest walk in the
-  game among things that are also walking and are not zombies.  **Clockwork**, the same four bearings over
-  and over on a beat that tightens from three seconds to one and six, where nothing is hard to kill and the
-  whole of it is noticing that the next one is coming from where the last one did.  **The Survivor**, a
-  rigged ring packed inside the blast's three units with one or two standing outside it, so setting the
-  ring off leaves a player deaf with something still walking in - the arena is the half minute afterwards
-  rather than the shot.  **The Wall**, a revolver against a Hulk at 100 life and a Riot Gear Zombie that
-  hides behind its shield for five seconds the moment it is hit, staggered far enough apart in time to be
-  taken one at a time.  **Stampede**, everything that runs - Runner at 1.3, Chainsaw at 1.45, Clown at 2 -
-  arriving from all round and closer together each wave.  **Three Bullets**, below.  Powder Keg last,
-  because it is all of it at once.
-
-  They are ordered by what they ask of a player rather than by how much life is in them, and each names the
-  one before it in `challenges_requirement` - which is the original's own key, read by
-  `hasChallengeRequirementsForChallengeWithName:` 0x10001ffbc, so the locking needed no code.  The Extra
+  Six more arenas, and the seven of them locked in a chain (user request), which is chapter 1.  Each names
+  the one before it in `challenges_requirement` - the original's own key, read by
+  `hasChallengeRequirementsForChallengeWithName:` 0x10001ffbc - so the locking needed no code.  The Extra
   menu reads each button's status out of `statusForChallengeWithDict:` 0x100054960, the selector's own:
-  `locked`, or how many of its three stars are won.  A locked button does nothing and says nothing when it
-  is pressed, which is what the selector's locked rows do.  What is drawn stays the title and what is read
-  is the title and the status, because on that screen there is nothing else to say it.
+  `locked`, or how many of its three stars are won.  A locked button does nothing and says nothing when
+  pressed, which is what the selector's locked rows do.  What is drawn stays the title and what is read is
+  the title and the status, because on that screen there is nothing else to say it.
 
-  Everything is sized against level-one weapons, because an arena only a player who has spent diamonds can
-  finish is not an arena.  Barnyard carries 450 damage against 360 of life, so nine of its forty-five
-  rounds can be wasted and every cow shot is one of the nine.  Every gun named is one the player already
-  has - pistol, Micro SMG, wok, none of which has a price - so no arena sends anybody to the armory first.
-  Nothing spawns further out than 12 units, which is the largest `spawn_distance` in the whole of `game/`,
-  and anything that never walks (the rings, the strays) stands inside the guns' range of 11, since a shot
-  past that cannot land at all.
+  **They were all built wrong the first time**, and the way they were wrong is worth writing down, because
+  it is a trap the shape of this game sets.  They were sized by eye, against how much life a wave held -
+  and life is very nearly irrelevant here.  There is no health in this game: `-[ADEnemy update:]` walks an
+  enemy in at `speed` until it is three units out, closes at `agressiveSpeed`, and `attack` 0x100060304
+  posts PLAYER_DIED, so **one enemy arriving is the whole game**.  What decides a wave is therefore not its
+  total life but whether every enemy in it can be killed before its own clock runs out, with the clock of
+  the one behind it already running - and the only thing that makes a wave get harder as it goes is
+  enemies arriving *faster than they can be killed*.  A revolver sustains 16.7 damage a second at level one
+  once its reloads are counted, so a Zombie is 2.9 seconds; a crowd walking in every four seconds never
+  builds pressure at all, however many of them there are.  Every one of the first six arenas staggered its
+  waves more widely than that.
 
-  **Three Bullets** is the one that is arithmetic.  Three rounds, three rigged rings, and it has to hold at
-  every upgrade level.  A WeakZombie has 20 life; the revolver does 10 a shot at level one and 14 at level
-  four, and a critical doubles it - 20 at the worst, which is exactly enough.  So the arena asks to be
-  played with `alwaysCritical`, which sits outside the aim test in `brick_manager` and therefore turns any
-  hit into a kill rather than only a hit that was lined up: one round, one zombie, one ring, with no luck
-  in it.  The rings stand at 2.8 units and the wok reaches 3 and does 25, so a wasted round is still
-  recoverable - an explosion in this game has never hurt the player, only deafened them, so standing in
-  one to swing is allowed.
+  Two of them were broken outright.  **Three Bullets** could not be lost: three rigged rings and
+  `alwaysCritical`, so firing in any direction whatsoever cleared a wave, and after the first shot of each
+  nothing in the arena could reach the player at all.  **Powder Keg** could not be won: its third ring
+  cycled Hulks into the circle, and 100 life survives a chain that does 37.5, so four of them were left
+  standing three units from the player with four seconds to live.  Neither is visible by reading the data;
+  both are obvious the moment it is measured.
+
+  So `tools/arena_pressure.py` measures it.  It gives every enemy a deadline, sorts a wave by deadline,
+  and asks whether the guns the challenge hands out can have killed the first *n* of them by the *n*th -
+  printing the slack at the tightest moment.  It simulates the chain properly (`hit_by_explosion`
+  0x100061284: dispersal 75 means a fixed 37.5 plus a falloff, so everything soft inside a ring dies and
+  everything tough merely flinches), it reads a challenge's own `Modifiers`, and it carries two numbers
+  that are judgement rather than disassembly and are labelled as such: `DEAF_COST`, because the game gives
+  tinnitus no mechanical effect and it is the player it disables, and `MELEE_COST`, because a wok reaches
+  three units and a swing that misses is the end of the run rather than a lost second.
+
+  The chapter is tuned to a deliberate curve of that number and ordered by it: Barnyard with sixteen
+  seconds to spare, The Wall nine, Clockwork seven, The Survivor two, Stampede three short, Powder Keg six
+  short.  Short is not impossible - the tool counts only the gun, where a player also has a wok worth 25 a
+  swing, headshots, and whatever they have spent diamonds on.
+
+  What each of them is for.  **Barnyard** is listening: three cows walk through every wave and a jukebox
+  plays in the last, and its constraint is not the clock but forty-two rounds against four hundred of life,
+  so a cow shot is a kill given away.  **The Wall** is reload discipline - a Hulk has 100 life and a
+  cylinder holds six rounds, so every one of them has to be reloaded through, and the Riot Gear Zombie
+  stops dead for five seconds whenever it is hit (`protect` 0x10005ff4c), which delays itself while the
+  Hulks walk on past.  **Clockwork** is anticipation: the same four bearings on a beat that tightens to
+  1.9 seconds, which is faster than a Zombie can be killed.  **The Survivor** is fighting deaf - the ring
+  is free and is meant to be, and what it costs is twenty seconds of hearing while eight more walk in.
+  **Stampede** is everything that runs, played with `fasterEnemies`.  **Powder Keg** is all of it at once
+  and closes the chapter.
+
+  **Three Bullets** is the one the tool cannot rank, and it is placed fourth by judgement with the reason
+  written here.  Ted, Jim and Bob are zombies with the whole sound set - spawn, approach, aggressive, hit,
+  death - and a speed of 0: they stand where they spawn and never come.  So the wok cannot touch them
+  (reach 3), `brickIsCleared` 0x1000a1658 will not pass a wave until they are dead, and Ted and Jim have
+  10 life, which is exactly one revolver round at level one and less at every level above.  Three of them,
+  three rounds, no modifier holding it up - and everything else in the arena walks and has to be met at
+  arm's length, because there is nothing left to shoot it with.  Its difficulty is categorical rather than
+  arithmetic: the tool measures the wok at 25 damage a second and calls it comfortable, and what it cannot
+  price is that a melee duel with no health is the frightening thing in this game.
+
+  Three rounds and not one spare means a wasted round leaves a wave that can never be cleared, with the
+  arena gone quiet and nothing arriving - which for a player with no screen is the worst thing a design can
+  do.  There is no fail-on-time in this game to rescue it (`time_limit_star` is a star, not a limit), and a
+  static enemy cannot be given a speed from a wave entry, so the tip says it plainly: if it goes quiet and
+  will not end, a round went somewhere it should not have, so end the challenge and start again.
 
   None of the seven says what it wants (user request).  An objective is what a player can hear and a tip is
-  a nudge, and the thing to be worked out is left to be worked out: "Not everything out here is dead, and
-  you were not given much ammunition", "Something out here is keeping time", "They are all standing close
-  together. Except the ones that are not", "Three rounds is all you are given, and there are three crowds
-  out there."  Powder Keg's own was rewritten to match - it used to say the Zombies were rigged and that
-  one kill took the ring, which is the whole of the puzzle given away in the first sentence a player hears.
-
+  a nudge, and the thing to be worked out is left to be worked out.  Powder Keg's own was rewritten to
+  match: it used to say the Zombies were rigged and that one kill took the ring, which is the whole of the
+  puzzle given away in the first sentence a player hears.
 * PORT ADDITION: a challenge may name the modifiers it is played with (user request).  The original has no
   such key and none of its challenges wants one: a challenge is the same arena for everybody, which is the
   point of its stars.  One of the port's own needs a modifier to be an arena at all - Three Bullets hands

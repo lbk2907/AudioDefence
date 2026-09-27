@@ -294,7 +294,7 @@ def _ring(kinds, count: int, distance: float, rigged: bool, every: float = 0.0) 
 def _wave(spec, rigged: bool = False, no_blast: bool = False, passers=None) -> dict:
     enemies = {}
     for i, one in enumerate(spec):
-        d = {'spawn_angle': float(one[1]), 'spawn_distance': float(one[2])}
+        d = {'spawn_angle': float(one[1]) % 360.0, 'spawn_distance': float(one[2])}
         if len(one) > 3:
             d['spawn_time'] = float(one[3])
         enemies['%s %i' % (one[0], i + 1)] = d
@@ -308,19 +308,40 @@ def _wave(spec, rigged: bool = False, no_blast: bool = False, passers=None) -> d
     return wave
 
 
+#: Bearings a crowd walks in from, well apart so a player has to turn to each in turn rather than sweep.
+#: They are written down rather than worked out so that a wave is the same wave every time it is played:
+#: a challenge has stars on it, and a star won against one arrangement has to mean the same as the next.
+SCATTER = (0.0, 143.0, 71.0, 251.0, 35.0, 196.0, 108.0, 305.0, 161.0, 18.0, 233.0, 88.0, 278.0, 125.0,
+           52.0, 214.0, 341.0, 97.0, 179.0, 263.0)
+
+
+def _crowd(kinds, count: int, distance: float, every: float, first: float = 0.0,
+           bearings=SCATTER, no_blast: bool = True) -> dict:
+    """A crowd walking in one at a time from bearings all round, which is the shape of most of these.
+
+    `every` is what makes a wave hard or not.  Nothing here has any health to lose - one enemy reaching the
+    player ends the game (`attack` 0x100060304) - so a wave is not its total life but whether each of them
+    can be killed before its own clock runs out, and `every` is what decides how much those clocks overlap.
+    """
+    return _wave([(kinds[i % len(kinds)], bearings[i % len(bearings)], distance,
+                   round(first + i * every, 2)) for i in range(count)], no_blast=no_blast)
+
+
 def _metronome(kinds, count: int, distance: float, every: float,
                bearings=(0.0, 90.0, 180.0, 270.0)) -> dict:
-    """A wave that arrives one at a time, on the beat, going round the same few bearings in turn."""
-    return _wave([(kinds[i % len(kinds)], bearings[i % len(bearings)], distance, round(i * every, 2))
-                  for i in range(count)], no_blast=True)
+    """A crowd that keeps time, going round the same few bearings in turn - Clockwork, and nothing else."""
+    return _crowd(kinds, count, distance, every, bearings=bearings)
 
 
 def _ring_with_strays(kinds, count: int, distance: float, strays) -> dict:
-    """A rigged ring, and enemies standing outside the blast that takes the ring.
+    """A rigged ring, and enemies standing far enough out that the chain never reaches them.
 
-    The blast's radius is 3 (`CHAIN_REACTION_BLAST`) and `Rigged` is a key on the wave rather than on one
-    enemy, so a stray is rigged as well - it simply has nothing near enough to set it off, and nothing near
-    enough to be taken with it.
+    A ring is a free wave and is meant to be: `CHAIN_REACTION_BLAST` puts 37.5 into everything within three
+    units (`hit_by_explosion` 0x100061284, dispersal 75), so one shot takes a ring of anything with 35 life
+    or less and the player pays for it in **hearing** - a blast inside five units rings the ears for
+    `intensity * 10 + 3` seconds and they add up to TINNITUS_MAX.  What a player does about the strays, deaf,
+    is the arena.  Nothing tough ever goes in a ring: it would survive the chain three units from the
+    player, which is close enough to be lethal before anything could be done about it.
     """
     spec = [(kinds[i % len(kinds)], round(i * 360.0 / count, 2), distance) for i in range(count)]
     return _wave(spec + list(strays), rigged=True)
@@ -337,22 +358,36 @@ def _cows(*places) -> dict:
 
 PLISTS: dict = {}
 
-# ------------------------------------------------------------------------------------------- 1. Barnyard
-#: Three kinds of zombie among the cows, and forty-five rounds to do it with.  QuietZombie is the point of
-#: this one: 35 life and the softest walk in the game, in a field where three cows are walking too.
-PLISTS['port_barnyard_1'] = _wave(
-    [('WeakZombie', 20, 10), ('WeakZombieB', 160, 10, 6), ('Zombie', 285, 10, 12)],
-    no_blast=True, passers=_cows((70, 11, 1), (210, 11, 5), (320, 11, 9)))
-PLISTS['port_barnyard_2'] = _wave(
-    [('QuietZombie', 45, 10), ('WeakZombie', 140, 10, 5), ('Zombie', 230, 10, 10),
-     ('ZombieB', 330, 10, 15)],
-    no_blast=True, passers=_cows((10, 11, 2), (180, 11, 7), (260, 11, 12)))
-PLISTS['port_barnyard_3'] = _wave(
-    [('QuietZombie', 30, 10), ('WeakZombie', 110, 10, 4), ('ZombieB', 190, 10, 9),
-     ('QuietZombie', 250, 10, 14), ('ZombieC', 320, 10, 19)],
-    no_blast=True,
-    passers=dict(_cows((60, 11, 1), (150, 11, 6), (290, 11, 11)),
-                 Jukebox={'spawn_angle': 215.0, 'spawn_distance': 9.0, 'spawn_time': 3.0}))
+# =========================================================================================== the arenas
+#: Chapter 1, in the order they open, which is the order `tools/arena_pressure.py` puts them in.
+#:
+#: That tool exists because of how this game kills you.  There is no health: an enemy that reaches the
+#: player ends the game there and then, so what makes a wave hard is not how much life is in it but whether
+#: every one of them can be killed before its own clock runs out - and the clock of the one behind it is
+#: already running.  It works that out wave by wave and prints the slack at the tightest moment, and the
+#: seven arenas below are tuned to a deliberate curve of it, from eleven seconds to spare down to nine
+#: seconds short.  Short is not impossible: the tool counts only the gun, and a player also has a wok
+#: worth 25 a swing inside three units, headshots, and whatever they have spent diamonds on.
+#:
+#: The first build of these was tuned by eye, and by eye every one of them was wrong.  Three Bullets could
+#: not be lost - three rigged rings and a modifier that made every hit a kill, so firing in any direction at
+#: all cleared a wave - and Powder Keg's third ring could not be won, because four Hulks stood inside it
+#: surviving the chain three units from the player.  Neither was visible without measuring.
+
+# ------------------------------------------------------------------------- 1. Barnyard, 11 seconds spare
+#: Listening, and nothing else.  Three cows walk through every wave and a jukebox plays in the last one;
+#: QuietZombie is the one to find, 35 life and the softest walk in the game.  Forty-five rounds against 405
+#: of life is 4.5 rounds of slack at level one, so a cow shot is a kill given away.
+PLISTS['port_barnyard_1'] = _crowd(('WeakZombie', 'WeakZombieB', 'Zombie'), 3, 10.0, 6.0)
+PLISTS['port_barnyard_1']['PasserBy'] = _cows((70, 11, 1), (210, 11, 5), (320, 11, 9))
+PLISTS['port_barnyard_2'] = _crowd(('QuietZombie', 'WeakZombie', 'Zombie', 'ZombieB', 'WeakZombieB'),
+                                   5, 10.0, 4.5)
+PLISTS['port_barnyard_2']['PasserBy'] = _cows((10, 11, 2), (180, 11, 7), (260, 11, 12))
+PLISTS['port_barnyard_3'] = _crowd(('QuietZombie', 'WeakZombie', 'ZombieB', 'QuietZombie', 'ZombieC',
+                                    'WeakZombieB'), 6, 10.0, 3.0)
+PLISTS['port_barnyard_3']['PasserBy'] = dict(
+    _cows((60, 11, 1), (150, 11, 6), (290, 11, 11)),
+    Jukebox={'spawn_angle': 215.0, 'spawn_distance': 9.0, 'spawn_time': 3.0})
 PLISTS['port_barnyard'] = {
     'challenge_id': 'port_barnyard',
     'title': 'Barnyard',
@@ -360,9 +395,7 @@ PLISTS['port_barnyard'] = {
     'tip': 'Listen before you fire. Some of what you can hear is only in the way, and the wok never runs '
            'out.',
     'icon': 'Challenge_icon_02', 'icon_title': 'BY',
-    #: 360 life across the three waves.  A revolver does 10 a shot at level one, so forty-five rounds is
-    #: thirty-six kills' worth and nine to waste - and every cow shot is one of the nine.
-    'weapons': [{'name': 'pistol', 'ammo': '45'}, {'name': 'wok'}],
+    'weapons': [{'name': 'pistol', 'ammo': '42'}, {'name': 'wok'}],
     'bricks': ['port_barnyard_1', 'port_barnyard_2', 'port_barnyard_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
     'mission_star': {'reward': 200},
@@ -370,12 +403,40 @@ PLISTS['port_barnyard'] = {
     'accuracy_star': {'reward': 150, 'objective': 60},
 }
 
-# ------------------------------------------------------------------------------------------ 2. Clockwork
-#: The same four bearings, over and over, on a beat that tightens.  Nothing here is hard to kill; the whole
-#: of it is whether a player works out that the next one is already coming from where the last one did.
+# ------------------------------------------------------------------------ 2. The Wall, 8 seconds spare
+#: A revolver against things that do not die to a cylinder.  A Hulk has 100 life and walks at 0.75, which
+#: is sixteen seconds from twelve units and six seconds of shooting - so one is nothing and three at once
+#: are the arena.  The Riot Gear Zombie is the other half of it: 150 life, and `protect` 0x10005ff4c stops
+#: it dead for five seconds every time it is hit, so it delays itself and the Hulks walk on past it.
+PLISTS['port_wall_1'] = _wave([('Hulk', 90, 12), ('HulkB', 300, 12, 9)], no_blast=True)
+PLISTS['port_wall_2'] = _wave([('Hulk', 40, 12), ('Shield', 175, 12, 8), ('HulkB', 290, 12, 16)],
+                              no_blast=True)
+PLISTS['port_wall_3'] = _wave([('Hulk', 20, 12), ('HulkB', 160, 12, 10), ('Shield', 95, 12, 20),
+                               ('Hulk', 255, 12, 30), ('HulkB', 310, 12, 40)], no_blast=True)
+PLISTS['port_wall'] = {
+    'challenge_id': 'port_wall',
+    'title': 'The Wall',
+    'objective': 'Six rounds in the cylinder, and nothing out here dies to six rounds.',
+    'tip': 'Reload before you need to, not when you find out. One of them will not let you hit it twice in '
+           'a row, so leave it and come back to it.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'WL',
+    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_wall_1', 'port_wall_2', 'port_wall_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'challenges_requirement': ['port_barnyard'],
+    'mission_star': {'reward': 250},
+    'time_limit_star': {'reward': 150, 'objective': 170},
+    'accuracy_star': {'reward': 200, 'objective': 55},
+}
+
+# ------------------------------------------------------------------------ 3. Clockwork, 5 seconds spare
+#: The same four bearings over and over, on a beat that tightens.  Nothing here is hard to kill and the
+#: pistol never runs dry; the whole of it is whether a player works out that the next one is already coming
+#: from where the last one did, and is turned that way before it arrives.  The last wave opens out to eight
+#: bearings, so the pattern is still a pattern but twice as long to learn.
 PLISTS['port_clockwork_1'] = _metronome(('WeakZombie', 'Zombie'), 8, 10.0, 3.0)
 PLISTS['port_clockwork_2'] = _metronome(('WeakZombie', 'Zombie', 'ZombieB', 'QuietZombie'), 12, 10.0, 2.2)
-PLISTS['port_clockwork_3'] = _metronome(('Zombie', 'Runner', 'ZombieB', 'QuietZombie'), 16, 11.0, 1.6,
+PLISTS['port_clockwork_3'] = _metronome(('Zombie', 'QuietZombie', 'ZombieB', 'WeakZombie'), 16, 11.0, 1.9,
                                         bearings=(0.0, 90.0, 180.0, 270.0, 45.0, 135.0, 225.0, 315.0))
 PLISTS['port_clockwork'] = {
     'challenge_id': 'port_clockwork',
@@ -387,78 +448,53 @@ PLISTS['port_clockwork'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '300'}, {'name': 'wok'}],
     'bricks': ['port_clockwork_1', 'port_clockwork_2', 'port_clockwork_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_barnyard'],
-    'mission_star': {'reward': 250},
+    'challenges_requirement': ['port_wall'],
+    'mission_star': {'reward': 300},
     'time_limit_star': {'reward': 150, 'objective': 150},
     'accuracy_star': {'reward': 150, 'objective': 45},
 }
 
-# --------------------------------------------------------------------------------------- 3. The Survivor
-#: A ring packed inside the blast's three units, and one or two standing outside it.  Setting off the ring
-#: leaves a player deaf - `solve_explosion_with_dictionary` rings the ears anywhere inside five units - with
-#: something still walking in, so the arena is the half minute afterwards rather than the shot.
-#:
-#: Every stray stands within ten and a half units, because the revolver and the Micro SMG both have a range
-#: of 11 and a shot past that cannot land at all.
+# --------------------------------------------------------------------- 4. The Survivor, 2 seconds spare
+#: Setting off the ring is free and is meant to be.  What it costs is twenty seconds of hearing, and what
+#: walks in during those twenty seconds is the arena: QuietZombies, which are hard enough to place with
+#: ears that work, and a Runner that gives no time to hunt.
 PLISTS['port_survivor_1'] = _ring_with_strays(
-    ('WeakZombie', 'WeakZombieB'), 8, 3.0, [('Zombie', 135, 9.0)])
+    ('WeakZombie', 'WeakZombieB'), 8, 2.8,
+    [('Zombie', 135, 9.0, 1.0), ('QuietZombie', 300, 9.5, 5.0), ('Zombie', 40, 9.0, 9.0),
+     ('Runner', 210, 11.0, 12.0)])
 PLISTS['port_survivor_2'] = _ring_with_strays(
-    ('WeakZombie', 'Zombie', 'WeakZombieB'), 10, 2.8, [('QuietZombie', 250, 10.0)])
+    ('WeakZombie', 'Zombie', 'WeakZombieB'), 10, 2.7,
+    [('QuietZombie', 250, 9.5, 1.0), ('Zombie', 20, 9.0, 4.0), ('QuietZombie', 160, 9.5, 7.0),
+     ('ZombieB', 300, 9.0, 10.0), ('Runner', 85, 11.0, 13.0), ('QuietZombie', 130, 9.5, 17.0)])
 PLISTS['port_survivor_3'] = _ring_with_strays(
     ('WeakZombie', 'Zombie', 'ZombieB', 'WeakZombieC'), 12, 2.6,
-    [('QuietZombie', 20, 10.5), ('QuietZombie', 190, 10.5)])
+    [('QuietZombie', 20, 9.5, 1.0), ('Zombie', 190, 9.0, 3.5), ('QuietZombie', 110, 9.5, 6.0),
+     ('ZombieB', 250, 9.0, 8.5), ('Runner', 290, 11.0, 11.0), ('QuietZombie', 60, 9.5, 14.0),
+     ('ZombieC', 330, 9.0, 16.5), ('RunnerB', 225, 11.0, 19.0)])
 PLISTS['port_survivor'] = {
     'challenge_id': 'port_survivor',
     'title': 'The Survivor',
     'objective': 'They are all standing close together. Except the ones that are not.',
-    'tip': 'It will be quiet for a while afterwards, and that is not a fault. Turn slowly and let the rest '
-           'come to you.',
+    'tip': 'It will be quiet for a while afterwards, and that is not a fault. Something is still walking, '
+           'and one of them is not walking slowly.',
     'icon': 'Challenge_icon_02', 'icon_title': 'SV',
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '150'}, {'name': 'wok'}],
     'bricks': ['port_survivor_1', 'port_survivor_2', 'port_survivor_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_clockwork'],
-    'mission_star': {'reward': 300},
+    'challenges_requirement': ['port_three_bullets'],
+    'mission_star': {'reward': 400},
     'time_limit_star': {'reward': 200, 'objective': 140},
     'accuracy_star': {'reward': 150, 'objective': 40},
 }
 
-# ---------------------------------------------------------------------------------------- 4. The Wall
-#: A revolver against things that do not die to a cylinder.  A Hulk has 100 life and walks at 0.75, the Riot
-#: Gear Zombie has 150 and hides behind its shield for five seconds the moment it is hit - and the revolver
-#: holds six rounds and takes 1.8 seconds to fill.  650 life over three waves, which is sixty-five shots and
-#: eleven reloads at level one, so they are staggered far enough apart in time to be taken one at
-#: a time.  Twelve units out, which is as far as this game has ever put anything.
-PLISTS['port_wall_1'] = _wave([('Hulk', 90, 12)], no_blast=True)
-PLISTS['port_wall_2'] = _wave([('Hulk', 40, 12), ('HulkB', 300, 12, 14)], no_blast=True)
-PLISTS['port_wall_3'] = _wave([('Hulk', 20, 12), ('Shield', 160, 12, 13), ('HulkB', 280, 12, 28)],
-                              no_blast=True)
-PLISTS['port_wall'] = {
-    'challenge_id': 'port_wall',
-    'title': 'The Wall',
-    'objective': 'Six rounds in the cylinder, and nothing out here dies to six rounds.',
-    'tip': 'Reload before you need to, not when you find out. One of them will not let you hit it twice in '
-           'a row, so leave it and come back to it.',
-    'icon': 'Challenge_icon_02', 'icon_title': 'WL',
-    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
-    'bricks': ['port_wall_1', 'port_wall_2', 'port_wall_3'],
-    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_survivor'],
-    'mission_star': {'reward': 350},
-    'time_limit_star': {'reward': 200, 'objective': 170},
-    'accuracy_star': {'reward': 200, 'objective': 55},
-}
-
-# ------------------------------------------------------------------------------------------ 5. Stampede
-#: Everything that runs.  A Runner covers 1.3 units a second, a Chainsaw 1.45 and a Clown 2, so from
-#: twelve units the first one is on a player in six seconds and they keep arriving closer together.  The
-#: Micro SMG is the answer - four hundred rounds of it - and the revolver is what a player reaches for while
-#: the SMG is reloading, which takes three and a third seconds.
-PLISTS['port_stampede_1'] = _metronome(('Runner', 'RunnerB'), 4, 12.0, 4.0, bearings=(0.0, 120.0, 240.0))
-PLISTS['port_stampede_2'] = _metronome(('Runner', 'Chainsaw', 'RunnerB', 'RunnerC'), 6, 12.0, 3.0,
-                                       bearings=(30.0, 150.0, 270.0, 90.0, 210.0, 330.0))
-PLISTS['port_stampede_3'] = _metronome(('Runner', 'Clown', 'Chainsaw', 'RunnerB', 'RunnerC'), 9, 12.0, 2.6,
-                                       bearings=(0.0, 140.0, 80.0, 250.0, 40.0, 190.0, 300.0, 110.0, 220.0))
+# ------------------------------------------------------------------------ 5. Stampede, 2 seconds short
+#: Everything that runs.  A Runner covers 1.3 units a second, a Chainsaw 1.45 and a Clown 2, so from twelve
+#: units the first one is on a player in six seconds and they keep arriving closer together.  And the arena
+#: asks to be played with `fasterEnemies` twice over, which is `enemi_speed_modifier` at 1.4: the same
+#: crowd, forty per cent less time to deal with it.
+PLISTS['port_stampede_1'] = _crowd(('Runner', 'RunnerB'), 4, 12.0, 4.0)
+PLISTS['port_stampede_2'] = _crowd(('Runner', 'Chainsaw', 'RunnerB', 'RunnerC'), 6, 12.0, 3.2)
+PLISTS['port_stampede_3'] = _crowd(('Runner', 'Clown', 'Chainsaw', 'RunnerB', 'RunnerC'), 9, 12.0, 3.2)
 PLISTS['port_stampede'] = {
     'challenge_id': 'port_stampede',
     'title': 'Stampede',
@@ -468,107 +504,92 @@ PLISTS['port_stampede'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '400'}, {'name': 'wok'}],
     'bricks': ['port_stampede_1', 'port_stampede_2', 'port_stampede_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_wall'],
-    'mission_star': {'reward': 400},
+    'challenges_requirement': ['port_survivor'],
+    #: PORT ADDITION (user request): the modifiers this arena is played with, whatever the deck last did.
+    #: A flag written twice is applied twice, and `times()` counts the stack, so this is +40% speed.
+    'Modifiers': ['fasterEnemies'],
+    'mission_star': {'reward': 450},
     'time_limit_star': {'reward': 200, 'objective': 120},
     'accuracy_star': {'reward': 200, 'objective': 35},
 }
 
-# -------------------------------------------------------------------------------------- 6. Three Bullets
-#: Three rounds, three rings and a wok.
+# ------------------------------------------------------------------- 6. Three Bullets, 5 seconds short
+#: Three rounds, and three things out there that no number of rounds will reach any other way.
 #:
-#: This one is arithmetic, and the arithmetic has to hold at every upgrade level or it is a challenge only a
-#: player who has spent diamonds can finish.  A WeakZombie has 20 life.  A revolver does 10 a shot at level
-#: one and 14 at level four, and a critical doubles it - 20 at the worst, which is exactly enough.  So the
-#: arena names `alwaysCritical`, the Executioner card's flag, which sits outside the aim test in
-#: `brick_manager` and so turns any hit into a kill rather than only a hit that was lined up.  One round,
-#: one zombie, one ring, at every level, with no luck in it.
+#: Ted, Jim and Bob are zombies with the whole sound set - spawn, approach, aggressive, hit, death - and a
+#: speed of 0.  They stand where they spawn and never come, so the wok cannot touch them (it reaches 3) and
+#: `brickIsCleared` 0x1000a1658 will not pass the wave until they are dead.  Ted and Jim have 10 life, which
+#: is exactly one revolver round at level one and less than one at every level above it.  So: one round
+#: each, three of them, three rounds, and no modifier propping it up.
 #:
-#: 2.8 units: inside the blast's radius, and near enough that setting one off is felt.  The wok reaches 3
-#: and does 25, so a wasted round is recoverable - an explosion has never hurt the player in this game, only
-#: deafened them, so standing in one to swing is allowed.
-PLISTS['port_three_bullets_1'] = _ring(('WeakZombie', 'WeakZombieB'), 8, 2.8, rigged=True)
-PLISTS['port_three_bullets_2'] = _ring(('WeakZombie', 'WeakZombieB', 'WeakZombieC'), 10, 2.8, rigged=True)
-PLISTS['port_three_bullets_3'] = _ring(('WeakZombie', 'WeakZombieB', 'WeakZombieC', 'WeakZombieD'), 12,
-                                       2.8, rigged=True)
+#: Everything else in here walks, and has to be met with the wok at arm's length, because there is nothing
+#: left to shoot it with.  A WeakZombie is one swing and a Zombie is two; they arrive far enough apart to be
+#: taken one at a time and near enough together that there is no time to think between them.  Spend a round
+#: on one of them and the wave it belongs to cannot be finished at all.
+PLISTS['port_three_bullets_1'] = _wave(
+    [('Ted', 200, 9.0), ('WeakZombie', 0, 9.0, 2.0), ('Zombie', 120, 9.0, 8.0)], no_blast=True)
+PLISTS['port_three_bullets_2'] = _wave(
+    [('Jim', 60, 10.0), ('Zombie', 250, 9.0, 1.0), ('WeakZombie', 140, 9.0, 4.0),
+     ('ZombieB', 20, 9.0, 8.0)], no_blast=True)
+PLISTS['port_three_bullets_3'] = _wave(
+    [('Ted', 310, 10.0), ('Zombie', 45, 9.0, 1.0), ('ZombieB', 190, 9.0, 3.0),
+     ('Runner', 105, 9.0, 7.0), ('WeakZombieB', 265, 9.0, 11.0), ('ZombieC', 330, 9.0, 15.0)],
+    no_blast=True)
 PLISTS['port_three_bullets'] = {
     'challenge_id': 'port_three_bullets',
     'title': 'Three Bullets',
-    'objective': 'Three rounds is all you are given, and there are three crowds out there.',
-    'tip': 'One round is meant to be enough for each of them. Work out why it is, and keep the wok for when '
-           'you work it out too late.',
+    'objective': 'Three rounds is all you are given, and three of them will not come to you.',
+    'tip': 'Work out which ones you cannot reach with the wok, and save your rounds for those. There are '
+           'exactly enough and not one spare, so if the arena goes quiet and will not end, a round went '
+           'somewhere it should not have. End the challenge and start again.',
     'icon': 'Challenge_icon_02', 'icon_title': '3B',
     'weapons': [{'name': 'pistol', 'ammo': '3'}, {'name': 'wok'}],
     'bricks': ['port_three_bullets_1', 'port_three_bullets_2', 'port_three_bullets_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_stampede'],
-    #: PORT ADDITION (user request): the modifiers this arena is played with, whatever the deck last did.
-    #: Read by `ChallengeGameplayController.view_did_load`.
-    'Modifiers': ['alwaysCritical'],
-    'mission_star': {'reward': 450},
-    'time_limit_star': {'reward': 200, 'objective': 90},
+    'challenges_requirement': ['port_clockwork'],
+    'mission_star': {'reward': 350},
+    'time_limit_star': {'reward': 200, 'objective': 150},
     'accuracy_star': {'reward': 200, 'objective': 80},
 }
 
-# ----------------------------------------------------------------------------------------- 7. Powder Keg
-#: The three rings, and the crowd after each, getting worse as they go (user request: harder, but a thing
-#: that can be finished).  This is the last of them, and the only one a player will have met already.
+# --------------------------------------------------------------------- 7. Powder Keg, 9 seconds short
+#: All of it at once, and the last of the chapter.
 #:
-#: A ring is cleared by one kill, whatever is standing in it - the chain does the rest - so what makes a
-#: ring hard is not how tough its zombies are but **how long the first kill takes while the rest close
-#: in**.  That is why the last ring has a Hulk in it at 100 life: it asks a player to pick the soft one by
-#: ear and shoot that, not to shoot whatever is loudest.  And why no ring holds a Runner, which at 1.3
-#: speed from three units is not a puzzle but an execution.
-#:
-#: The crowds are the opposite.  Nothing in them explodes, so every one of them has to be killed, and they
-#: walk in one at a time (`every`).  Those are where the Runners go, and the last one is eight of them
-#: with a Hulk at the end.
-#:
-#: 3.5 units, then 3.2, then 3.0.  Inside 5 a blast rings a player's ears; at 3 a zombie stops walking and
-#: starts closing (`squared_distance >= 9` is the test), so 3.0 is as near as a ring can stand and still
-#: give a moment to choose.
+#: Three rings, and a crowd walking in behind each while the ring is still ringing in the player's ears.
+#: The rings are free and deafening - nothing tough stands in one, because a Hulk three units away that
+#: survived the chain is a death nobody could have prevented - and the crowds are where the work is: nothing
+#: in them explodes, whatever a player is carrying, so every one of them has to be killed, and the third one
+#: is nine of them with the Hulks in it, arriving one every second and a half from eight units.
 RINGS = (
     (('WeakZombie', 'WeakZombieB', 'Zombie', 'ZombieB'), 10, 3.5),
     (('WeakZombie', 'Zombie', 'ZombieB', 'ZombieC'), 12, 3.2),
-    (('WeakZombie', 'Zombie', 'Hulk', 'ZombieB', 'HulkB'), 12, 3.0),
+    (('WeakZombie', 'Zombie', 'ZombieB', 'WeakZombieC', 'ZombieC'), 12, 3.0),
 )
 CROWDS = (
-    (('WeakZombie', 'Zombie', 'Farty', 'ZombieB'), 5, 10.0, 1.5),
-    (('Zombie', 'Runner', 'Farty', 'ZombieB'), 7, 9.0, 1.4),
-    (('Runner', 'Zombie', 'Hulk', 'RunnerB', 'Farty'), 9, 8.0, 1.3),
+    (('WeakZombie', 'Zombie', 'Farty', 'ZombieB'), 5, 10.0, 2.0),
+    (('Zombie', 'Runner', 'Farty', 'ZombieB', 'QuietZombie'), 7, 9.0, 1.8),
+    (('Runner', 'Zombie', 'Hulk', 'RunnerB', 'Farty', 'ZombieB', 'HulkB'), 9, 9.0, 1.6),
 )
-
 for _n, (_k, _c, _d) in enumerate(RINGS, start=1):
     PLISTS['port_keg_ring_%i' % _n] = _ring(_k, _c, _d, rigged=True)
 for _n, (_k, _c, _d, _e) in enumerate(CROWDS, start=1):
-    PLISTS['port_keg_crowd_%i' % _n] = _ring(_k, _c, _d, rigged=False, every=_e)
+    PLISTS['port_keg_crowd_%i' % _n] = _crowd(_k, _c, _d, _e)
 del _n, _k, _c, _d, _e
 
-#: The challenge itself.  Shaped as the original's are (`tutorial_5.plist` and the rest): a title, an
-#: objective, the guns it hands you, and the waves in the order they come.  Three rings with a crowd after
-#: each, and a wave counts as cleared the way every wave in this game does - when nothing in it is left.
 PLISTS['port_keg'] = {
     'challenge_id': 'port_keg',
     'title': 'Powder Keg',
     'objective': 'Six crowds, and half of them came standing far too close together.',
     'tip': 'Find out what a crowd that close is good for, and then be quick about it, because the rest are '
-           'already walking in.',
-    'icon': 'Challenge_icon_02',
-    'icon_title': 'PK',
-    #: A pistol that never runs dry, a Micro SMG that does, and a wok.  The pistol is what makes this
-    #: finishable however badly it goes; the SMG is the thing worth spending well, and 200 rounds is
-    #: enough for the crowds only if the rings are set off with one shot each.  No shotgun: a ring is a
-    #: target a shotgun cannot miss.
-    'weapons': [
-        {'name': 'pistol', 'ammo': '999'},
-        {'name': 'microsmg', 'ammo': '200'},
-        {'name': 'wok'},
-    ],
+           'already walking in and you will not hear them coming.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'PK',
+    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '200'},
+                {'name': 'wok'}],
     'bricks': ['port_keg_ring_1', 'port_keg_crowd_1',
                'port_keg_ring_2', 'port_keg_crowd_2',
                'port_keg_ring_3', 'port_keg_crowd_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_three_bullets'],
+    'challenges_requirement': ['port_stampede'],
     'mission_star': {'reward': 500},
     'time_limit_star': {'reward': 200, 'objective': 180},
     'accuracy_star': {'reward': 200, 'objective': 40},
@@ -577,9 +598,7 @@ PLISTS['port_keg'] = {
 #: The port's own challenges, in the order the Extra menu lists them - which is also the order they are
 #: unlocked in (user request), each one naming the one before it in `challenges_requirement`.  That key is
 #: the original's own: `hasChallengeRequirementsForChallengeWithName:` 0x10001ffbc reads it, and the
-#: accessible selector calls a challenge whose requirement is unmet `locked`.  They are ordered by what
-#: they ask of a player rather than by how much life is in them: the field with the cows first, then the
-#: beat, then the ring and what it leaves standing, then the slow ones, then the fast ones, then three
-#: rounds - and Powder Keg last, because it is all of it at once.
-EXTRA_CHALLENGES = ('port_barnyard', 'port_clockwork', 'port_survivor', 'port_wall', 'port_stampede',
-                    'port_three_bullets', 'port_keg')
+#: accessible selector calls a challenge whose requirement is unmet `locked`.  The order is the one
+#: `tools/arena_pressure.py` measures, easiest first.
+EXTRA_CHALLENGES = ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets',
+                    'port_survivor', 'port_stampede', 'port_keg')
