@@ -632,6 +632,17 @@ class TarotScreen(ViewControllerScreen):
         self.shuffle_button.hint = '%i diamonds and %i coins. You have %i diamonds and %i coins' % (
             diamonds, coins, inv.diamonds, inv.coins)
 
+    def announce_cards(self, cards: list) -> None:
+        """PORT ADDITION (user request): read several cards out as one thing to say.
+
+        `Screen.speak` interrupts by default, so one call per card means every card but the last is cut
+        off mid-sentence: a shuffle that dealt cards 3 and 4 read out only card 4.  They go in a single
+        utterance, each still naming its own slot, so what is heard is the whole hand that moved.
+        """
+        said = [c.accessible_description(with_action=False) for c in cards if c.accessible_card is not None]
+        if said:
+            self.speak(' \n\n '.join(said))
+
     def shuffle_button_pressed(self) -> None:
         """PORT ADDITION (user request): deal every locked card again, at random, for a price.
 
@@ -706,8 +717,7 @@ class TarotScreen(ViewControllerScreen):
             self.shuffling = False
             if self.shuffle_button is not None:
                 self.shuffle_button.enabled = True
-            for card in cards:                            # read out the way the cursor would read them
-                card.announce_card()
+            self.announce_cards(cards)
 
         flip(0)
 

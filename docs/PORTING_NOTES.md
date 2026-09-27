@@ -1268,8 +1268,12 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   The announcement was cut back with it.  A card read out after being changed is now the title and the
   description and nothing else (`accessible_description(with_action=False)`): what the cursor would say
   also carries the price of changing it again, the diamonds in the purse and the word "button", none of
-  which is what somebody who has just paid wants to hear.  A shuffle reads two of those in a row, which is
-  twice the reason.
+  which is what somebody who has just paid wants to hear.
+
+  And a shuffle says the cards in **one** utterance (`announce_cards`).  `Screen.speak` interrupts by
+  default, so a call per card cut every card but the last off mid-sentence: a shuffle that dealt cards 3
+  and 4 read out only card 4, which is what it did until it was played (user request).  They are joined
+  now, each still naming its own slot, so what is heard is the whole hand that moved.
 
 * PORT ADDITION: a Shuffle button, for the cards that cannot be changed one at a time (user request).
   It deals every locked slot again at once - card 3, and card 4 on a hand that has one - at random, and
