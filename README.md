@@ -996,16 +996,24 @@ what every address comment in the port points into.
 None of them is needed to play; they exist so a session can be started at a
 particular point, and so automated runs can finish on their own.
 
+**Most of them only exist when the game is run from a checkout.** A release
+knows `--game` and `--log-level` and nothing else, and answers *unrecognized
+arguments* to the rest — they are never added to it. Those are the ones that
+start the game past its own rules, and a built copy should not carry a switch
+that turns those rules off. The two that stay are the two a player might
+genuinely need: pointing the game at its data, and turning up the log when
+something misbehaves.
+
 | option | what it does |
 |---|---|
-| `--endless` | start an endless game directly. This skips the play menu (so it works before Endless is unlocked by finishing `tutorial_5`) and skips the tarot cards, so no card modifiers are in play. |
-| `--challenge NAME` | start one challenge by its plist name (`tutorial_1`, `arena1_3`, …). It skips the selector, so the challenge's weapon and completion requirements are not checked — your saved inventory is still what you play with. |
+| `--endless` *(checkout only)* | start an endless game directly. This skips the play menu (so it works before Endless is unlocked by finishing `tutorial_5`) and skips the tarot cards, so no card modifiers are in play. |
+| `--challenge NAME` *(checkout only)* | start one challenge by its plist name (`tutorial_1`, `arena1_3`, …). It skips the selector, so the challenge's weapon and completion requirements are not checked — your saved inventory is still what you play with. |
 | `--game PATH` | read the game's data from somewhere other than `game/` (see below). |
 | `--log-level debug` | log every decision the engine makes, not just the milestones. The first thing to try when something misbehaves. |
-| `--free-cards` | the tarot cards that cannot normally be changed — the third, and any after it — can be, and changing any of them costs nothing. For trying a particular card out: press Enter on it until it comes up, instead of playing hands until it does. The first two cards are unaffected and still cost their 3 diamonds and 2. |
-| `--mute` | set the listener's gain to zero: the game runs in silence. |
-| `--no-speech` | never speak, so a test run does not talk over your screen reader. |
-| `--exit-after SECONDS` | quit cleanly after this long, for unattended runs. |
+| `--free-cards` *(checkout only)* | the tarot cards that cannot normally be changed — the third, and any after it — can be, and changing any of them costs nothing. For trying a particular card out: press Enter on it until it comes up, instead of playing hands until it does. The first two cards are unaffected and still cost their 3 diamonds and 2. |
+| `--mute` *(checkout only)* | set the listener's gain to zero: the game runs in silence. |
+| `--no-speech` *(checkout only)* | never speak, so a test run does not talk over your screen reader. |
+| `--exit-after SECONDS` *(checkout only)* | quit cleanly after this long, for unattended runs. |
 
 A game started with `--endless` or `--challenge` saves its score, kills and
 stats like any other, so it can legitimately unlock things.

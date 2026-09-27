@@ -26,17 +26,36 @@ def main(argv=None) -> int:
     parser.add_argument('--log-level', default='info')
     parser.add_argument('--game', help="the original app bundle (or the folder holding it), when it is not "
                                        "in the project's game folder")
-    parser.add_argument('--endless', action='store_true',
-                        help='start an endless game, unlocked or not (skips the menu and the tarot cards)')
-    parser.add_argument('--challenge', metavar='NAME',
-                        help='start a challenge by its plist name, e.g. tutorial_1, unlocked or not')
-    parser.add_argument('--free-cards', action='store_true',
-                        help='testing: the tarot cards that cannot be changed can be, and cost nothing')
-    parser.add_argument('--mute', action='store_true', help='testing: silence the listener')
-    parser.add_argument('--no-speech', action='store_true', help='testing: do not speak')
-    parser.add_argument('--exit-after', type=float, metavar='SECONDS',
-                        help='testing: quit after this many seconds')
+    # PORT ADDITION (user request): the flags below exist in a checkout and not in a build.  They let
+    # the game be started past its own rules - Endless before it is unlocked, a challenge whose
+    # requirements are not checked, a locked tarot card that can be changed - which is what makes them
+    # worth having while the port is being worked on and worth not shipping.  A release does not know
+    # them at all: they are never added to the parser, so it answers "unrecognized arguments" rather than
+    # carrying a switch that turns the rules off.  `sys.frozen` is what `paths.FROZEN` reads, asked
+    # directly because `--game` has to reach the environment before `paths` is imported at all.
+    #
+    # `--game` and `--log-level` stay in a build on purpose: the first is how a player points the game at
+    # its data when it is not where it is looked for, and the second is the first thing to try when
+    # something misbehaves.  Neither changes how the game plays.
+    from_source = not getattr(sys, 'frozen', False)
+    if from_source:
+        parser.add_argument('--endless', action='store_true',
+                            help='start an endless game, unlocked or not (skips the menu and the cards)')
+        parser.add_argument('--challenge', metavar='NAME',
+                            help='start a challenge by its plist name, e.g. tutorial_1, unlocked or not')
+        parser.add_argument('--free-cards', action='store_true',
+                            help='testing: the tarot cards that cannot be changed can be, and cost nothing')
+        parser.add_argument('--mute', action='store_true', help='testing: silence the listener')
+        parser.add_argument('--no-speech', action='store_true', help='testing: do not speak')
+        parser.add_argument('--exit-after', type=float, metavar='SECONDS',
+                            help='testing: quit after this many seconds')
     args = parser.parse_args(argv)
+    endless = getattr(args, 'endless', False)
+    challenge = getattr(args, 'challenge', None)
+    free_cards = getattr(args, 'free_cards', False)
+    mute = getattr(args, 'mute', False)
+    no_speech = getattr(args, 'no_speech', False)
+    exit_after = getattr(args, 'exit_after', None)
     if args.game:
         # set before anything imports audiodefence.paths: that module resolves the bundle on import
         os.environ['AUDIODEFENCE_GAME'] = args.game
@@ -59,10 +78,10 @@ def main(argv=None) -> int:
     from .s3d.engine import S3DEngine
     from .ui.host import ScreenManager
 
-    if args.no_speech:
+    if no_speech:
         Speech.shared().speak = lambda *a, **k: None
         Speech.shared().speak_automatic = lambda *a, **k: None
-    if args.free_cards:
+    if free_cards:
         from .ui import tarot
         tarot.UNLOCK_CARDS_FOR_TESTING = True
         log.warning('--free-cards: the locked tarot cards can be changed, and cost nothing. '
@@ -85,16 +104,16 @@ def main(argv=None) -> int:
     host.request_quit = lambda: running.__setitem__(0, False)
     app = App.delegate()
     app.host = host
-    if args.endless or args.challenge:
+    if endless or challenge:
         app.init_papa_engine()
         app.run_sanity_check()
-        if args.endless:
+        if endless:
             app.go_to_gameplay()
         else:
-            app.go_to_challenge_with_dict(App.dictionary_for_challenge_with_name(args.challenge))
+            app.go_to_challenge_with_dict(App.dictionary_for_challenge_with_name(challenge))
     else:
         app.application_did_finish_launching()          # logo, then the opener or the control scheme choice
-    if args.mute:
+    if mute:
         from .s3d import openal as oal
         S3DEngine.engine().al.alListenerf(oal.AL_GAIN, 0.0)
 
@@ -103,7 +122,7 @@ def main(argv=None) -> int:
     started = time.perf_counter()
     try:
         while running[0]:
-            if args.exit_after is not None and time.perf_counter() - started > args.exit_after:
+            if exit_after is not None and time.perf_counter() - started > exit_after:
                 break
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

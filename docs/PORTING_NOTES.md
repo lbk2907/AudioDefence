@@ -12,9 +12,11 @@ py AudioDefence.py --endless
 py AudioDefence.py --challenge tutorial_1
 ```
 
-Testing flags: `--mute`, `--no-speech`, `--exit-after SECONDS`, `--log-level debug`, `--free-cards`
-(the tarot cards that cannot be changed can be, and cost nothing - for trying one out without
-playing hands until it turns up).
+Testing flags: `--mute`, `--no-speech`, `--exit-after SECONDS`, `--free-cards` (the tarot cards that
+cannot be changed can be, and cost nothing - for trying one out without playing hands until it turns
+up).  These, with `--endless` and `--challenge`, are added to the parser only when `sys.frozen` is not
+set, so a build does not have them: they start the game past its own rules, and a release should not
+carry the switch that turns those rules off.  `--game` and `--log-level` are in every copy.
 The log is written to `%APPDATA%\AudioDefence\audiodefence.log`; saves live in the same folder.
 
 ## Ported so far
