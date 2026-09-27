@@ -6,7 +6,7 @@ import logging
 from ..platform.defaults import ns_bool_value, ns_int_value, ns_float_value
 from ..platform.runloop import RunLoop
 from . import data
-from .modifiers import POWDER_KEG_REWARD, GameModifiers
+from .modifiers import GameModifiers
 from .persistent_stats import PersistentStats, build_from_dictionary
 
 log = logging.getLogger('stats')
@@ -204,15 +204,12 @@ class InGameStats:
             entry['Killed'] = ns_int_value(entry.get('Killed')) + 1
         self.number_of_enemy_kills += 1
         self.set_combo(self._combo + enemy.combo_bonus)
-        # PORT ADDITION (user request): Powder Keg pays for what it asks of a player.  Once for each card
-        # that asked, though only one deck holds it; `times` is what makes that so without a special case.
-        pay = POWDER_KEG_REWARD ** GameModifiers.shared().times('powderKeg')
-        self.coins_for_kill += enemy.coins_reward * pay
+        self.coins_for_kill += enemy.coins_reward
         if enemy.score < 2:
             add = self._combo
         else:
             add = enemy.score * self._combo
-        self.game_score += add * pay
+        self.game_score += add
 
     def death_by_enemy_with_name(self, name: str) -> None:  # 0x1000ba098
         entry = self.enemy_list.get(name)

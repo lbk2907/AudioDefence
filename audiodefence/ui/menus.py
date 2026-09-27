@@ -225,6 +225,47 @@ class MainMenuScreen(ViewControllerScreen):
     # REMOVED (user request): the magic tap 0x100065d40 pressed Play.
 
 
+# =========================================================================================== extra
+@register('Port_ExtraMenuViewController')
+class ExtraMenuScreen(ViewControllerScreen):
+    """PORT ADDITION (user request): the challenges the port wrote, which the original has no screen for.
+
+    It is built like the play menu rather than like the challenge selector: the selector is a table of
+    worlds and stars and locks, and these are neither locked nor part of a world.  One button a challenge,
+    Back to the play menu.  What they are is in `additions.PLISTS`, and they are read by name through
+    `data.plist` exactly as the original's challenges are.
+    """
+    page_title = 'Extra'
+
+    def load_view(self) -> None:
+        from ..game.additions import EXTRA_CHALLENGES
+        v = self.view = View('', (0, 0, 568, 320), accessible=False, name='extraMenu')
+        self.buttons = []
+        for i, name in enumerate(EXTRA_CHALLENGES):
+            d = data.plist(name) or {}
+            b = Button(str(d.get('title') or name), (192, 100 + i * 50, 187, 46), parent=v,
+                       actions=[lambda n=name: self.challenge_chosen(n)], name='extra %s' % name)
+            b.hint = str(d.get('objective') or '')
+            self.buttons.append(b)
+        if self.buttons:
+            self.first_accessible_element = self.buttons[0]
+        self.roots = [v]
+
+    def view_did_load(self) -> None:
+        super().view_did_load()
+        sb = self.status_bar_view_controller
+        sb.set_armory_button_visibility(False)
+        sb.set_currencies_visibility(False)
+        sb.back_button.set_title('Play')
+
+    @staticmethod
+    def challenge_chosen(name: str) -> None:
+        App.delegate().go_to_challenge_with_dict(App.dictionary_for_challenge_with_name(name))
+
+    def back_button_pressed(self) -> None:
+        App.delegate().go_to_play_menu()
+
+
 # =========================================================================================== play menu
 @register('ADPlayMenuViewController')
 class PlayMenuScreen(ViewControllerScreen):
@@ -249,6 +290,11 @@ class PlayMenuScreen(ViewControllerScreen):
         self.endless_mode_lock_view = View('', (200, 206, 180, 70), accessible=False, parent=s, name='#242')
         View('Finish 5 challenges to unlock this mode', (200, 206, 180, 70), parent=self.endless_mode_lock_view,
              name='#181')
+        # PORT ADDITION (user request): Extra, where the challenges the port wrote itself live.  Its frame
+        # puts it after Endless and before the two info buttons, `reading_order` sorting by the vertical
+        # centre of a frame: 168+46/2 is Endless at 191, and this is at 237.
+        self.extra_button = Button('Extra', (212, 222, 149, 30), parent=s,
+                                   actions=[self.extra_button_touched], name='extraButton')
         self.challenge_info_button = Button('Challenge Info', (373, 126, 22, 22), parent=s, font_button=False,
                                             actions=[self.challenge_info_button_pressed], name='#186')
         self.endless_info_button = Button('Endless Info', (357, 177, 22, 22), parent=s, font_button=False,
@@ -283,6 +329,10 @@ class PlayMenuScreen(ViewControllerScreen):
     @staticmethod
     def challenge_button_touched() -> None:               # challengeButtonTouched: 0x1000ab8c8
         App.delegate().go_to_world_selector()
+
+    @staticmethod
+    def extra_button_touched() -> None:                   # PORT ADDITION: see load_view
+        App.delegate().go_to_extra_menu()
 
     def back_button_pressed(self) -> None:                # 0x1000ab96c
         App.delegate().go_to_main_menu()

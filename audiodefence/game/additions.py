@@ -253,3 +253,75 @@ def extra_power_up_levels(weapons: dict) -> None:
         for n in range(5, 5 + EXTRA_POWER_UP_LEVELS):
             value = {k: value[k] + step[k] for k in stats}
             new_key(entry, 'level_%i' % n, {k: _tidy(value[k]) for k in stats})
+
+
+# ============================================================== plists of the port's own
+#: PORT ADDITION (user request): whole files the original does not have, rather than additions to files it
+#: does.  `data._load` falls back to these when the bundle has nothing by that name, so a challenge the
+#: port wrote and the waves it is made of are read exactly as the game's own are - by name, through the one
+#: function, by every screen that asks.
+#:
+#: The waves are where the work is, and almost none of it is code.  A ring is a wave whose zombies stand at
+#: one distance and even angles, which is what `spawn_angle` and `spawn_distance` have always meant; the
+#: `Rigged` key gives each of them the blast the game gives a Farty, so one shot takes the ring; and
+#: `NoBlast` on the crowd that follows promises the opposite, whatever a player is carrying.  The engine
+#: does the rest: it activates the playlists a wave names, so a ring of four kinds is four kinds a player
+#: can hear, and it moves to the next wave when one is cleared, which is what makes three rings a
+#: challenge of three waves.
+def _ring(kinds, count: int, distance: float, rigged: bool) -> dict:
+    """A wave standing in a circle at one distance, the kinds taken in turn round it."""
+    enemies = {}
+    for i in range(count):
+        enemies['%s %i' % (kinds[i % len(kinds)], i + 1)] = {
+            'spawn_angle': round(i * 360.0 / count, 2),
+            'spawn_distance': distance,
+        }
+    wave = {'Enemies': enemies}
+    wave['Rigged' if rigged else 'NoBlast'] = True
+    return wave
+
+
+#: The kinds a ring is dealt from, and the crowd that follows it.  Four kinds so a ring is not ten of one
+#: thing, and all of them ordinary walkers: a ring of Runners at three and a half units would be a death
+#: sentence rather than a puzzle.
+RING_KINDS = ('WeakZombie', 'WeakZombieB', 'Zombie', 'ZombieB')
+CROWD_KINDS = ('WeakZombie', 'Zombie', 'Farty', 'ZombieB')
+
+#: Close enough that the blast reaches a player's ears (a blast rings them from inside 5 units) and far
+#: enough that a zombie is still walking rather than lunging (they turn at 3).
+RING_DISTANCE = 3.5
+CROWD_DISTANCE = 10.0
+
+PLISTS: dict = {}
+for _n in (1, 2, 3):
+    PLISTS['port_keg_ring_%i' % _n] = _ring(RING_KINDS, 10, RING_DISTANCE, rigged=True)
+    PLISTS['port_keg_crowd_%i' % _n] = _ring(CROWD_KINDS, 5, CROWD_DISTANCE, rigged=False)
+del _n
+
+#: The challenge itself.  Shaped as the original's are (`tutorial_5.plist` and the rest): a title, an
+#: objective, the guns it hands you, and the waves in the order they come.  Three rings with a crowd after
+#: each, and a wave counts as cleared the way every wave in this game does - when nothing in it is left.
+PLISTS['port_keg'] = {
+    'challenge_id': 'port_keg',
+    'title': 'Powder Keg',
+    'objective': 'Clear three rings of rigged Zombies.',
+    'tip': 'They are packed close and every one of them is a bomb. Shoot one and the ring goes with it, '
+           'then deal with what walks in after.',
+    'icon': 'Challenge_icon_02',
+    'icon_title': 'PK',
+    'weapons': [
+        {'name': 'policeshotgun', 'ammo': '999'},
+        {'name': 'microsmg', 'ammo': '999'},
+        {'name': 'wok'},
+    ],
+    'bricks': ['port_keg_ring_1', 'port_keg_crowd_1',
+               'port_keg_ring_2', 'port_keg_crowd_2',
+               'port_keg_ring_3', 'port_keg_crowd_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'mission_star': {'reward': 500},
+    'time_limit_star': {'reward': 200, 'objective': 120},
+    'accuracy_star': {'reward': 200, 'objective': 40},
+}
+
+#: The port's own challenges, in the order the Extra menu lists them.
+EXTRA_CHALLENGES = ('port_keg',)

@@ -642,7 +642,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **152 divergences** and **15 original quirks kept on purpose** in the notes, of which 76 are
+There are **153 divergences** and **15 original quirks kept on purpose** in the notes, of which 77 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -821,6 +821,9 @@ replacing them.
   and on the pause screen, the keys do nothing and the game's music and ambience are untouched.
 - **Settings → Miscellaneous → Reset all settings** puts every setting back to its default, except your key
   bindings.
+- **Play → Extra**, challenges written for this port rather than ported. The first is **Powder Keg**:
+  three rings of Zombies rigged to blow, standing close enough that one shot takes a whole ring, with a
+  crowd that will not explode walking in between them.
 - **Game controllers**: a DualSense, DualShock, Xbox, Switch Pro or most other pads, in the menus and in
   play, with a stick that turns as fast as it is pushed, vibration for the heartbeat, hits, kills,
   explosions and your death, the phone's shake, and a DualSense's triggers that feel like a gun, each at

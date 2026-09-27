@@ -1425,10 +1425,33 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   A three-card hand is laid out by the original's own spacing, gaps of exactly 10 points, because that
   formula only goes negative at four.
 
-* PORT ADDITION: zombies the port deals itself (`spawner.py`, user request).  It was a tarot card at
-  first - Powder Keg, in a deck of its own at slot 4 - and it is a challenge now, under Play, Extra: the
-  idea outgrew a card.  Chain Reaction and Damp Squib went back to the level-2 deck, whose subject is
-  what the Zombies do, and the tarot is four slots again with the give-and-take cards at slot 4.
+* PORT ADDITION: **Play, Extra** - challenges the port wrote itself - and the first of them, Powder Keg
+  (user request).  It was a tarot card for a day; the idea outgrew a card.  Chain Reaction and Damp Squib
+  went back to the level-2 deck, whose subject is what the Zombies do, and the tarot is four slots again.
+
+  Almost none of it is code, because a ring turns out to be a **wave**.  `spawn_angle` and
+  `spawn_distance` have always meant what they say, so ten zombies at one distance and even angles is a
+  circle, and the engine's own machinery does the rest: it activates the playlists a wave names, so a ring
+  of four kinds is four kinds a player can hear without anything being loaded on the fly; and it moves on
+  when a wave is cleared, which is what makes three rings and three crowds a challenge of six waves.  The
+  first shape of this was a manager spawning zombies into a live wave (`spawner.py`), and it is gone: a
+  wave was always the right shape, and the risk it was written to dodge - a zombie whose sounds are not
+  loaded - was a risk only because it was fighting the engine instead of using it.
+
+  Two keys are the whole of the code.  A wave with `Rigged` gives every zombie in it the blast the game
+  gives a Farty, so one shot takes the ring in the original's own chain; a wave with `NoBlast` promises
+  the opposite whatever cards are in hand, which is what the crowd between the rings is for.  Their own
+  waves have neither key and are untouched.
+
+  `additions.PLISTS` is where the challenge and its six waves live: whole files the original does not
+  have, rather than additions to files it does.  `data._load` falls back to it when the bundle has nothing
+  by that name, so `dictionary_for_challenge_with_name` 0x1000810c8 finds a challenge of the port's by
+  name exactly as it finds one of theirs, and every screen that reads the game's data reads these too.
+
+  The menu is built like the play menu rather than like the challenge selector, which is a table of worlds
+  and stars and locks that these are not part of: one button a challenge, Back to Play.  The Extra button
+  sits after Endless on the play menu, which its frame decides - `reading_order` sorts by a frame's
+  vertical centre.
 
   Powder Keg is the first thing in the port to put an enemy in the arena outside a wave.  Nothing in the
   original does: a wave is a plist read once when `ADBrick` is built, which is also when the playlists its

@@ -77,13 +77,8 @@ PAIRED_FLAGS = {
 #: carrying its own goes off in turn, and that goes on as far as the crowd reaches.
 CHAIN_REACTION_BLAST = {'radius': 3, 'damages': 50, 'dispersal': 75}
 
-#: PORT ADDITION (user request): what a kill is worth while Powder Keg is in hand.  The card fills the
-#: arena with things that will kill you and asks you to stand in the middle of them, so it pays for it:
-#: three times the coins and three times the score, for every kill of the run and not only the ring's.
-POWDER_KEG_REWARD = 3
-
 PORT_FLAGS = ('earlyPowerUp', 'luckyNight', 'lessPowerUps', 'lessCoins', 'alwaysCritical',
-              'everythingExplodes', 'noFartyBlast', 'powderKeg') + tuple(PAIRED_FLAGS)
+              'everythingExplodes', 'noFartyBlast') + tuple(PAIRED_FLAGS)
 
 
 class GameModifiers:

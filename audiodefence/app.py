@@ -200,6 +200,10 @@ class App:
         self.start_menu_music('main_menu_theme')
         self.load_view_controller_named('ADMainMenuViewController')
 
+    def go_to_extra_menu(self) -> None:                   # PORT ADDITION: the port's own challenges
+        self.start_menu_music('main_menu_theme')
+        self.load_view_controller_named('Port_ExtraMenuViewController')
+
     def go_to_play_menu(self) -> None:                    # 0x100082474
         # PORT ADDITION (user request): everything from here until the main menu is "inside Play", and that
         # is what the coins and the diamonds are shown on - a mode added later included (StatusBar._wanted)

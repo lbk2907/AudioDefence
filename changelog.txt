@@ -12,6 +12,7 @@ Explosions that go off while your ears are still ringing add to the ringing, and
 An explosion is no longer cut off halfway when another one goes off beside it.
 A zombie killed by a Tesla Coil is heard dying, and heard exploding if it was going to. Only the zap was audible before.
 Diamonds and Power Ups are never caught up in the explosions, so they are still there to be shot.
+There is an Extra menu under Play, with challenges written for this version of the game. The first one rings you with Zombies rigged to blow.
 Going back has a sound of its own now, so leaving a screen no longer sounds the same as pressing a button on it.
 Two tarot cards that do the same thing now add up. Ten per cent more damage from each is twenty per cent, not ten, and a card never turns out to be worth nothing because another one got there first.
 

@@ -15,7 +15,11 @@ from .modifiers import LUCKY_SHOT_PERCENT         # a card that names its odds s
 def _load(name: str):
     path = paths.bundle_path(name if name.endswith('.plist') else name + '.plist')
     if not os.path.isfile(path):
-        return None
+        # PORT ADDITION: a plist of the port's own - a challenge it wrote, and the waves for it.  The
+        # overlay adds to their files; this is for a file they do not have at all, and it goes through
+        # the same door so that every one of the twenty-two places that read the game's data finds it.
+        from .additions import PLISTS
+        return copy.deepcopy(PLISTS.get(name.replace('.plist', '')))
     with open(path, 'rb') as fh:
         data = _correct(plistlib.load(fh))                # PORT ADDITION: the original's typos (TYPOS)
     from .additions import apply_to                       # here: additions read the game's own modules
