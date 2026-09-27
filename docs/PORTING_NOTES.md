@@ -1211,6 +1211,23 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   modifier under the same key.  Nothing else moves: `applyAllModifiers` 0x100035a5c still reads the live
   card, and `resetCardsModifiersIfNeeded` 0x1000d42a8 still clears all three keys after an endless game
   lasting over 60 seconds, so a fresh deal still follows a real run.
+* PORT ADDITION: a card is not there until its own flip has been heard (user request).  The deal is a
+  sound per card, and the cursor now reaches exactly the cards that sound has brought in: before the
+  first flip there is nothing to arrow onto, after the second there are two, whatever the hand will hold.
+  `reading_order` skips an element that is not `accessible`, so an undealt card is not something to pass
+  over - it is not there.  `TarotCardViewController.reveal` is what the flip calls
+  (`TarotScreen._deal_card`), and `_cards_dealt` reveals whatever is left as a backstop.
+
+  A card that has arrived is still dimmed until the whole deal is over, so it can be read and cannot be
+  paid to change - which is the state Back, Armory and Play are in for those same seconds.
+
+* PORT ADDITION: a shuffle flips once for each card it deals, and reads them out after the last of them
+  (user request).  Two locked cards are two sounds, so what a player hears is how many cards moved;
+  `SHUFFLE_FLIP_GAP` is the half second between them.  Nothing is spoken until they have all landed,
+  because a card read out while another is still arriving is a card read over, and finding out what came
+  back is the whole reason for paying.  The button is dimmed while a shuffle lands (`shuffling`) so a
+  second press cannot be paid for on top of the first.
+
 * PORT ADDITION: a Shuffle button, for the cards that cannot be changed one at a time (user request).
   It deals every locked slot again at once - card 3, and card 4 on a hand that has one - at random, and
   what comes back may be worse than what went.  That is the point: the locked cards are there so a hand

@@ -53,6 +53,12 @@ LOCKED_CARD_LEVEL = 3
 #: what it was going to do to them.
 FOURTH_CARD_CHANCE = 25
 
+#: PORT ADDITION (user request): how long between the flips of a shuffle.  A shuffle deals every locked
+#: card again, and each one gets a flip of its own, so two cards are two sounds - what a player hears is
+#: how many cards moved.  Both new cards are read out after the last of them, not as each lands, because a
+#: card read out while another is still arriving is a card read over.
+SHUFFLE_FLIP_GAP = 0.5
+
 #: PORT ADDITION (user request): what it costs to shuffle the cards that cannot be changed one by one.
 #: The locked cards are the point of the hand - something nobody chose - so this is not a way to shop for
 #: a card: it deals every locked slot again at random, and what comes back may be worse.  It is the way
@@ -210,6 +216,12 @@ class TarotCardViewController:
             # to press on it, and "button" at the end of it would be an offer the card does not make.
             self.accessible_card = View('', self._view.frame, traits=STATIC_TEXT if self.locked else BUTTON,
                                         parent=self._view, name='accessibleCard')
+            # PORT DIVERGENCE (user request): a card is not there until its own flip has been heard.  The
+            # deal is a sound per card, and the cursor reaches exactly the cards that sound has brought
+            # in - hear the second flip and there are two cards to read, whatever the hand will hold.
+            # `reading_order` skips an element that is not `accessible`, so an undealt card is not
+            # something to arrow past; it is not there at all.  `reveal` is what the flip calls.
+            self.accessible_card.accessible = False
             # PORT DIVERGENCE (user request): a card cannot be changed while the cards are being dealt.
             # The original dims Back and Armory for those seconds (`deactivateButtons` 0x10001cee4) and
             # the port dims Play with them, but every card stayed live, so a hand could be paid for and
@@ -320,6 +332,15 @@ class TarotCardViewController:
             # arrow keys produce - so the new card is heard exactly as a card is normally heard.
             self.announce_card()
 
+    def reveal(self) -> None:
+        """PORT ADDITION: the cursor can reach this card, its flip having been heard.
+
+        It is still dimmed until the whole deal is over - a card that has arrived can be read, and cannot
+        be paid to change, which is the state the other three buttons are in for those seconds.
+        """
+        if self.accessible_card is not None:
+            self.accessible_card.accessible = True
+
     def announce_card(self) -> None:                      # PORT ADDITION
         """Read the card out the way the cursor reads it, after it has changed under the cursor."""
         card = self.accessible_card
@@ -362,6 +383,7 @@ class TarotScreen(ViewControllerScreen):
     def __init__(self, host):
         super().__init__(host)
         self.shuffle_button = None
+        self.shuffling = False                            # PORT ADDITION: a shuffle is still landing
         self.backbuttonpressed = False
         self.dealing = False                              # PORT ADDITION: the cards are being dealt
         self.tarot_playlist = None
@@ -447,6 +469,7 @@ class TarotScreen(ViewControllerScreen):
             return
         for card in self.tarot_cards:                     # PORT DIVERGENCE: the cards come alive with Play
             if card.accessible_card is not None:
+                card.reveal()                             # every card is in by now; this is the backstop
                 card.accessible_card.enabled = True
             if card.change_card_button is not None:
                 card.change_card_button.enabled = True
@@ -516,7 +539,12 @@ class TarotScreen(ViewControllerScreen):
         # so the last of them lands where the original's last one did.  See DEAL_LAST_FLIP.
         after = DEAL_LAST_FLIP * float(number) / float(max(1, self.cards_to_load))
         RunLoop.main().call_soon(
-            lambda: RunLoop.main().call_later(after, lambda: card.flip_card(False)))
+            lambda: RunLoop.main().call_later(after, lambda: self._deal_card(card)))
+
+    def _deal_card(self, card) -> None:
+        """PORT ADDITION: the flip that brings a card in, and the card arriving with it."""
+        card.flip_card(False)
+        card.reveal()
 
     # --- the shuffle ------------------------------------------------------------------------------
     def locked_cards(self) -> list:
@@ -560,7 +588,7 @@ class TarotScreen(ViewControllerScreen):
         It is not a way to shop for a card: every locked slot is dealt again together and what comes back
         may be worse than what went.  It is the way out of a hand that has gone wrong."""
         from ..game.inventory import Inventory
-        if self.dealing:                                  # as the cards are, while they are being dealt
+        if self.dealing or self.shuffling:                 # as the cards are, while they are being dealt
             return
         cards = self.locked_cards()
         if not cards:
@@ -581,7 +609,6 @@ class TarotScreen(ViewControllerScreen):
                 status_bar.animate_coins(-coins)
         inv.set_diamonds(inv.diamonds - diamonds)
         inv.set_coins(inv.coins - coins)
-        _flip_sound_play()
         for card in cards:
             card.change_card()                            # a new card, stored under its own key
         # every card's hint carries a count of money that has just moved, and the button's carries both
@@ -589,8 +616,38 @@ class TarotScreen(ViewControllerScreen):
             if card.accessible_card is not None:
                 card.refresh_accessible_text()
         self.refresh_shuffle_button()
-        for card in cards:                                # read out the way the cursor would read them
-            card.announce_card()
+        self._shuffle_lands(cards)
+
+    def _shuffle_lands(self, cards: list) -> None:
+        """PORT ADDITION (user request): a flip for each card that moved, then both of them read out.
+
+        One sound per card, so what a player hears is how many cards a shuffle dealt - a hand with two
+        locked cards is two flips.  Nothing is read out until the last of them has been heard: a card
+        spoken while another is still arriving is a card spoken over, and the whole point of paying for a
+        shuffle is to find out what came back.
+
+        The button is dimmed until then, so a second press cannot be paid for while the first is landing.
+        """
+        loop = RunLoop.main()
+        self.shuffling = True
+        if self.shuffle_button is not None:
+            self.shuffle_button.enabled = False
+
+        def flip(n: int) -> None:
+            _flip_sound_play()
+            if n + 1 < len(cards):
+                loop.call_later(SHUFFLE_FLIP_GAP, lambda: flip(n + 1))
+                return
+            loop.call_later(SHUFFLE_FLIP_GAP, done)
+
+        def done() -> None:
+            self.shuffling = False
+            if self.shuffle_button is not None:
+                self.shuffle_button.enabled = True
+            for card in cards:                            # read out the way the cursor would read them
+                card.announce_card()
+
+        flip(0)
 
     def reroll_card_with_number(self, number: int) -> None:   # 0x100035a48
         self.record_card_reload_with_number(number)
