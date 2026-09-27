@@ -53,6 +53,18 @@ LOCKED_CARD_LEVEL = 3
 #: what it was going to do to them.
 FOURTH_CARD_CHANCE = 25
 
+#: PORT ADDITION (user request): what it costs to shuffle the cards that cannot be changed one by one.
+#: The locked cards are the point of the hand - something nobody chose - so this is not a way to shop for
+#: a card: it deals every locked slot again at random, and what comes back may be worse.  It is the way
+#: out of a hand that has gone wrong, and it is priced to be thought about rather than leaned on.
+#:
+#: Both currencies, because they are earned differently: diamonds are scarce (about twenty a run) and
+#: coins are not (twelve thousand in a long one), so the diamonds are the real price and the coins are
+#: what makes it sting early on, before a player has a bank.  Three diamonds is what changing the first
+#: card costs, which is the dearest single change the original sells.
+SHUFFLE_DIAMONDS = 3
+SHUFFLE_COINS = 2500
+
 #: PORT ADDITION: how many cards this hand holds, kept with the hand itself.  The roll has to be made once
 #: and then remembered: the screen is left and come back to - the armory opens over it - and a hand that
 #: rolled its fourth card again each time would gain and lose one under the player.  The original has no
@@ -349,6 +361,7 @@ class TarotScreen(ViewControllerScreen):
 
     def __init__(self, host):
         super().__init__(host)
+        self.shuffle_button = None
         self.backbuttonpressed = False
         self.dealing = False                              # PORT ADDITION: the cards are being dealt
         self.tarot_playlist = None
@@ -360,6 +373,11 @@ class TarotScreen(ViewControllerScreen):
         self.info_text = View("Dr. Bastard's tarot cards will disrupt your game", (96, 55, 392, 39), parent=v,
                               name='#20')
         self.card_container = View('', (60, 95, 460, 190), accessible=False, parent=v, name='#115')
+        # PORT ADDITION (user request): a shuffle for the cards that cannot be changed one at a time.  The
+        # frame is what puts it after the cards and before Play: `reading_order` sorts by the vertical
+        # centre of a frame, and 255 sits between the cards' 180 and Play's 302.
+        self.shuffle_button = Button('Shuffle the locked cards', (214, 240, 140, 30), parent=v,
+                                     actions=[self.shuffle_button_pressed], name='shuffleButton')
         self.play_button = Button('Play', (234, 272, 100, 60), parent=v, actions=[self.play_button_pressed],
                                   name='#71')
         self.play_button.alpha = 0.0                      # nib alpha
@@ -376,6 +394,8 @@ class TarotScreen(ViewControllerScreen):
         for card in self.tarot_cards:
             if getattr(card, 'accessible_card', None) is not None and self.host.screen_reader_running():
                 card.refresh_accessible_text()
+        if not self.dealing:                              # PORT ADDITION: the shuffle's price and purse
+            self.refresh_shuffle_button()
 
     def view_did_load(self) -> None:                      # 0x10003461c
         super().view_did_load()
@@ -409,6 +429,8 @@ class TarotScreen(ViewControllerScreen):
         else:
             self.play_button.user_interaction_enabled = False
         sb.deactivate_buttons()
+        if self.shuffle_button is not None:               # PORT ADDITION: dimmed while the cards are dealt
+            self.shuffle_button.enabled = False
         self.dealing = True
         self.cards_to_load = self.cards_this_hand()        # PORT DIVERGENCE: always 2 in the original
         n = 0
@@ -428,6 +450,9 @@ class TarotScreen(ViewControllerScreen):
                 card.accessible_card.enabled = True
             if card.change_card_button is not None:
                 card.change_card_button.enabled = True
+        if self.shuffle_button is not None:               # PORT ADDITION: and so does the shuffle
+            self.shuffle_button.enabled = True
+            self.refresh_shuffle_button()
         sb = self.status_bar_view_controller
         self.play_button.alpha = 1.0                      # 0.5 s animation
         if sb is not None:
@@ -492,6 +517,80 @@ class TarotScreen(ViewControllerScreen):
         after = DEAL_LAST_FLIP * float(number) / float(max(1, self.cards_to_load))
         RunLoop.main().call_soon(
             lambda: RunLoop.main().call_later(after, lambda: card.flip_card(False)))
+
+    # --- the shuffle ------------------------------------------------------------------------------
+    def locked_cards(self) -> list:
+        """PORT ADDITION: the cards a shuffle deals again - every slot from LOCKED_CARD_LEVEL up.
+
+        Not `card.locked`, which `--free-cards` turns off: the slots the shuffle is for are the same
+        whether or not a test run has unlocked them one by one."""
+        return [c for c in self.tarot_cards if c.card_level >= LOCKED_CARD_LEVEL]
+
+    def shuffle_cost(self) -> tuple:
+        """PORT ADDITION: (diamonds, coins), and nothing at all while --free-cards is on."""
+        if UNLOCK_CARDS_FOR_TESTING:
+            return 0, 0
+        return SHUFFLE_DIAMONDS, SHUFFLE_COINS
+
+    def refresh_shuffle_button(self) -> None:
+        """PORT ADDITION: the price, and what the player has to pay it with.
+
+        Rebuilt on the way into the screen, as the cards' own hints are, because the armory opens over
+        this screen and a number read from before a purchase is a number that lies."""
+        from ..game.inventory import Inventory
+        if self.shuffle_button is None:
+            return
+        diamonds, coins = self.shuffle_cost()
+        # Both wordings are written out rather than built from a %s, so the walk in
+        # tools/verify_localization.py can see them: a line with a substitution in it is dropped whole.
+        cards = self.locked_cards()
+        self.shuffle_button.set_title('Shuffle the locked card' if len(cards) == 1
+                                     else 'Shuffle the locked cards')
+        self.shuffle_button.label = self.shuffle_button.text
+        inv = Inventory.shared()
+        if not diamonds and not coins:
+            self.shuffle_button.hint = 'Free while testing'
+            return
+        self.shuffle_button.hint = '%i diamonds and %i coins. You have %i diamonds and %i coins' % (
+            diamonds, coins, inv.diamonds, inv.coins)
+
+    def shuffle_button_pressed(self) -> None:
+        """PORT ADDITION (user request): deal every locked card again, at random, for a price.
+
+        It is not a way to shop for a card: every locked slot is dealt again together and what comes back
+        may be worse than what went.  It is the way out of a hand that has gone wrong."""
+        from ..game.inventory import Inventory
+        if self.dealing:                                  # as the cards are, while they are being dealt
+            return
+        cards = self.locked_cards()
+        if not cards:
+            return
+        diamonds, coins = self.shuffle_cost()
+        inv = Inventory.shared()
+        if inv.diamonds < diamonds:
+            self.host.show_no_diamonds_alert()
+            return
+        if inv.coins < coins:
+            self.host.show_no_coins_alert()
+            return
+        status_bar = App.delegate().status_bar
+        if status_bar is not None:
+            if diamonds:
+                status_bar.animate_diamonds(-diamonds)
+            if coins:
+                status_bar.animate_coins(-coins)
+        inv.set_diamonds(inv.diamonds - diamonds)
+        inv.set_coins(inv.coins - coins)
+        _flip_sound_play()
+        for card in cards:
+            card.change_card()                            # a new card, stored under its own key
+        # every card's hint carries a count of money that has just moved, and the button's carries both
+        for card in self.tarot_cards:
+            if card.accessible_card is not None:
+                card.refresh_accessible_text()
+        self.refresh_shuffle_button()
+        for card in cards:                                # read out the way the cursor would read them
+            card.announce_card()
 
     def reroll_card_with_number(self, number: int) -> None:   # 0x100035a48
         self.record_card_reload_with_number(number)

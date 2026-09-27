@@ -1211,6 +1211,27 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   modifier under the same key.  Nothing else moves: `applyAllModifiers` 0x100035a5c still reads the live
   card, and `resetCardsModifiersIfNeeded` 0x1000d42a8 still clears all three keys after an endless game
   lasting over 60 seconds, so a fresh deal still follows a real run.
+* PORT ADDITION: a Shuffle button, for the cards that cannot be changed one at a time (user request).
+  It deals every locked slot again at once - card 3, and card 4 on a hand that has one - at random, and
+  what comes back may be worse than what went.  That is the point: the locked cards are there so a hand
+  holds something nobody chose, and a way to pay for a *particular* card would undo them.  This is the way
+  out of a hand that has gone wrong, not a shop.
+
+  It costs both currencies, `SHUFFLE_DIAMONDS` and `SHUFFLE_COINS` - 3 and 2500 - because they are earned
+  differently.  Diamonds are scarce, about twenty a run, so they are the real price; coins are not, twelve
+  thousand in a long run, so they are what makes it sting before a player has a bank.  Three diamonds is
+  what changing the first card costs, the dearest single change the original sells.  Short of either and
+  the matching alert goes up and nothing is dealt or taken; `--free-cards` makes it free like the rest.
+
+  The button sits after the cards and before Play, which its frame decides rather than its order in the
+  file: `reading_order` sorts by the vertical centre of a frame, and 255 falls between the cards' 180 and
+  Play's 302.  Its label says how many cards it would deal - one or two - and its hint carries the price
+  and what the player has, rebuilt on the way into the screen as the cards' own hints are, because the
+  armory opens over this screen and a number read from before a purchase is a number that lies.  It is
+  dimmed while the cards are dealt and comes alive with Play, as they do, and
+  `shuffle_button_pressed` returns while `dealing` so no path round it reaches the money.  Both wordings
+  of the label are written out rather than built with a `%s`, so `verify_localization` can see them.
+
 * PORT ADDITION: the fourth card is a chance, not a fixture (user request).  A quarter of hands are dealt
   one; the rest hold three.  That is what the level-4 deck is for - a card worth reading because it is not
   there every time - and it is why those cards can be as strong and as costly as they are.

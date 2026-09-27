@@ -137,6 +137,14 @@ class ScreenManager:
         self.push_overlay(AlertScreen(self, data.localized('DIAMONDS_ALERT_TITLE'),
                                       data.localized('DIAMONDS_ALERT_CONTENT'), [('OK', None)]))
 
+    def show_no_coins_alert(self) -> None:
+        """PORT ADDITION: the coins alert, for anything outside the armory that charges coins - the tarot
+        shuffle is the first.  The armory keeps `show_not_enough_money_alert` of its own because it hands
+        the alert a delegate; the last sentence is cut here for the same reason it is cut there, the
+        currency tab it points at being gone."""
+        content = data.localized('COINS_ALERT_CONTENT').split('You can also get coins')[0].strip()
+        self.push_overlay(AlertScreen(self, data.localized('COINS_ALERT_TITLE'), content, [('OK', None)]))
+
     def dismiss_presented(self, screen) -> None:        # [presentingViewController dismissViewControllerAnimated:]
         if screen in self.overlays:
             while self.overlays and self.overlays[-1] is not screen:
