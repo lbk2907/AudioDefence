@@ -160,7 +160,11 @@ class App:
         cd = ChallengeData.shared()
         world = GameParameters.shared().last_challenge_world
         if not cd.has_challenge_after(challenge, world):
-            self.go_to_world_selector()
+            from .game.additions import EXTRA_CHALLENGES  # PORT ADDITION: back to the list it came from
+            if challenge in EXTRA_CHALLENGES:
+                self.go_to_extra_menu()
+            else:
+                self.go_to_world_selector()
             return
         nxt = cd.challenge_after(challenge, world)
         if self.screen_reader_running():

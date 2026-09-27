@@ -98,12 +98,22 @@ class ChallengeData:
         return (data.plist_ro(last) or {}).get('challenge_id') if last is not None else None
 
     def has_challenge_after(self, challenge, world) -> bool:   # 0x10001f230
+        # PORT ADDITION: a challenge of the port's own (Play, Extra) belongs to no world, so nothing
+        # follows it.  Without this the world lookup came back empty and the index arithmetic below ran
+        # off the end of an empty list - the crash a player found by pressing Next challenge after one.
+        from .additions import EXTRA_CHALLENGES
+        if challenge in EXTRA_CHALLENGES:
+            return False
+        if not ((self._world(world) or {}).get('challenges') or []):
+            return False
         return not (self._last_challenge_id(world) == challenge and challenge is not None)
 
     def challenge_after(self, challenge, world):          # 0x10001f52c
         if challenge is not None and self._last_challenge_id(world) == challenge:
             return ''
         challenges = (self._world(world) or {}).get('challenges') or []
+        if not challenges:
+            return ''                                     # PORT ADDITION: nothing to be after
         index = challenges.index(challenge) if challenge in challenges else -1   # NSNotFound + 1 wraps to 0
         return challenges[index + 1]
 

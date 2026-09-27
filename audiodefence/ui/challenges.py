@@ -629,6 +629,13 @@ class AccessibleChallengeCompletedScreen(AccessibleGameOverEndlessScreen):
         if ChallengeData.shared().has_challenge_after(self.challenge_dict.get('challenge_id'),
                                                       GameParameters.shared().last_challenge_world):
             return
+        from ..game.additions import EXTRA_CHALLENGES
+        if self.challenge_dict.get('challenge_id') in EXTRA_CHALLENGES:
+            # PORT ADDITION: an Extra challenge is part of no arena, so "next arena" would be a lie and
+            # the world selector the wrong place to send anybody.  It goes back to the list it came from.
+            self.next_challenge_button.label = 'back to Extra'
+            self.next_challenge_button.set_title('back to Extra')
+            return
         self.next_challenge_button.label = 'next arena'
         self.next_challenge_button.set_title('next arena')
 
