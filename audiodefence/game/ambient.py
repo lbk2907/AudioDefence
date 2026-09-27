@@ -217,11 +217,16 @@ class AmbientManager:
         self.stop_ambiant()
 
     def pause(self) -> None:                              # 0x100099928
-        for snd in (self.enemy_ambiant_sound, self.thunder_sound, self.base_sound):
-            if snd is not None and snd.playing:
-                snd.pause()
+        """DIVERGENCE (user request): the arena keeps its ambience through the pause menu.
+
+        The original pauses all three of these.  The base sound and the storm are the room a player is
+        standing in, and a room that falls silent the moment a menu opens is a room that has gone away; the
+        enemy ambience is a zombie making a noise - a Chainsaw revving - and that is not the room, so it
+        pauses with everything else the zombies are doing.
+        """
+        if self.enemy_ambiant_sound is not None and self.enemy_ambiant_sound.playing:
+            self.enemy_ambiant_sound.pause()
 
     def resume(self) -> None:                             # 0x1000999e8
-        for snd in (self.enemy_ambiant_sound, self.thunder_sound, self.base_sound):
-            if snd is not None:
-                snd.resume()
+        if self.enemy_ambiant_sound is not None:
+            self.enemy_ambiant_sound.resume()

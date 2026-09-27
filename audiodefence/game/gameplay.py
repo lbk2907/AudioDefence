@@ -699,6 +699,8 @@ class GameplayController:
         AmbientManager.shared().pause()
         if self.weapon_manager is not None:               # PORT ADDITION: see Weapon.pause
             self.weapon_manager.pause()
+        if self.player is not None:                       # PORT ADDITION: see Player.pause
+            self.player.pause()
         self.paused = True
         self.announcer_value_on_entering_pause = GameParameters.shared().last_announcer_value()
 
@@ -708,6 +710,8 @@ class GameplayController:
         AmbientManager.shared().resume()
         if self.weapon_manager is not None:               # PORT ADDITION: see Weapon.pause
             self.weapon_manager.resume()
+        if self.player is not None:                       # PORT ADDITION: see Player.pause
+            self.player.resume()
         self.pause_view = None
         self.paused = False
         announcer = GameParameters.shared().last_announcer_value()

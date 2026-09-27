@@ -66,6 +66,21 @@ class Player:
         from ..platform.haptics import Haptics            # PORT ADDITION: felt on a controller as well
         Haptics.shared().heartbeat(closeness, heart.path)
 
+    def pause(self) -> None:
+        """PORT ADDITION (user request): the ringing in a player's ears pauses with the game.
+
+        `pauseGame` 0x10005b5fc pauses the bricks and the ambience and says nothing about the player, so
+        the tinnitus rang on through the pause menu - and it loops now, so it rang on for as long as a
+        player left the game sitting there.  Its timer does not advance while paused (`update` is driven by
+        the timers `pauseGame` stops), so it comes back with exactly as long left as it had.
+        """
+        if self.tinnitus_sound is not None and self.tinnitus_sound.playing:
+            self.tinnitus_sound.pause()
+
+    def resume(self) -> None:
+        if self.tinnitus_sound is not None:
+            self.tinnitus_sound.resume()
+
     def start_tinitus_with_intensity(self, intensity: float) -> None:   # 0x1000b6940
         self.start_tinnitus_with_duration(intensity * 10.0 + 3.0, intensity * 0.8 + 0.1)
 

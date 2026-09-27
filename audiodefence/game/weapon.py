@@ -346,12 +346,13 @@ class Weapon:
         still works, because the beeps keep coming and the ear picks the rhythm out; fired in taps it is
         one beep under one shot, and it is not heard at all.
 
-        It lives with the clip instead: it starts when the clip is down to its last fifth and keeps beeping
-        between bursts, where nothing is over it, until the gun is reloaded, run dry, put away, or the
-        player dies.
+        It keeps the original's timing and not its level: it sounds while the gun is firing and stops with
+        it (user request), which is the original's own `continuousStart`/`continuousStop` pairing, but it
+        is heard, where in the original it was 12 dB under the gun's loop and was not.  It beeped between
+        bursts here for a day and that was wrong - a warning that never stops is a warning nobody hears.
         """
         wanted = (self.continuous_fire and self.playlist is not None
-                  and self._state not in (1, 6, 7, 8)   # switching, or somewhere in a reload
+                  and self._state == 3                  # firing, and not switching or reloading
                   and self.bullets_in_clip > 0 and self.running_low())
         if not wanted:
             self.stop_low_ammo_warning()

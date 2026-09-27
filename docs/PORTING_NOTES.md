@@ -543,11 +543,40 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   "_conti" loop.  Held down that still works - the beeps keep coming and the ear picks the rhythm out of
   the noise - but a tap is one beep under one shot, and it is not heard at all.
 
-  The loop now follows the clip (`Weapon.update_low_ammo_warning`, called from `update:`): it starts when
-  the clip is down to its last fifth - `resolveShoot`'s own test, pulled out as `Weapon.running_low` - and
-  keeps beeping between bursts, where nothing is over it, until the gun is reloaded, run dry, put away, or
-  the player dies.  A gun picked up already low warns without a shot being fired.  `resolveShoot`'s gain
-  line goes with the old lifetime: the loop being there is the warning now.
+  The fix is the level, not the timing (`Weapon.update_low_ammo_warning`, called from `update:`).  It
+  sounds while the gun is firing and stops with it, which is the original's own `continuousStart` /
+  `continuousStop` pairing - but it is built at a level that can be heard, where the original's could not
+  be.  It starts when the clip is down to its last fifth, `resolveShoot`'s own test pulled out as
+  `Weapon.running_low`, and `resolveShoot`'s gain line goes: the loop being there is the warning now.
+
+  It beeped between bursts as well for a day, and that came out again (user request).  A warning that
+  never stops is a warning nobody hears, and on a gun held low through half a wave it was the loudest
+  thing in the arena.
+
+* DIVERGENCE: the pause menu holds every sound where it is, and the arena keeps its ambience (user
+  request).  Three faults, all of them the same shape - the original pauses by **play rate**, so `play`
+  on a paused sound carries on and a stopped one is simply gone, while this port pauses the OpenAL source,
+  where `play` starts again from the beginning.
+
+  `-[ADEnemy resume]` 0x100063d34 is `[sound play]`, ported as written, so every zombie came back from the
+  pause menu with a **fresh** growl instead of the one it was halfway through - which is what a player
+  heard.  It is `resume` now, the engine having one for exactly this.  And `pause` 0x100063c64 holds
+  `sound` and *stops* `painSound`, which costs the original nothing and costs this port a pain sound that
+  restarts; both are paused here, along with every other voice an enemy can have going.  The original has
+  one sound and one pain sound to think about, where the port gives each enemy its own copy of every file
+  (`voice_of`), a few for the ones that overlap (`overlapping_voice_of`) and one for an explosion -
+  `Enemy.all_voices` is the list, and a growl heard from the pause menu was one nothing had thought of.
+
+  `pauseGame` 0x10005b5fc says nothing about the player, so the tinnitus rang on through the pause - and
+  it loops now, so it rang on for as long as the game sat there.  `Player.pause` holds it; its timer does
+  not advance meanwhile, the timers being what `pauseGame` stops, so it comes back with exactly as long
+  left as it had.
+
+  The ambience is the one thing that does **not** pause.  `ADAmbiantManager.pause` 0x100099928 pauses the
+  base sound, the storm and the enemy ambience; the first two are the room a player is standing in, and a
+  room that falls silent when a menu opens is a room that has gone away.  The enemy ambience - a Chainsaw
+  revving - is a zombie making a noise rather than the room, so it pauses with everything else the
+  zombies are doing.
 
 * Running the clip out with the trigger held is answered (user request).  Two things were in the way.
   `-[ADWeapon update:]` 0x100014c8c plays the click first and stops the gun after it, so the "Reload"

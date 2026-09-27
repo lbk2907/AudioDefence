@@ -76,6 +76,7 @@ class Enemy:
         self.sound = None
         self.pain_sound = None
         self.explosion_sound = None
+        self.paused_voices: list = []                     # PORT ADDITION: see `pause`
         self.dead_sound_has_played = False
         self.shield_damages_taken = 0.0
         self.shield_duration = 0.0
@@ -827,13 +828,39 @@ class Enemy:
             AmbientManager.shared().enemy_with_ambiant_name_killed(self.ambiant_name)
             self.ambiant_name = None
 
+    def all_voices(self):
+        """PORT ADDITION: every sound this enemy can have going at once.
+
+        The original has one `sound` and one `painSound` and that is all there is to pause.  The port gives
+        each enemy its own copy of every file its playlist picked (`voice_of`), a few voices for the sounds
+        that overlap (`overlapping_voice_of`) and one for an explosion, so there are several - and a growl
+        heard from the pause menu is one of them that nothing had thought to pause (user request).
+        """
+        found = [self.sound, self.pain_sound, self.explosion_sound]
+        found.extend(self._voices.values())
+        for voices in self._overlapping.values():
+            found.extend(voices)
+        seen, out = set(), []
+        for s in found:
+            if s is not None and id(s) not in seen:
+                seen.add(id(s))
+                out.append(s)
+        return out
+
     def pause(self) -> None:                              # 0x100063c64
-        self.sound_was_playing = bool(self.sound is not None and self.sound.playing)
-        if self.sound is not None:
-            self.sound.pause()
-        if self.pain_sound is not None:
-            self.pain_sound.stop()
+        # PORT DIVERGENCE: every voice, and paused rather than stopped.  The original pauses `sound` and
+        # *stops* `painSound`, which its engine can do without losing anything, because it pauses by play
+        # rate and a stopped sound is simply gone.  Here a pain sound stopped is a pain sound restarted
+        # from the beginning on the way back in.
+        self.paused_voices = [s for s in self.all_voices() if s.playing]
+        for s in self.paused_voices:
+            s.pause()
 
     def resume(self) -> None:                             # 0x100063d34
-        if self.sound_was_playing and self.sound is not None:
-            self.sound.play()
+        # PORT DIVERGENCE: `resume`, not `play`.  The original's resume is `[sound play]` and its engine
+        # takes that as "carry on", pausing by rate; playing an OpenAL source that was paused starts it
+        # again from the beginning, which is the second growl a player heard on leaving the pause menu.
+        for s in self.paused_voices:
+            s.resume()
+        self.paused_voices = []
+        self.sound_was_playing = False
