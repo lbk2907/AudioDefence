@@ -1211,6 +1211,27 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   modifier under the same key.  Nothing else moves: `applyAllModifiers` 0x100035a5c still reads the live
   card, and `resetCardsModifiersIfNeeded` 0x1000d42a8 still clears all three keys after an endless game
   lasting over 60 seconds, so a fresh deal still follows a real run.
+* PORT ADDITION: Chain Reaction and Damp Squib - every zombie carries a bomb, or the Farties lose theirs
+  (user request).  Whether an enemy explodes is a key in `enemies.plist`, and only six things have one:
+  Farty, FartyB, Machine and the three Cars, all with the same block - radius 3, 50 damage, dispersal 75.
+  `Enemy.blast` is what everything asks now, and it answers with the enemy's own, or with
+  `modifiers.CHAIN_REACTION_BLAST` - the same numbers - when Chain Reaction has lent one, or with nothing
+  when Damp Squib has taken the Farties' away.  Machine and the Cars keep theirs under Damp Squib: they are
+  things a player shoots on purpose to stop a noise, and taking the blast away takes the point away.
+
+  **The cascade is the original's own and needed nothing.**  `solveExplosionWithDictionary:` 0x1000c5c40
+  damages everything inside the radius and then calls `checkDeathsForHitEnemies`, so a neighbour killed by
+  a blast and carrying one of its own goes off in turn, and that runs as far as the crowd reaches.
+  Measured: six zombies a unit apart, kill the first and all six die; the same six without the card and
+  only the one that was shot; ten units apart and the blast reaches nobody.  The ringing ears are the
+  original's too - a blast inside 5 units starts tinnitus, its intensity scaled by how close it was.
+
+  What did need writing was the bang.  `playHitSoundForDamages:` 0x100062db8 plays an explosion from the
+  dying enemy's own playlist, and a zombie has none - only the Farties and the Cars were ever given one -
+  so the damage would have been silent, which in this game is damage nobody can play around.  The
+  grenade's explosion is borrowed when an enemy has none of its own: a recording already in `game/`, and
+  already spatialised.  `ADEnemy` reaches into another playlist by name for the Tesla kill in the same way.
+
 * PORT ADDITION: a card is not there until its own flip has been heard (user request).  The deal is a
   sound per card, and the cursor now reaches exactly the cards that sound has brought in: before the
   first flip there is nothing to arrow onto, after the second there are two, whatever the hand will hold.

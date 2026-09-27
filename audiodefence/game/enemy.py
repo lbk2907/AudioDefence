@@ -491,7 +491,7 @@ class Enemy:
         if bm.player_is_dead:
             return
         self.felt_death()                                # PORT ADDITION: a kill, by whatever did it
-        if self.explosion_dictionary is not None:
+        if self.blast() is not None:                      # PORT ADDITION: see `blast`
             self.explode()
             self.set_state(5)
         else:
@@ -506,10 +506,34 @@ class Enemy:
         if self.name == 'Diamond' and InGameStats.singleton().game_mode == 'CHALLENGE':
             notify_stats('UPDATE_DIAMONDS', 1)
 
+    #: PORT ADDITION: the two Farties are what Damp Squib quietens.  Machine and the Cars keep their
+    #: blasts: they are things a player shoots on purpose to stop a noise, and taking that away would be
+    #: taking away the point of shooting them.
+    FARTIES = ('Farty', 'FartyB')
+
+    def blast(self):
+        """PORT ADDITION: the explosion this enemy has as the cards stand, or None for none.
+
+        `explosion` is a key in `enemies.plist` and only six things have one.  Chain Reaction lends its
+        own to everything that has not got one (`modifiers.CHAIN_REACTION_BLAST`), and Damp Squib takes
+        the Farties' away.  Everything that asks whether an enemy explodes asks this.
+        """
+        mods = GameModifiers.shared()
+        if mods.noFartyBlast and self.name in self.FARTIES:
+            return None
+        if self.explosion_dictionary is not None:
+            return self.explosion_dictionary
+        if mods.everythingExplodes:
+            from .modifiers import CHAIN_REACTION_BLAST
+            return CHAIN_REACTION_BLAST
+        return None
+
     def explode(self) -> None:                            # 0x100061e6c
         from .brick_manager import BrickManager
-        BrickManager.shared().solve_explosion_with_dictionary(self.explosion_dictionary, self.position,
-                                                              self.name, False)
+        blast = self.blast()                              # PORT ADDITION: see `blast`
+        if blast is None:
+            return
+        BrickManager.shared().solve_explosion_with_dictionary(blast, self.position, self.name, False)
 
     def can_be_shot_at(self) -> bool:                     # 0x100061f68
         if self._life <= 0.0:
@@ -663,10 +687,19 @@ class Enemy:
         if self.destroyed:
             return
         if self._life <= 0.0:
-            if self.explosion_dictionary is not None:
+            if self.blast() is not None:                  # PORT ADDITION: see `blast`
                 if not (self.explosion_sound is not None and self.explosion_sound.playing):
                     self.explosion_sound = (self.voice_of(self.playlist.any_sound_containing('explosion'))
                                             if self.playlist else None)
+                    if self.explosion_sound is None:
+                        # PORT ADDITION: a zombie lent a bomb by Chain Reaction has no bang of its own -
+                        # only the Farties and the Cars were ever given one - and damage nobody hears is
+                        # damage nobody can play around.  The grenade's is borrowed, which is a recording
+                        # already in `game/` and already spatialised; `ADEnemy` reaches into another
+                        # playlist by name for the Tesla kill in the same way.
+                        pl = S3DEngine.engine().play_list_with_name('grenade')
+                        self.explosion_sound = self.voice_of(
+                            pl.any_sound_containing('explosion')) if pl is not None else None
                     if self.explosion_sound is not None:
                         self.explosion_sound.set_planar((self.position[0], self.position[1], 0.0))
                         self.explosion_sound.set_spatialized(True)

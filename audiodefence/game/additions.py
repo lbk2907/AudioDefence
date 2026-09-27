@@ -169,6 +169,14 @@ NEW_CARDS = {
         {'title': 'Iron Sights', 'goodbad': 'both', 'selector': 'ironSights',
          'icon': 'Roulette_icon_headshot',
          'description': 'Your chance of a critical hit goes up by half. Your accuracy is slightly reduced.'},
+        {'title': 'Chain Reaction', 'goodbad': 'both', 'selector': 'everythingExplodes',
+         'icon': 'Roulette_icon_threezombies',
+         'description': 'Every Zombie explodes when it dies, taking its neighbours with it. '
+                        'The blasts will leave your ears ringing.'},
+        {'title': 'Damp Squib', 'goodbad': 'both', 'selector': 'noFartyBlast',
+         'icon': 'Roulette_icon_glue',
+         'description': 'Farties no longer explode, so nothing will deafen you. '
+                        'They will not clear a crowd for you either.'},
         {'title': 'House Band', 'goodbad': 'both', 'selector': 'houseBand',
          'icon': 'Roulette_icon_music',
          'description': 'You start the game with double Combo. An old jukebox plays terrible music.'},
