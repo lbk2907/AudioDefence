@@ -30,6 +30,8 @@ def main(argv=None) -> int:
                         help='start an endless game, unlocked or not (skips the menu and the tarot cards)')
     parser.add_argument('--challenge', metavar='NAME',
                         help='start a challenge by its plist name, e.g. tutorial_1, unlocked or not')
+    parser.add_argument('--free-cards', action='store_true',
+                        help='testing: the tarot cards that cannot be changed can be, and cost nothing')
     parser.add_argument('--mute', action='store_true', help='testing: silence the listener')
     parser.add_argument('--no-speech', action='store_true', help='testing: do not speak')
     parser.add_argument('--exit-after', type=float, metavar='SECONDS',
@@ -60,6 +62,11 @@ def main(argv=None) -> int:
     if args.no_speech:
         Speech.shared().speak = lambda *a, **k: None
         Speech.shared().speak_automatic = lambda *a, **k: None
+    if args.free_cards:
+        from .ui import tarot
+        tarot.UNLOCK_CARDS_FOR_TESTING = True
+        log.warning('--free-cards: the locked tarot cards can be changed, and cost nothing. '
+                    'This is not how the game plays.')
     GameParameters.screen_reader_running = Speech.shared().screen_reader_running()
     Speech.shared().choice = GameParameters.shared().speech_output()   # Settings -> Miscellaneous
     Speech.shared().configure_sapi(**GameParameters.shared().sapi_config())

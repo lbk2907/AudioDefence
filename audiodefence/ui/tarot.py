@@ -34,10 +34,17 @@ CARDS_TO_LOAD = 3
 DEAL_LAST_FLIP = 2.0
 DEAL_SECONDS = 2.3
 
-#: PORT DIVERGENCE (user request): the third card is dealt and kept.  The first two can still be bought
-#: out of, at 3 diamonds and 2; the level-3 deck is an even split of six good cards and six bad, so the
-#: hand always holds one card the player did not choose and cannot pay to be rid of.
+#: PORT DIVERGENCE (user request): the third card is dealt and kept, and so is any card after it.  The
+#: first two can still be bought out of, at 3 diamonds and 2; the level-3 deck is an even split of six
+#: good cards and six bad, so the hand always holds one card the player did not choose and cannot pay to
+#: be rid of.
 LOCKED_CARD_LEVEL = 3
+
+#: PORT ADDITION (testing, user request): `--free-cards` lets the cards from `LOCKED_CARD_LEVEL` on be
+#: changed after all, and charges nothing for it, so a card can be looked for by pressing Enter instead of
+#: by playing hands until it turns up.  Off unless the flag is passed, because a locked card a player can
+#: change is not a locked card.  The first two are untouched by it and still cost their 3 diamonds and 2.
+UNLOCK_CARDS_FOR_TESTING = False
 
 
 def _cards_for_level(level: int) -> list:
@@ -91,7 +98,8 @@ class TarotCardViewController:
         if self.card_dictionary is None and cards:
             self.card_dictionary = cards[crand.rand() % len(cards)]
         self.tarot_view_controller = None
-        self.locked = card_level == LOCKED_CARD_LEVEL     # PORT DIVERGENCE: see LOCKED_CARD_LEVEL
+        # PORT DIVERGENCE: see LOCKED_CARD_LEVEL, and UNLOCK_CARDS_FOR_TESTING for the way out of it
+        self.locked = card_level >= LOCKED_CARD_LEVEL and not UNLOCK_CARDS_FOR_TESTING
         self.cost = 0
         self.current_title = None
         self.flipped = False
@@ -155,6 +163,8 @@ class TarotCardViewController:
             self.cost = 2
         if self.card_level == 3:
             self.cost = 1
+        if UNLOCK_CARDS_FOR_TESTING and self.card_level >= LOCKED_CARD_LEVEL:
+            self.cost = 0                                 # PORT ADDITION (testing): nothing to pay
         # changeCardButton setDiamonds:cost -> -setTitle:forState: labels it "<title> diamonds"
         if self.change_card_button is not None:
             title = 'Change for %d' % self.cost
@@ -218,7 +228,8 @@ class TarotCardViewController:
         card.label = self.accessible_description()
         # PORT DIVERGENCE: the count is what you would be spending, so a card you cannot spend on is silent
         # about it.  The status bar still carries the number for anyone who wants it.
-        card.hint = None if self.locked else 'You have %i diamonds' % Inventory.shared().diamonds
+        card.hint = None if (self.locked or not self.cost) else \
+            'You have %i diamonds' % Inventory.shared().diamonds
 
     def accessible_description(self) -> str:             # 0x1000a61a0
         if self.locked:                                   # PORT DIVERGENCE: see LOCKED_CARD_LEVEL
@@ -228,6 +239,9 @@ class TarotCardViewController:
             return 'Tarot card number %i : %s \n\n %s \n\n(%s)' % (
                 self.card_level, self.card_dictionary.get('title'), self.card_dictionary.get('description'),
                 localization.translate('this card cannot be changed'))
+        if not self.cost:                                 # PORT ADDITION (testing): free, so unpriced
+            return 'Tarot card number %i : %s \n\n %s \n\n(press Enter to change)' % (
+                self.card_level, self.card_dictionary.get('title'), self.card_dictionary.get('description'))
         # PORT INPUT: the original says "(double tap to change for %i diamonds)"; the port names its key
         return 'Tarot card number %i : %s \n\n %s \n\n(press Enter to change for %i diamonds)' % (
             self.card_level, self.card_dictionary.get('title'), self.card_dictionary.get('description'), self.cost)

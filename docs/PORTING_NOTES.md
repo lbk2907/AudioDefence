@@ -12,7 +12,9 @@ py AudioDefence.py --endless
 py AudioDefence.py --challenge tutorial_1
 ```
 
-Testing flags: `--mute`, `--no-speech`, `--exit-after SECONDS`, `--log-level debug`.
+Testing flags: `--mute`, `--no-speech`, `--exit-after SECONDS`, `--log-level debug`, `--free-cards`
+(the tarot cards that cannot be changed can be, and cost nothing - for trying one out without
+playing hands until it turns up).
 The log is written to `%APPDATA%\AudioDefence\audiodefence.log`; saves live in the same folder.
 
 ## Ported so far
@@ -1247,12 +1249,18 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   a level-3 change at 1 diamond; `applyModifier:` 0x100035da4 has a setter for all twelve selectors; and
   `resetCardsModifiersIfNeeded` 0x1000d42a8 already clears three keys.  All that was missing was the 3.
 
-  The third card is dealt and kept.  It has no change button, nothing on it answers Enter, it is read as
-  text rather than as a button - "button" at the end of it would be an offer it does not make - and it
+  The third card is dealt and kept, and so is any card after it - the test is `>= LOCKED_CARD_LEVEL`, so
+  a fourth slot would be locked the day it arrives.  It has no change button, nothing on it answers Enter,
+  it is read as text rather than as a button - "button" at the end of it would be an offer it does not make - and it
   says "(this card cannot be changed)" where the other two say what pressing Enter costs.  It gives no
   count of diamonds in its hint either, because the count is what you would be spending.  The first two
   cards are untouched: 3 diamonds and 2, changed as often as you can pay for.  The point is that a hand
   always holds one card nobody chose, out of a deck that is an even split of good and bad.
+
+  `--free-cards` (`UNLOCK_CARDS_FOR_TESTING`) opens the locked cards and charges nothing for changing
+  them, so one can be looked for by pressing Enter rather than by playing hands until it turns up.  It is
+  off unless the flag is passed and it says so in the log when it is not, because a locked card a player
+  can change is not a locked card.  The first two are untouched by it and still cost their 3 and 2.
 
   The deal still takes the time it always took (user request).  The original holds you 2.3 s and flips
   card N after N seconds, which for its two cards is the same number twice - the last card at 2 s, the
