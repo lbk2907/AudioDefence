@@ -103,13 +103,18 @@ class PowderKeg:
         brick = bm.current_brick()
         if brick is None:
             return []
-        name = self._name_that_can_be_heard(brick)
-        if name is None:
+        names = self._names_that_can_be_heard(brick)
+        if not names:
             return []
         made = []
         turn = float(crand.c_mod(crand.rand(), 360))      # the ring starts somewhere different each time
         for i in range(count):
             angle = ((turn + i * 360.0 / count) * math.pi) / 180.0
+            # PORT ADDITION (user request): a ring of different kinds rather than ten of one.  The wave's
+            # own kinds are what there is to choose from - see the module docstring - and they are dealt
+            # round the ring in turn, so a ring of ten from a wave of three is not three of one standing
+            # together but one of each, three times round.
+            name = names[i % len(names)]
             z = Enemy(name)
             z.random_additional_spawn_angle = 0.0
             z.parent_brick = brick
@@ -127,19 +132,22 @@ class PowderKeg:
             brick.enemies.append(z)
             z.spawn()
             made.append(z)
-        log.info('Powder Keg: %d %s at %.1f units of %s',
-                 len(made), 'rigged' if rigged else 'plain', radius, name)
+        log.info('Powder Keg: %d %s at %.1f units, of %s',
+                 len(made), 'rigged' if rigged else 'plain', radius, ', '.join(sorted(set(names))))
         return made
 
     @staticmethod
-    def _name_that_can_be_heard(brick) -> str | None:
-        """A kind of zombie this wave already holds, whose sounds are therefore loaded.
+    def _names_that_can_be_heard(brick) -> list:
+        """Every kind of zombie this wave already holds, whose sounds are therefore loaded.
 
-        None when the wave has nothing to borrow - between waves, or a wave of only passers-by - and the
-        card simply tries again on a later tick.
+        Empty when the wave has nothing to borrow - between waves, or a wave of only passers-by - and the
+        card simply tries again on a later tick.  The order is the wave's own, so a ring is dealt the
+        kinds in the order the wave lists them rather than in whatever order a set happens to give.
         """
+        names = []
         for e in list(brick.enemies):
             if e.playlist is None or e.is_a_bystander():
                 continue
-            return str(e.name)
-        return None
+            if str(e.name) not in names:
+                names.append(str(e.name))
+        return names

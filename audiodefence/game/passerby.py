@@ -304,9 +304,13 @@ class DiamondDropper(Enemy):
         from .modifiers import GameModifiers
         super().die()
         # PORT ADDITION: Lucky Night pays what a full moon pays, on any night of the month, and a second
-        # card asking pays again - a full moon and two Lucky Nights is four diamonds a Dropper.
+        # card asking pays again - a full moon and two Lucky Nights is four diamonds a Dropper.  Powder
+        # Keg multiplies whatever that came to, as it does the coins and the score (user request): it is
+        # paying for a player standing in the middle of a ring of bombs, and a diamond is what that buys.
+        from .modifiers import POWDER_KEG_REWARD
         mods = GameModifiers.shared()
-        notify_stats('UPDATE_DIAMONDS', 1 + (1 if mods.fullMoon else 0) + mods.times('luckyNight'))
+        paid = 1 + (1 if mods.fullMoon else 0) + mods.times('luckyNight')
+        notify_stats('UPDATE_DIAMONDS', paid * POWDER_KEG_REWARD ** mods.times('powderKeg'))
         Tracker.shared().diamond_acquired()
         # QUIRK: the original then dispatch_after(5 s) a block whose captured receiver is nil
         # (str xzr at 0x10007e950), i.e. [nil deactivatePlaylist] - nothing happens, so nothing is scheduled.

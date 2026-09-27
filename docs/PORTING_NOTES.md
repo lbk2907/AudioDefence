@@ -1446,6 +1446,17 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   a wave's own zombies come from, and nothing in it explodes - `no_lent_blast` keeps Chain Reaction from
   lending even those a bomb, the Farties included.  Then another ring, while the crowd is still about.
 
+  A ring is dealt of **every kind the wave holds**, taken in turn round the circle (user request), so a
+  ring of ten from a wave of two is five of each standing alternately rather than ten of one.  The kinds
+  are the wave's own for the reason above - theirs are the playlists that are loaded.
+
+  And the card **pays three times** (`modifiers.POWDER_KEG_REWARD`, user request): three times the coins
+  and three times the score for every kill of the run, and three times what a Diamond Dropper gives, which
+  multiplies whatever a full moon and Lucky Night had already made of it.  It asks a player to stand in a
+  ring of bombs with the ordinary waves still coming, and this is what that is worth.  It is raised to the
+  power of `times('powderKeg')` rather than multiplied by it, so a second card would treble it again -
+  only one deck holds the card, so that cannot happen today and needs no special case if it ever does.
+
   The waves are untouched: `ADBrick` spawns what its plist says on its own clock, and these are added to
   the list it already updates, so the ordinary game carries on around them.
 
