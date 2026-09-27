@@ -41,9 +41,10 @@ DEAL_SECONDS = 2.3
 LOCKED_CARD_LEVEL = 3
 
 #: PORT ADDITION (testing, user request): `--free-cards` lets the cards from `LOCKED_CARD_LEVEL` on be
-#: changed after all, and charges nothing for it, so a card can be looked for by pressing Enter instead of
-#: by playing hands until it turns up.  Off unless the flag is passed, because a locked card a player can
-#: change is not a locked card.  The first two are untouched by it and still cost their 3 diamonds and 2.
+#: changed after all, and every card in the hand - locked or not, whatever the slot - costs nothing to
+#: change, so a card can be looked for by pressing Enter instead of by playing hands until it turns up.
+#: Off unless the flag is passed, because a locked card a player can change is not a locked card, and a
+#: hand that can be rearranged for nothing is not a hand.
 UNLOCK_CARDS_FOR_TESTING = False
 
 
@@ -163,8 +164,8 @@ class TarotCardViewController:
             self.cost = 2
         if self.card_level == 3:
             self.cost = 1
-        if UNLOCK_CARDS_FOR_TESTING and self.card_level >= LOCKED_CARD_LEVEL:
-            self.cost = 0                                 # PORT ADDITION (testing): nothing to pay
+        if UNLOCK_CARDS_FOR_TESTING:
+            self.cost = 0                                 # PORT ADDITION (testing): nothing to pay, on any card
         # changeCardButton setDiamonds:cost -> -setTitle:forState: labels it "<title> diamonds"
         if self.change_card_button is not None:
             title = 'Change for %d' % self.cost

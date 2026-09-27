@@ -1010,7 +1010,7 @@ something misbehaves.
 | `--challenge NAME` *(checkout only)* | start one challenge by its plist name (`tutorial_1`, `arena1_3`, …). It skips the selector, so the challenge's weapon and completion requirements are not checked — your saved inventory is still what you play with. |
 | `--game PATH` | read the game's data from somewhere other than `game/` (see below). |
 | `--log-level debug` | log every decision the engine makes, not just the milestones. The first thing to try when something misbehaves. |
-| `--free-cards` *(checkout only)* | the tarot cards that cannot normally be changed — the third, and any after it — can be, and changing any of them costs nothing. For trying a particular card out: press Enter on it until it comes up, instead of playing hands until it does. The first two cards are unaffected and still cost their 3 diamonds and 2. |
+| `--free-cards` *(checkout only)* | every card in the hand can be changed, whatever the slot and locked or not, and none of them costs anything. For trying a particular card out: press Enter on it until it comes up, instead of playing hands until it does. |
 | `--mute` *(checkout only)* | set the listener's gain to zero: the game runs in silence. |
 | `--no-speech` *(checkout only)* | never speak, so a test run does not talk over your screen reader. |
 | `--exit-after SECONDS` *(checkout only)* | quit cleanly after this long, for unattended runs. |

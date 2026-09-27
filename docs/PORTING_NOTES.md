@@ -1261,8 +1261,9 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
 
   `--free-cards` (`UNLOCK_CARDS_FOR_TESTING`) opens the locked cards and charges nothing for changing
   them, so one can be looked for by pressing Enter rather than by playing hands until it turns up.  It is
-  off unless the flag is passed and it says so in the log when it is not, because a locked card a player
-  can change is not a locked card.  The first two are untouched by it and still cost their 3 and 2.
+  off unless the flag is passed and says so in the log when it is on, because a locked card a player can
+  change is not a locked card.  Every slot goes free under it, not only the locked ones (user request):
+  a hand is quicker to walk through when nothing in it has to be paid for.
 
   The deal still takes the time it always took (user request).  The original holds you 2.3 s and flips
   card N after N seconds, which for its two cards is the same number twice - the last card at 2 s, the
