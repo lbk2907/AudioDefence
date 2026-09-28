@@ -23,9 +23,15 @@ how to build it; `docs/PORTING_NOTES.md` says what was changed and why.
 file, **at the end of that block** - it reads in the order things were done.
 
 * **Write the line.**  A change a player would notice gets one, and whether the `unrelease:` block is
-  empty or already long is not a reason either way.  Nor is "the thing it fixes has not shipped yet":
-  that is a judgement about what a player needs to know, and it is not mine to make.  The one reason not
-  to write a line is being told, for that change, that it does not need one.
+  empty or already long is not a reason either way.  The reasons not to write a line are being told, for
+  that change, that it does not need one - and the rule below, which is that telling made general.
+* **A change to something that has not shipped gets no line of its own** (user request, 2026-09-28).  A
+  player has never met the thing, so there is nothing for them to notice has changed: the line that
+  announces the new thing covers whatever was done to it afterwards.  So a new mode is one line, and its
+  new arenas, their retuning and the fixes to its menus are none; a new button is one line, and how it
+  sounds is none.  Something that has shipped, or anything about how the game plays in general, still
+  gets its line.  To tell which, `git merge-base --is-ancestor <commit> <the version commit>` says whether
+  the thing was in the last release.  Six lines came out of the block for this on 2026-09-28.
 * One entry per line, no wrapping, no bullets, no "Fixed:", no version numbers, no addresses.
 * Plain sentences about what a player notices, not what the code does.
 * **Name a screen or a tab in words, not as a path.**  "The Speech tab in Settings", not "Settings,
