@@ -1800,6 +1800,21 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   that says so where it is defined, because the Sawn-off's damage is almost all distance.  And since a round
   of a crowd weapon is not worth its damage once, the tool counts the rounds each gun spends and prints them
   against what the arena hands out.
+* FIX to a PORT ADDITION: a chapter's list of arenas answered a press in the wrong order, and a locked
+  arena could be played.  A row reads the status the accessible selector gives (`statusForChallengeWithDict:`
+  0x100054960), which asks about guns before it asks about locks - so an arena that wants a gun reads "Hunting
+  Rifle required, press Enter to go to armory" whether or not the arena before it has been beaten.  The row
+  then opened the challenge's overview for anything that did not read `locked`, and the overview only asks
+  about guns (0x10003e980), since the original never shows it for a locked challenge.  So a player could open
+  an arena three places ahead, buy its gun from the overview's own armory button, come back and press Play.
+  Big Game and The Last Word had that hole from the day they were written; chapter 4, where four arenas of
+  six want a gun bought, is what found it (2026-09-28).
+
+  `ExtraChapterScreen.challenge_chosen` now does what the selector's `tableView:didSelectRowAtIndexPath:`
+  0x100054f8c does, in the same order: a gun not bought goes to the armory, which is what the row has just
+  promised; a locked arena does nothing and says nothing; anything else opens the overview.  The armory is
+  presented over the list, so the rows are read out again when it is dismissed, and a player who has just
+  bought the gun hears the row say `locked` if that is what it now is.
 * PORT ADDITION: a challenge may name the modifiers it is played with (user request).  The original has no
   such key and none of its challenges wants one: a challenge is the same arena for everybody, which is the
   point of its stars.  One of the port's own needs a modifier to be an arena at all - Three Bullets hands

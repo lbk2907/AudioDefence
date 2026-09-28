@@ -313,26 +313,38 @@ class ExtraChapterScreen(ViewControllerScreen):
 
     def load_view(self) -> None:
         from ..game.additions import chapter_arenas
-        from .challenges import AccessibleChallengeSelectorScreen
         v = self.view = View('', (0, 0, 568, 320), accessible=False, name='extraChapter')
         self.buttons = []
-        for i, name in enumerate(chapter_arenas(self.chapter)):
+        self.arenas = list(chapter_arenas(self.chapter))
+        for i, name in enumerate(self.arenas):
             d = data.plist(name) or {}
-            title = str(d.get('title') or name)
-            status = AccessibleChallengeSelectorScreen.status_for_challenge_with_dict(d)
-            locked = status == 'locked'
             # Seven of them in a view 320 points tall, so they sit closer together than the play menu's
             # buttons do.  One column: `reading_order` sorts by a frame's vertical centre, and a column is
-            # the order they unlock in.
-            b = Button(title, (192, 34 + i * 38, 187, 34), parent=v, font_button=not locked,
-                       actions=() if locked else [lambda n=name: self.challenge_chosen(n)],
-                       name='extra %s' % name)
-            b.label = '%s, %s' % (title, status)
-            b.hint = None if locked else str(d.get('objective') or '')
+            # the order they unlock in.  No click of their own: `challenge_chosen` makes one on the paths
+            # that go somewhere, as the selector's rows do.
+            b = Button(str(d.get('title') or name), (192, 34 + i * 38, 187, 34), parent=v, font_button=False,
+                       actions=[lambda n=name: self.challenge_chosen(n)], name='extra %s' % name)
             self.buttons.append(b)
+        self.read_out_arenas()
         if self.buttons:
             self.first_accessible_element = self.buttons[0]
         self.roots = [v]
+
+    def read_out_arenas(self) -> None:
+        """What each row says: its title and the status the accessible selector gives (0x100054960).
+
+        Done again whenever the screen comes back, because the armory is presented over it: a player sent
+        there to buy a gun comes back to a row whose status has changed under it."""
+        from .challenges import AccessibleChallengeSelectorScreen
+        for name, b in zip(self.arenas, self.buttons):
+            d = data.plist(name) or {}
+            status = AccessibleChallengeSelectorScreen.status_for_challenge_with_dict(d)
+            b.label = '%s, %s' % (str(d.get('title') or name), status)
+            b.hint = None if status == 'locked' else str(d.get('objective') or '')
+
+    def view_will_appear(self) -> None:
+        super().view_will_appear()
+        self.read_out_arenas()
 
     def view_did_load(self) -> None:
         super().view_did_load()
@@ -341,21 +353,37 @@ class ExtraChapterScreen(ViewControllerScreen):
         sb.set_currencies_visibility(False)
         sb.back_button.set_title('Extra')
 
-    @staticmethod
-    def challenge_chosen(name: str) -> None:
-        """PORT ADDITION (user request): the challenge's own overview first, as the selector gives.
+    def challenge_chosen(self, name: str) -> None:
+        """PORT ADDITION (user request): what the selector's `tableView:didSelectRowAtIndexPath:` 0x100054f8c
+        does with a row, in the same order.
 
-        `ADChallengeOverviewViewController` 0x1000d8178 takes a challenge dictionary and reads out its
-        title, what it asks of you, its tip and its three stars, with Play at the bottom - and it tells a
-        player who has not bought one of its guns to go and buy it.  A challenge of the port's is a
-        challenge dictionary like any other, so it gets all of that for nothing.
+        A gun not bought goes to the armory, which is what the row has just said it will do ("Hunting Rifle
+        required, press Enter to go to armory").  A locked arena does nothing and says nothing.  Anything
+        else opens the challenge's own overview (`ADChallengeOverviewViewController` 0x1000d8178), which
+        reads out its title, what it asks of you, its tip and its three stars, with Play at the bottom.
+
+        The order is the point.  This used to open the overview for every row that was not `locked` - and a
+        row that wants a gun reads as the gun and not as `locked`, whether or not the arena before it has
+        been beaten.  The overview only asks about guns (0x10003e980), since the original never shows it for
+        a locked challenge, so a player could open an arena three places ahead, buy its gun from the
+        overview's own armory button and play it (2026-09-28).  Big Game and The Last Word had that hole
+        from the start; chapter 4, where four arenas of six want a gun bought, is what made it matter.
         """
-        app = App.delegate()
+        from ..game.challenge_data import ChallengeData
+        from ..game.inventory import Inventory
+        d = App.dictionary_for_challenge_with_name(name) or {}
+        for w in d.get('weapons') or []:
+            if not Inventory.shared().has_unlocked_weapon(w.get('name')):
+                play_button_click()
+                App.delegate().go_to_armory(self, False)
+                return
+        if not ChallengeData.shared().has_challenge_requirements_for_challenge_with_name(name):
+            return
+        play_button_click()
         # The accessible overview whether a screen reader is running or not: the sighted one is a nib the
         # port never ported, so asking for it hands back a placeholder and a dead end.  This screen is
         # views like any other and reads the same dictionary.
-        app.go_to_accessible_challenge_overview_with_dictionary(
-            App.dictionary_for_challenge_with_name(name))
+        App.delegate().go_to_accessible_challenge_overview_with_dictionary(d)
 
     def back_button_pressed(self) -> None:
         App.delegate().go_to_extra_menu()
