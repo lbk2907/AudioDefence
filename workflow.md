@@ -23,9 +23,15 @@ how to build it; `docs/PORTING_NOTES.md` says what was changed and why.
 file, **at the end of that block** - it reads in the order things were done.
 
 * **Write the line.**  A change a player would notice gets one, and whether the `unrelease:` block is
-  empty or already long is not a reason either way.  Nor is "the thing it fixes has not shipped yet":
-  that is a judgement about what a player needs to know, and it is not mine to make.  The one reason not
-  to write a line is being told, for that change, that it does not need one.
+  empty or already long is not a reason either way.  The reasons not to write a line are being told, for
+  that change, that it does not need one, and the rule below.
+* **A new feature gets one line, and nothing more until it ships** (user request, 2026-09-28).  When
+  something new is added, one line says it has been added.  While it has not been released, a fix to it or
+  a change to part of it gets no line of its own: players have not had it yet, so there is nothing for them
+  to notice has changed.  Extra is the example - "There is an Extra menu under Play" is its line, and a new
+  arena or chapter, a retuned arena or a fix to its menus adds nothing.  Once a feature has shipped, a
+  change to it gets its line like anything else.  This is for writing new lines: the lines already in the
+  block are the maintainer's to prune.
 * One entry per line, no wrapping, no bullets, no "Fixed:", no version numbers, no addresses.
 * Plain sentences about what a player notices, not what the code does.
 * **Name a screen or a tab in words, not as a path.**  "The Speech tab in Settings", not "Settings,
