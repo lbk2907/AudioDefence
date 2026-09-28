@@ -1148,10 +1148,13 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   The counted word is the word straight after the number (`_template_regex`), or the two for "per cent".
   Until 2026-09-28 it was the whole run of words to the end of the line, so a count in the middle of a
   sentence was never recognised and the word after it kept whatever form the translation was written in:
-  "нужно 73 звёзд", "уложились в 22 секунд", "заработал 21 монет".  Three lines count the object of their
-  verb, where Russian says 21 секунду and 21 монету rather than the forms a count standing on its own takes,
-  and have rules of their own in `_MANUAL`.  Compared over every numbered line in the Russian file at six
-  numbers each, 906 lines: twenty read differently, all of them those three lines being put right.
+  "нужно 73 звёзд", "уложились в 22 секунд", "заработал 21 монет".  Compared over every numbered line in the
+  Russian file at six numbers each, 906 lines: twenty read differently, all of them put right.
+
+  Nothing of one language goes into the code for this (user request): a line that wants other forms than
+  a count standing on its own - Russian's "уложились в 21 секунду", say - is the translator's to word in
+  their own file.  Three rules that did it in `_MANUAL` for Russian were written and taken out again the
+  same day for that reason, so every language is handed the same general layer and edits its own lines.
 
 * PORT ADDITION: the additions overlay - the plists are the original, and everything the port adds is in
   code (user request).  `game/` holds Somethin' Else's files exactly as they shipped them: not re-encoded,

@@ -197,9 +197,9 @@ def _template_regex(key: str):
         # The counted word is the word straight after the number, or the two ("per cent").  This took the
         # whole run of words to the end of the line until 2026-09-28, so a count in the middle of a sentence
         # was never recognised - "You need %i stars to play this level" looked for a unit called "stars to
-        # play this level" - and the Russian after it kept whatever form the translation happened to be
-        # written in: "\u043d\u0443\u0436\u043d\u043e 73 \u0437\u0432\u0451\u0437\u0434".  Measured over all 151 templates in the Russian file, five numbers
-        # gain a counted word by this and none loses one.
+        # play this level" - and the translated word after it kept whatever form the translation happened
+        # to be written in, whatever the number.  Measured over all 151 templates in the one language file
+        # there is, five numbers gain a counted word by this and none loses one.
         word = re.match(r'\s+([A-Za-z]+)(?: ([A-Za-z]+))?', key[match.end():])
         if word:
             for unit in ([word.group(1) + ' ' + word.group(2)] if word.group(2) else []) + [word.group(1)]:
@@ -348,18 +348,6 @@ _MANUAL = (
      lambda m: 'Возродиться за %s %s' % (m.group(1), _plural(int(m.group(1)), 'алмаз', 'алмаза', 'алмазов'))),
     (re.compile(r'^Respawn for (\d+) diamonds?$'),
      lambda m: 'Возродиться за %s %s' % (m.group(1), _plural(int(m.group(1)), 'алмаз', 'алмаза', 'алмазов'))),
-    # Two lines whose count is the object of the verb, where Russian says 21 секунду and 21 монету rather
-    # than the секунда and монета `UNITS` has for a count standing on its own.  The rest of their forms are
-    # the same either way.
-    (re.compile(r'^You beat the (\d+) seconds? time limit -- Reward : (\d+) coins?$'),
-     lambda m: 'Вы уложились в %s %s. Награда: %s %s' % (
-         m.group(1), _plural(int(m.group(1)), 'секунду', 'секунды', 'секунд'),
-         m.group(2), _plural(int(m.group(2)), 'монета', 'монеты', 'монет'))),
-    (re.compile(r'^You beat the (\d+) seconds? time limit$'),
-     lambda m: 'Вы уложились в %s %s' % (m.group(1), _plural(int(m.group(1)), 'секунду', 'секунды', 'секунд'))),
-    (re.compile(r'^You earned (\d+) coins? for killing zombies$'),
-     lambda m: 'Ты заработал %s %s за убийство зомби' % (
-         m.group(1), _plural(int(m.group(1)), 'монету', 'монеты', 'монет'))),
 )
 
 
