@@ -88,8 +88,19 @@ def sustained_dps(weapon: str, level: str = 'level_1') -> float:
     return (cap * dmg) / (cap * rate + float(lv.get('reloadTime') or 0))
 
 
+def walks_away(kind: str) -> bool:
+    return BERSERK_IS_FREE and isinstance(ENEMIES[kind].get('berserk'), dict)
+
+
+def hits_to_kill(kind: str, per_shot: float) -> int:
+    import math
+    return max(1, int(math.ceil(life_of(kind) / per_shot))) if per_shot else 1
+
+
 def deadline(kind: str, distance: float, spawn_time: float) -> float:
     """Seconds from the wave starting until this enemy reaches the player, which is the end of the game."""
+    if walks_away(kind):
+        return float('inf')                               # it leaves on its own, unless it is shot
     e = ENEMIES[kind]
     speed = float(e.get('speed') or 0) * MULT['speed']
     if not speed:
@@ -162,15 +173,35 @@ DEAF_COST = 2.5
 #: of the run.  Charged as overhead, on top of the wok's own rate of damage.
 MELEE_COST = 2.0
 
+#: PORT JUDGEMENT: what a `dodge` is worth.  An enemy with one strafes sideways at `dodgeSpeed` for
+#: `dodgeTime` every time it is hit and survives - 3.5 units for Dodge, which at ten units' range is 19
+#: degrees and so outside the revolver's spread.  It has to be found again after every single hit, and this
+#: is charged as one overhead per hit it takes to kill.
+DODGE_COST = 1.0
 
-def wave_pressure(wave: dict, dps: float, overhead: float):
+#: An enemy with a `berserk` dict walks *away* from the player (state 2 negates the orientation) and
+#: `berserk_go_away` 0x100060944 sets its life to nought after `disappearAfter` seconds, so the wave counts
+#: it as cleared without a shot being fired.  It asks nothing of the player who leaves it alone, which is how
+#: it is counted here - and everything of the one who shoots it, which cannot be counted here at all.
+BERSERK_IS_FREE = True
+
+
+def extra_overhead(kind: str, overhead: float, per_shot: float) -> float:
+    """What this enemy costs beyond its life, for having to be found again."""
+    if isinstance(ENEMIES[kind].get('dodge'), dict):
+        return overhead * DODGE_COST * (hits_to_kill(kind, per_shot) - 1)
+    return 0.0
+
+
+def wave_pressure(wave: dict, dps: float, overhead: float, per_shot: float = 0.0):
     """(margin, the enemy the margin belongs to, how long the wave takes to clear).
 
     The margin is the smallest slack over the wave: every enemy has to be dead before it arrives, and the
     best a player can do is take them in the order their clocks run out, so this walks that order and asks
     how much of it the guns can keep up with.
     """
-    lives = {k: life_of(k.split(' ')[0]) for k in wave['Enemies']}
+    lives = {k: life_of(k.split(' ')[0]) for k in wave['Enemies']
+             if not walks_away(k.split(' ')[0])}         # a Berserk left alone leaves by itself
     budget, note = 0.0, ''
     if wave.get('Rigged'):
         # one kill sets off the chain, and the cheapest kill is the one a player goes for
@@ -189,7 +220,9 @@ def wave_pressure(wave: dict, dps: float, overhead: float):
     deaf_until = budget + tinnitus_for(wave)
     margin, who, spent = float('inf'), 'nothing can reach you', budget
     for due, rest, key in rows:
-        spent += rest / dps + (overhead * DEAF_COST if spent < deaf_until else overhead)
+        kind = key.split(' ')[0]
+        found = overhead * DEAF_COST if spent < deaf_until else overhead
+        spent += rest / dps + found + extra_overhead(kind, overhead, per_shot)
         if due - spent < margin:
             margin, who = due - spent, key + note
     return margin, who, spent
@@ -248,6 +281,8 @@ def report(name: str, overhead: float, level: str) -> None:
     dps = melee_dps if fought_with_wok else (ranged_dps or melee_dps)
     if fought_with_wok:
         overhead = overhead * MELEE_COST
+    gun = (melee if fought_with_wok else ranged)[0]
+    per_shot = float((WEAPONS[gun].get(level) or {}).get('damages') or 0)
 
     print('%s  (%s)' % (d.get('title', name), name))
     print('  guns %s%s' % (', '.join('%s%s' % (g, ' x%i' % rounds[g] if rounds.get(g) else '')
@@ -258,7 +293,7 @@ def report(name: str, overhead: float, level: str) -> None:
     worst, worst_wave = float('inf'), ''
     for brick in d['bricks']:
         wave = load(brick)
-        margin, who, spent = wave_pressure(wave, dps, overhead)
+        margin, who, spent = wave_pressure(wave, dps, overhead, per_shot)
         life = sum(life_of(k.split(' ')[0]) for k in wave['Enemies'])
         deaf = tinnitus_for(wave)
         shown = 'nothing arrives' if margin == float('inf') else '%5.1fs' % margin

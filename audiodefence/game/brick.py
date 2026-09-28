@@ -41,13 +41,17 @@ class Brick:
             e.set_position_from_dictionary(d)
             # PORT ADDITION: a wave of the port's own can say what its zombies carry.  `Rigged` gives
             # every one of them the blast the game gives a Farty, so the wave goes up in a chain from one
-            # shot; `NoBlast` promises they never will, whatever cards are in hand.  The original's own
-            # waves have neither key and are untouched.
+            # shot; `NoBlast` refuses them the one Chain Reaction lends, whatever is in hand.  The
+            # original's own waves have neither key and are untouched.
+            #
+            # `NoBlast` leaves an enemy's *own* explosion alone, and used to throw it away as well - which
+            # silenced the Farties in Powder Keg's crowds, whose bang is theirs out of `enemies.plist` and
+            # the reason a player is glad to hear one.  `blast` answers with the enemy's own first and only
+            # then consults this flag, so the flag by itself says exactly what was meant.
             if self.brick_dictionary.get('Rigged'):
                 from .modifiers import CHAIN_REACTION_BLAST
                 e.explosion_dictionary = dict(CHAIN_REACTION_BLAST)
             elif self.brick_dictionary.get('NoBlast'):
-                e.explosion_dictionary = None
                 e.no_lent_blast = True
             e.tag = ((self.tag * 100) | 1) + len(self.enemies)
             self.enemies.append(e)

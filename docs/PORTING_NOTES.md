@@ -1619,6 +1619,60 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   `App.go_to_challenge_list_for` asks `chapter_of` - and the completed screen's button says which one, "back
   to Chapter 1".
 
+  **Chapter 2** (user request), six arenas built out of the parts of this engine chapter 1 never touched,
+  and it opens on twelve of chapter 1's twenty-one stars - so an arena a player cannot finish does not stop
+  them, and one who took every star is well past it.  In the order they open, with what
+  `tools/arena_pressure.py` measures at level one: Scrapyard (five seconds spare, but ammunition-bound),
+  Do Not Wake It (four), The Long Walk (one short), Sidestep (five short), Hydra (nine short) and Big Game
+  (eleven short).  At level four the last of them comes out twelve seconds to the good, which is the point:
+  chapter 2 is entered by a player who has been playing.
+
+  **Scrapyard** is an economy.  A Car keeps its own explosion from `enemies.plist` - radius 3, 30 damage,
+  dispersal 50, which `hit_by_explosion` makes 15 flat plus 15 falling off inside one unit - so it kills
+  nothing outright and takes 15 off everything within three units.  Against sixty rounds and 815 of life,
+  the question is whether the zombies walking past are worth what the car costs to set off.  The cars go in
+  as `PasserBy` and not as enemies, which is where the game puts them and the only place they work:
+  `sounds/passerBy/Car` holds an alarm, a spawn, an impact and a death and **no `_approach_`**, so a Car
+  driven by the enemy state machine falls silent the moment it finishes spawning - an inaudible thing that
+  `brickIsCleared` would still wait for, which is the dead end Three Bullets had to be written around.  As a
+  passer-by, `CarAlarm` loops the alarm so it can be found, it can still be shot, it still explodes, and it
+  holds nothing up if a player decides it is not worth a round.
+
+  **Do Not Wake It** is the only arena in either chapter where the right move is sometimes not to shoot.
+  Everything about a Berserk runs backwards: 225 life, and in its walking state the orientation is negated so
+  it walks *away*, and `berserk_go_away` 0x100060944 sets its life to nought once `disappearAfter` is up - so
+  the wave counts it as cleared and no shot was ever fired.  But `hit_by_weapon` sends it to
+  `transition_to_berserk` the moment it is hit and survives, and it comes back at `berserkSpeed` with
+  whatever is left of 225, which at level one is thirteen seconds of shooting it does not give you.  The
+  Berserks stand on bearings between the zombies that do have to die, close enough that a shot thirty degrees
+  wide might find the wrong one.
+
+  **Sidestep** is a target that will not stay found.  `dodge` {dodgeTime 0.7, dodgeSpeed 5} fires from
+  `hit_by_weapon` every time a Dodge is hit and survives, and it strafes **3.5 units** - measured, not
+  assumed - which at ten units out is nineteen degrees and so outside the revolver's spread of thirty.  Eight
+  rounds at level one is being found again eight times, while it closes at 0.9 and the walkers behind it do
+  not wait.  The tool charges `DODGE_COST` of overhead per hit for that.
+
+  **Hydra** hands the player the timer.  `spawn_after` is the original's own key (`challenge_arena1_1` uses
+  it) and `checkSpawnAfterKill:` 0x1000a20ac reads it: an enemy spawns so many seconds after the one it names
+  **dies**.  So seeds stand out there with a pair waiting behind each, and nothing happens at all until a
+  seed is killed - kill them one at a time and the clock runs out, kill them together and eight arrive at
+  once.  An enemy with a `spawn_after` and no `spawn_time` is built and then left in the state it was born
+  in, which a test confirms: thirty seconds pass and the brood has not moved.
+
+  **The Long Walk** is 500 life at a quarter of a unit a second - forty-eight seconds to arrive and thirty
+  seconds of level-one shooting to put down - and the arena is what walks in behind the player during those
+  thirty seconds.  **Big Game** closes the chapter and is the first arena of either that names a gun the
+  player has to buy (user request): `hasWeaponForChallengeWithName:` 0x10001f868 is what the overview checks,
+  and a player without a Hunting Rifle is told to go to the armory rather than let in.
+
+* FIX to a PORT ADDITION: `NoBlast` used to throw away an enemy's **own** explosion as well as refusing it
+  the one Chain Reaction lends.  It was written for the crowds between Powder Keg's rings, and those crowds
+  contain Farties - whose bang is theirs out of `enemies.plist` and the reason a player is glad to hear one -
+  so the Farties in Powder Keg had been silent since the day the key was added.  `blast` answers with the
+  enemy's own explosion first and only then consults the flag, so setting the flag alone says exactly what
+  was meant, and the key now leaves an enemy's own explosion alone.
+
   An info button for Extra, beside the two the play menu already has (user request).
   `ADInfoViewController` takes a page name and reads its title and its text out of `Localizable.strings`,
   which is Somethin' Else's file and holds nothing for a mode they never wrote; so the words for this one

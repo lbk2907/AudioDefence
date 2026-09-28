@@ -595,6 +595,271 @@ PLISTS['port_keg'] = {
     'accuracy_star': {'reward': 200, 'objective': 40},
 }
 
+
+# =========================================================================================== chapter 2
+#: Chapter 2, which carries on from where Powder Keg left off (user request) and is built out of the parts of
+#: this engine chapter 1 never touched: the enemies that dodge, the one that runs away, the static bombs, the
+#: 500-life one, and `spawn_after`, which lets a wave answer a kill with more of itself.
+
+# ---------------------------------------------------------------------------------------- 1. Scrapyard
+#: Parked cars, and an economy.
+#:
+#: A Car keeps its own explosion out of `enemies.plist` - radius 3, 30 damage, dispersal 50, which by
+#: `hit_by_explosion` is 15 flat plus 15 more falling off inside one unit.  So a car kills nothing outright
+#: and takes 15 off everything within three units of it, and the question is whether the zombies walking past
+#: are worth the rounds the car itself costs: 35 for a Car, 50 and 80 for the other two.  Thirty-six rounds
+#: against four hundred of life says: only if you wait for two or three of them.
+#:
+#: They go in as `PasserBy` and not as enemies, which is where the game puts them and the only place they
+#: work.  `sounds/passerBy/Car` holds an alarm, a spawn, an impact and a death and **no `_approach_`**, so a
+#: Car driven by the enemy state machine would fall silent the moment it finished spawning - an invisible,
+#: inaudible thing that `brickIsCleared` would still wait for.  As a passer-by, `CarAlarm` loops the alarm so
+#: it can be found, it can be shot like anything else, it explodes when it dies, and it holds nothing up if a
+#: player decides it is not worth a round.
+#:
+#: The zombies spawn on the cars' own bearings, further out, so they walk onto them.
+def _scrap(cars, crowd) -> dict:
+    wave = _wave(crowd, no_blast=True)
+    wave['PasserBy'] = {kind: {'spawn_angle': float(a), 'spawn_distance': 6.0, 'spawn_time': 0.5}
+                        for kind, a in cars}
+    return wave
+
+
+PLISTS['port_scrap_1'] = _scrap(
+    (('Car', 70), ('Machine', 250)),
+    [('WeakZombie', 70, 10.0, 1.0), ('Zombie', 70, 11.0, 3.0), ('WeakZombieB', 68, 12.0, 5.0),
+     ('Zombie', 250, 10.0, 8.0), ('ZombieB', 252, 11.0, 10.0), ('WeakZombieC', 248, 12.0, 12.0)])
+PLISTS['port_scrap_2'] = _scrap(
+    (('Car', 40), ('Car2', 200), ('Machine', 310)),
+    [('WeakZombie', 40, 10.0, 1.0), ('Zombie', 42, 11.0, 2.6), ('ZombieB', 38, 12.0, 4.2),
+     ('WeakZombieB', 200, 10.0, 5.8), ('Zombie', 202, 11.0, 7.4), ('QuietZombie', 198, 12.0, 9.0),
+     ('ZombieC', 310, 10.0, 10.6), ('WeakZombieC', 312, 11.0, 12.2), ('Zombie', 120, 11.0, 13.8)])
+PLISTS['port_scrap_3'] = _scrap(
+    (('Car', 20), ('Car2', 140), ('Car3', 260)),
+    [('WeakZombie', 20, 10.0, 1.0), ('Zombie', 22, 11.0, 2.4), ('ZombieB', 18, 12.0, 3.8),
+     ('WeakZombieB', 140, 10.0, 5.2), ('Zombie', 142, 11.0, 6.6), ('QuietZombie', 138, 12.0, 8.0),
+     ('WeakZombieC', 260, 10.0, 9.4), ('ZombieC', 262, 11.0, 10.8), ('QuietZombie', 258, 12.0, 12.2),
+     ('Runner', 330, 11.0, 14.0), ('ZombieB', 60, 11.0, 15.4), ('QuietZombie', 180, 11.0, 16.8)])
+PLISTS['port_scrap'] = {
+    'challenge_id': 'port_scrap',
+    'title': 'Scrapyard',
+    'objective': 'Sixty rounds, and a good deal more than sixty of them out there.',
+    'tip': 'Not everything making a noise out here is a zombie, and some of it is worth more to you than '
+           'the rounds it costs. Wait until it is worth it.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'SY',
+    'weapons': [{'name': 'pistol', 'ammo': '60'}, {'name': 'wok'}],
+    'bricks': ['port_scrap_1', 'port_scrap_2', 'port_scrap_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'mission_star': {'reward': 550},
+    'time_limit_star': {'reward': 250, 'objective': 190},
+    'accuracy_star': {'reward': 250, 'objective': 55},
+}
+
+# ----------------------------------------------------------------------------------------- 2. Sidestep
+#: The target that will not stay found.  A Dodge has 80 life and `dodge` {dodgeTime 0.7, dodgeSpeed 5}, and
+#: `set_life` 0x100061a00 sends it into state 7 every time it is hit and survives: 3.5 units sideways, which
+#: at ten units out is nineteen degrees and so outside the revolver's spread of thirty.  Eight rounds at
+#: level one means being found again eight times, while it closes at 0.9 - and the walkers arriving behind it
+#: do not wait for that.
+PLISTS['port_sidestep_1'] = _wave(
+    [('Dodge', 60, 12.0), ('WeakZombie', 200, 10.0, 4.0), ('Zombie', 300, 10.0, 10.0)], no_blast=True)
+PLISTS['port_sidestep_2'] = _wave(
+    [('Dodge', 30, 12.0), ('DodgeB', 210, 12.0, 10.0), ('Zombie', 120, 10.0, 3.0),
+     ('WeakZombie', 280, 10.0, 11.0), ('ZombieB', 160, 10.0, 18.0)], no_blast=True)
+PLISTS['port_sidestep_3'] = _wave(
+    [('Dodge', 20, 12.0), ('DodgeB', 150, 12.0, 9.0),
+     ('Zombie', 90, 10.0, 2.0), ('Runner', 330, 11.0, 8.0), ('ZombieB', 190, 10.0, 15.0),
+     ('QuietZombie', 60, 10.0, 21.0)], no_blast=True)
+PLISTS['port_sidestep'] = {
+    'challenge_id': 'port_sidestep',
+    'title': 'Sidestep',
+    'objective': 'One of them will not be where you left it.',
+    'tip': 'Every time you hit it, it is somewhere else. Listen for where it went before you fire again, '
+           'because the rest are still coming.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'SS',
+    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '250'}, {'name': 'wok'}],
+    'bricks': ['port_sidestep_1', 'port_sidestep_2', 'port_sidestep_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'challenges_requirement': ['port_longwalk'],
+    'mission_star': {'reward': 700},
+    'time_limit_star': {'reward': 250, 'objective': 180},
+    'accuracy_star': {'reward': 250, 'objective': 45},
+}
+
+# ------------------------------------------------------------------------------------ 3. Do Not Wake It
+#: The arena that punishes shooting.
+#:
+#: A Berserk has 225 life and a `berserk` dict, and everything about it runs backwards.  In its walking state
+#: the orientation is negated, so it walks *away*; `berserk_go_away` 0x100060944 sets its life to nought once
+#: `disappearAfter` (15 seconds) is up, so the wave counts it as cleared and the player never fires a shot.
+#: But `set_life` sends it to `transition_to_berserk` the moment it is hit and survives, and then it comes
+#: back at `berserkSpeed` with whatever is left of 225 life - which at level one is thirteen seconds of
+#: shooting, and it arrives long before that.
+#:
+#: So each wave puts the Berserks on bearings between the zombies that do have to be killed, close enough
+#: that a shot thirty degrees wide might find the wrong one.  The whole arena is fire discipline, and it is
+#: the only one in either chapter where the right move is sometimes to not shoot at all.
+PLISTS['port_nowake_1'] = _wave(
+    [('Berserk', 90, 7.0), ('WeakZombie', 70, 10.0, 1.0), ('Zombie', 110, 10.0, 5.0),
+     ('WeakZombieB', 250, 10.0, 9.0), ('Zombie', 280, 10.0, 13.0),
+     ('ZombieB', 30, 10.0, 17.0), ('QuietZombie', 200, 10.0, 21.0)], no_blast=True)
+PLISTS['port_nowake_2'] = _wave(
+    [('Berserk', 60, 7.0), ('Berserk', 240, 7.0, 8.0),
+     ('Zombie', 40, 10.0, 1.0), ('WeakZombie', 80, 10.0, 3.0), ('ZombieB', 220, 10.0, 5.0),
+     ('Zombie', 260, 10.0, 7.0), ('QuietZombie', 150, 10.0, 9.0), ('ZombieC', 110, 10.0, 11.0),
+     ('Zombie', 300, 10.0, 13.0), ('QuietZombie', 20, 10.0, 15.0)], no_blast=True)
+PLISTS['port_nowake_3'] = _wave(
+    [('Berserk', 30, 6.5), ('Berserk', 150, 6.5, 6.0), ('Berserk', 270, 6.5, 12.0),
+     ('Zombie', 15, 10.0, 1.0), ('WeakZombie', 45, 10.0, 2.6), ('ZombieB', 135, 10.0, 4.2),
+     ('QuietZombie', 165, 10.0, 5.8), ('Zombie', 255, 10.0, 7.4), ('ZombieC', 285, 10.0, 9.0),
+     ('Runner', 200, 11.0, 10.6), ('ZombieB', 100, 10.0, 12.2), ('QuietZombie', 300, 10.0, 13.8),
+     ('Zombie', 60, 10.0, 15.4), ('RunnerB', 240, 11.0, 17.0)], no_blast=True)
+PLISTS['port_nowake'] = {
+    'challenge_id': 'port_nowake',
+    'title': 'Do Not Wake It',
+    'objective': 'One of the things out there is leaving on its own. It would rather you did not interrupt.',
+    'tip': 'It walks away from you and it does not need killing. What it needs is to be missed, and a shot '
+           'is thirty degrees wide.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'NW',
+    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_nowake_1', 'port_nowake_2', 'port_nowake_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'challenges_requirement': ['port_scrap'],
+    'mission_star': {'reward': 600},
+    'time_limit_star': {'reward': 250, 'objective': 200},
+    'accuracy_star': {'reward': 300, 'objective': 70},
+}
+
+# -------------------------------------------------------------------------------------------- 4. Hydra
+#: A wave that answers a kill with more of itself, and hands the player the timer.
+#:
+#: `spawn_after` is the original's own key - `challenge_arena1_1` uses it - and `checkSpawnAfterKill:`
+#: 0x1000a20ac reads it: an enemy whose `spawn_after` names another by the key it is written under spawns
+#: that many seconds after the named one **dies**.  So three seeds stand out there, each with two behind it,
+#: and nothing else happens until a seed is killed.  Which means the player decides when the next pair comes,
+#: and the arena is really a question about pacing: kill them one at a time and the wave takes for ever
+#: against the clock, kill them together and six arrive at once.
+def _hydra(seeds, broods, after: float = 3.0) -> dict:
+    """Seeds standing out there, and behind each of them a brood that waits for it to die.
+
+    `spawn_after` names another enemy by the key it is written under, so the numbering `_wave` gives has to
+    be worked out here: the seeds go in first and are keys 1..n, and each brood follows.  An enemy with a
+    `spawn_after` and no `spawn_time` is built and then left alone by `Brick.__init__`, and
+    `checkSpawnAfterKill:` 0x1000a20ac is what eventually starts its clock.
+    """
+    spec = list(seeds) + [one for brood in broods for one in brood]
+    wave = _wave(spec, no_blast=True)
+    keys = list(wave['Enemies'])
+    seed_keys = keys[:len(seeds)]
+    i = len(seeds)
+    for seed_key, brood in zip(seed_keys, broods):
+        for _one in brood:
+            wave['Enemies'][keys[i]] = dict(wave['Enemies'][keys[i]],
+                                            spawn_after={'enemy': seed_key, 'time': after})
+            wave['Enemies'][keys[i]].pop('spawn_time', None)
+            i += 1
+    return wave
+
+
+PLISTS['port_hydra_1'] = _hydra(
+    (('Zombie', 45, 9.0), ('Zombie', 225, 9.0)),
+    ([('WeakZombie', 20, 11.0), ('WeakZombieB', 70, 11.0)],
+     [('WeakZombieC', 200, 11.0), ('WeakZombieD', 250, 11.0)]))
+PLISTS['port_hydra_2'] = _hydra(
+    (('Zombie', 30, 9.0), ('Zombie', 150, 9.0), ('Zombie', 270, 9.0)),
+    ([('WeakZombie', 10, 11.0), ('WeakZombieB', 50, 11.0)],
+     [('WeakZombieC', 130, 11.0), ('WeakZombieD', 170, 11.0)],
+     [('Zombie', 250, 11.0), ('ZombieB', 290, 11.0)]))
+PLISTS['port_hydra_3'] = _hydra(
+    (('Zombie', 20, 8.5), ('Zombie', 110, 8.5), ('Zombie', 200, 8.5), ('Zombie', 290, 8.5)),
+    ([('WeakZombie', 0, 11.0), ('ZombieB', 40, 11.0)],
+     [('WeakZombieB', 90, 11.0), ('ZombieC', 130, 11.0)],
+     [('Runner', 180, 11.0), ('WeakZombieC', 220, 11.0)],
+     [('Runner', 270, 11.0), ('WeakZombieD', 310, 11.0)]))
+PLISTS['port_hydra'] = {
+    'challenge_id': 'port_hydra',
+    'title': 'Hydra',
+    'objective': 'Nothing out there is in any hurry. That part is up to you.',
+    'tip': 'The arena is waiting for you, and every one you finish is an invitation. Finish them one at a '
+           'time and watch the clock; finish them together and do not.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'HY',
+    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '200'}, {'name': 'wok'}],
+    'bricks': ['port_hydra_1', 'port_hydra_2', 'port_hydra_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'challenges_requirement': ['port_sidestep'],
+    'mission_star': {'reward': 750},
+    'time_limit_star': {'reward': 300, 'objective': 150},
+    'accuracy_star': {'reward': 250, 'objective': 50},
+}
+
+# ----------------------------------------------------------------------------------- 5. The Long Walk
+#: Five hundred life at a quarter of a unit a second.  A Colossus spawned twelve units out takes
+#: forty-eight seconds to arrive and thirty seconds of level-one shooting to put down, so it is not a
+#: question of whether it can be killed but of what else happens in the half minute it takes - and what
+#: else is a crowd, walking in on the other side of the player while their back is turned.
+PLISTS['port_longwalk_1'] = _wave(
+    [('Colossus', 0, 12.0), ('WeakZombie', 160, 10.0, 6.0), ('Zombie', 200, 10.0, 14.0),
+     ('ZombieB', 180, 10.0, 22.0)], no_blast=True)
+PLISTS['port_longwalk_2'] = _wave(
+    [('Colossus', 0, 12.0), ('Zombie', 150, 10.0, 5.0), ('WeakZombie', 190, 10.0, 11.0),
+     ('ZombieB', 210, 10.0, 17.0), ('QuietZombie', 170, 10.0, 23.0), ('Zombie', 230, 10.0, 29.0)],
+    no_blast=True)
+PLISTS['port_longwalk_3'] = _wave(
+    [('Colossus', 0, 12.0), ('Zombie', 140, 10.0, 4.0), ('WeakZombie', 180, 10.0, 9.0),
+     ('ZombieB', 220, 10.0, 14.0), ('QuietZombie', 160, 10.0, 19.0), ('Runner', 200, 11.0, 24.0),
+     ('ZombieC', 240, 10.0, 29.0), ('RunnerB', 120, 11.0, 34.0)], no_blast=True)
+PLISTS['port_longwalk'] = {
+    'challenge_id': 'port_longwalk',
+    'title': 'The Long Walk',
+    'objective': 'Something very large is on its way, and it is in no hurry at all.',
+    'tip': 'It will take everything you have got for half a minute. Decide whether it gets that half '
+           'minute now or later, because the rest are coming from behind you.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'LW',
+    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '400'}, {'name': 'wok'}],
+    'bricks': ['port_longwalk_1', 'port_longwalk_2', 'port_longwalk_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'challenges_requirement': ['port_nowake'],
+    'mission_star': {'reward': 650},
+    'time_limit_star': {'reward': 300, 'objective': 220},
+    'accuracy_star': {'reward': 300, 'objective': 45},
+}
+
+# --------------------------------------------------------------------------------------- 6. Big Game
+#: The first arena of either chapter that wants a gun the player has to buy (user request).  A Hunting Rifle
+#: is 8500 coins and does 15 a shot at level one against the revolver's 10, and this asks for it by name:
+#: `hasWeaponForChallengeWithName:` 0x10001f868 is what the overview checks, and a player who has not bought
+#: one is told to go to the armory instead of being let in.  Everything in here is something the revolver was
+#: never going to be enough for - a Colossus, the Hulks, and two Berserks that had better be left where they
+#: are - and it closes the chapter.
+PLISTS['port_biggame_1'] = _wave(
+    [('Hulk', 60, 12.0), ('HulkB', 300, 12.0, 8.0), ('Berserk', 180, 7.0, 2.0),
+     ('Zombie', 120, 10.0, 14.0), ('ZombieB', 240, 10.0, 20.0)], no_blast=True)
+PLISTS['port_biggame_2'] = _wave(
+    [('Colossus', 90, 12.0), ('Hulk', 30, 12.0, 12.0), ('HulkB', 150, 12.0, 24.0),
+     ('Berserk', 270, 7.0, 3.0), ('Runner', 210, 11.0, 34.0), ('Zombie', 330, 10.0, 40.0)],
+    no_blast=True)
+PLISTS['port_biggame_3'] = _wave(
+    [('Colossus', 0, 12.0), ('Hulk', 80, 12.0, 10.0), ('HulkB', 280, 12.0, 20.0),
+     ('Shield', 160, 12.0, 28.0), ('Berserk', 40, 6.5, 2.0), ('Berserk', 320, 6.5, 9.0),
+     ('Runner', 200, 11.0, 34.0), ('RunnerB', 120, 11.0, 39.0), ('Chainsaw', 240, 11.0, 44.0),
+     ('Clown', 60, 11.0, 49.0)], no_blast=True)
+PLISTS['port_biggame'] = {
+    'challenge_id': 'port_biggame',
+    'title': 'Big Game',
+    'objective': 'A revolver was never going to be enough for this, and Dr. Bastard knows it.',
+    'tip': 'Buy the rifle. Then work out which of them you are meant to shoot with it, because one of them '
+           'is not on the list.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'BG',
+    'weapons': [{'name': 'hunting', 'ammo': '120'}, {'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_biggame_1', 'port_biggame_2', 'port_biggame_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'challenges_requirement': ['port_hydra'],
+    'mission_star': {'reward': 800},
+    'time_limit_star': {'reward': 300, 'objective': 240},
+    'accuracy_star': {'reward': 300, 'objective': 60},
+}
+
+
 #: The port's own arenas, gathered into chapters (user request).
 #:
 #: A chapter is `(name, stars needed to open it, the arenas in it)`.  Inside a chapter each arena names the
@@ -612,6 +877,10 @@ PLISTS['port_keg'] = {
 CHAPTERS = (
     ('Chapter 1', 0, ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets',
                       'port_survivor', 'port_stampede', 'port_keg')),
+    #: Twelve of chapter 1's twenty-one stars, so a player who could not finish one of its arenas is not
+    #: stopped here, and one who took every star is well past it.
+    ('Chapter 2', 12, ('port_scrap', 'port_nowake', 'port_longwalk', 'port_sidestep', 'port_hydra',
+                       'port_biggame')),
 )
 
 #: Every arena of the port's, in the order they are played.  What `go_to_challenge_list_for` and the
