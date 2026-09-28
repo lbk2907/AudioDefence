@@ -26,11 +26,6 @@ file, **at the end of that block** - it reads in the order things were done.
   empty or already long is not a reason either way.  Nor is "the thing it fixes has not shipped yet":
   that is a judgement about what a player needs to know, and it is not mine to make.  The one reason not
   to write a line is being told, for that change, that it does not need one.
-* **Extra's arenas get no lines of their own** (user request, 2026-09-28).  Players have not had Extra yet,
-  so "There is an Extra menu under Play" is the whole of it: a new arena or chapter, an arena retuned, a
-  fix to the chapter menus is not a change to anything they have met.  This is about Extra and nothing
-  else - a new feature elsewhere still gets its lines, how the Shuffle button sounds included.  Three lines
-  about Extra came out of the block for it on 2026-09-28.
 * One entry per line, no wrapping, no bullets, no "Fixed:", no version numbers, no addresses.
 * Plain sentences about what a player notices, not what the code does.
 * **Name a screen or a tab in words, not as a path.**  "The Speech tab in Settings", not "Settings,
