@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 
+from .. import localization
 from ..app import App
 from ..game import data
 from ..game.parameters import GameParameters
@@ -326,6 +327,11 @@ class PlayMenuScreen(ViewControllerScreen):
                                    actions=[self.extra_button_touched], name='extraButton')
         self.challenge_info_button = Button('Challenge Info', (373, 126, 22, 22), parent=s, font_button=False,
                                             actions=[self.challenge_info_button_pressed], name='#186')
+        # PORT ADDITION (user request): an info button for Extra, as Challenge and Endless have.  Its
+        # frame shares Extra's vertical centre (222 + 30/2 = 237) and sits to the right of it, which is
+        # what puts it straight after Extra: `reading_order` sorts by vertical centre and then by x.
+        self.extra_info_button = Button('Extra Info', (373, 226, 22, 22), parent=s, font_button=False,
+                                        actions=[self.extra_info_button_pressed], name='extraInfoButton')
         self.endless_info_button = Button('Endless Info', (357, 177, 22, 22), parent=s, font_button=False,
                                           actions=[self.endless_info_button_pressed], name='#131')
         self.first_accessible_element = challenge
@@ -376,6 +382,11 @@ class PlayMenuScreen(ViewControllerScreen):
         play_button_click()
         App.delegate().go_to_info_screen('endless')
 
+    @staticmethod
+    def extra_info_button_pressed() -> None:              # PORT ADDITION (user request): see load_view
+        play_button_click()
+        App.delegate().go_to_info_screen('extra')
+
     # REMOVED (user request): the magic tap 0x1000abc80 pressed Endless once tutorial_5 had been
     # completed, and Challenge before that.
 
@@ -388,7 +399,8 @@ class InfoScreen(ViewControllerScreen):
 
     #: the two buttons that reach this screen are "Challenge Info" and "Endless Info", so the screen says
     #: which one you opened rather than the original's bare "INFO"
-    PAGE_TITLES = {'challenge': 'Challenge Info', 'endless': 'Endless Info'}
+    PAGE_TITLES = {'challenge': 'Challenge Info', 'endless': 'Endless Info',
+                   'extra': 'Extra Info'}                    # PORT ADDITION (user request)
 
     def __init__(self, host, page_name: str = ''):       # initWithPageName: 0x100039738
         super().__init__(host)
@@ -423,6 +435,15 @@ class InfoScreen(ViewControllerScreen):
         elif self.page_name == 'endless':
             self.info_text_view.label = data.localized('ENDLESS_INFO_TEXT')
             self.title_label.label = data.localized('ENDLESS_INFO_TITLE')
+        elif self.page_name == 'extra':
+            # PORT ADDITION (user request): the original has no Extra, so it has no strings for one.  The
+            # words are here rather than in `Localizable.strings`, which is theirs, and each goes to
+            # `translate` on its own so the localization walk collects it.
+            self.title_label.label = localization.translate('EXTRA MODE')
+            self.info_text_view.label = localization.translate(
+                'Arenas written for this version of the game, in chapters. Each one opens when the one '
+                'before it is beaten, and none of them tells you how it is won.\n \nThey use the '
+                'weapons they hand you, and the stars you earn here open the chapters that follow.')
         # [[self view] bringSubviewToFront:statusBar view] does not change the reading order
 
     def continue_button_pressed(self) -> None:            # continueButtonPressed: 0x100039f94
@@ -430,6 +451,8 @@ class InfoScreen(ViewControllerScreen):
             App.delegate().go_to_tabbed_challenge_screen()
         elif self.page_name == 'endless':
             App.delegate().go_to_tarot()
+        elif self.page_name == 'extra':                   # PORT ADDITION (user request)
+            App.delegate().go_to_extra_menu()
 
     def back_button_pressed(self) -> None:                # 0x10003a0f8
         App.delegate().go_to_play_menu()

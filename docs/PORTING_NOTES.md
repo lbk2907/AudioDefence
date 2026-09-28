@@ -1600,6 +1600,15 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   a nudge, and the thing to be worked out is left to be worked out.  Powder Keg's own was rewritten to
   match: it used to say the Zombies were rigged and that one kill took the ring, which is the whole of the
   puzzle given away in the first sentence a player hears.
+
+  An info button for Extra, beside the two the play menu already has (user request).
+  `ADInfoViewController` takes a page name and reads its title and its text out of `Localizable.strings`,
+  which is Somethin' Else's file and holds nothing for a mode they never wrote; so the words for this one
+  are in `menus.py` and each goes through `localization.translate` on its own, which is also what puts them
+  in front of a translator.  The button shares Extra's vertical centre and sits to the right of it, which
+  is what makes `reading_order` read it straight after Extra - the original's own two are placed the same
+  way, and one consequence of that is that Endless Info is read *before* Endless.  Play on that screen goes
+  to the Extra menu, as Challenge Info's Play goes to the challenge screen.
 * PORT ADDITION: a challenge may name the modifiers it is played with (user request).  The original has no
   such key and none of its challenges wants one: a challenge is the same arena for everybody, which is the
   point of its stars.  One of the port's own needs a modifier to be an arena at all - Three Bullets hands
