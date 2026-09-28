@@ -52,6 +52,26 @@ PLAY_PACKAGES = (('pygame', 'pygame-ce'), ('numpy', 'numpy'), ('av', 'av'), ('co
                  ('prism', 'prismatoid'))
 DATA = (('assets/hrtf', 'assets/hrtf'),                        # the game's own HRTF
         ('localization', 'localization'))                     # PORT ADDITION: phrase files
+#: files of a DATA folder a build leaves behind: the language a translator is still writing
+#: (tools/make_language.py), which the game would otherwise offer every player as "Template, being
+#: translated" if it happened to be in the folder the build was made from
+DATA_LEAVE_OUT = {'localization': ('template.json',)}
+
+
+def data_to_bundle() -> list:
+    """(source, destination) for PyInstaller's --add-data: each DATA folder whole, or file by file where
+    something in it is left out."""
+    out = []
+    for src, dest in DATA:
+        leave = DATA_LEAVE_OUT.get(src)
+        folder = os.path.join(HERE, src.replace('/', os.sep))
+        if not leave or not os.path.isdir(folder):
+            out.append((src, dest))
+            continue
+        for name in sorted(os.listdir(folder)):
+            if name not in leave and os.path.isfile(os.path.join(folder, name)):
+                out.append((src + '/' + name, dest))
+    return out
 BINARIES = (('vendor/openal/soft_oal.dll', 'vendor/openal'),    # the audio engine itself
             ('vendor/nvda/nvdaControllerClient64.dll', 'vendor/nvda'))
 if host.MAC:
@@ -333,7 +353,7 @@ def prism_native_modules() -> list[str]:
 
 def command(args, baked_folder: str) -> list[str]:
     cmd = [sys.executable, '-m', 'PyInstaller', '--noconfirm', '--noupx', '--name', NAME]
-    for src, dest in DATA:
+    for src, dest in data_to_bundle():
         cmd += ['--add-data', src + os.pathsep + dest]
     for src, dest in BINARIES:
         cmd += ['--add-binary', src + os.pathsep + dest]

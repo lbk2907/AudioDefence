@@ -22,9 +22,10 @@ When it is ready, rename it to whatever the Language row should say - `Deutsch.j
 offers a language by its file's name, whatever that is, and nothing in the code needs to change.
 `template.json` is not committed: it belongs to whoever is writing it.
 
-Run this again whenever the port gains text.  A file that is already there keeps every phrase translated
-and only the new ones arrive empty; nothing is ever removed.  Pass a language code to do the same for one
-that has been renamed already (`py tools/make_language.py ru`).
+Run this again whenever the port gains text: it brings **every** language file under `localization/` up to
+date at once, and the template with them.  A file keeps every phrase translated and only the new ones arrive
+empty; nothing is ever removed.  Name one file to do only that one, or to start one under the name the
+Language row should give it (`py tools/make_language.py "Bahasa Melayu"`).
 """
 from __future__ import annotations
 
@@ -93,28 +94,18 @@ def dump(table: dict) -> str:
     return json.dumps(ordered, ensure_ascii=False, indent=1) + '\n'
 
 
-def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument('language', nargs='?', default=TEMPLATE,
-                        help="a language already renamed from the template (ru, de); the default writes "
-                             'localization/%s.json' % TEMPLATE)
-    parser.add_argument('--into', help='write somewhere else than localization/<code>.json')
-    args = parser.parse_args(argv)
-
-    path = args.into or os.path.join(paths.LOCALIZATION, '%s.json' % args.language)
+def update(path: str, phrases: list) -> tuple:
+    """Bring one language file up to date: every phrase it lacks arrives empty, nothing it has is touched.
+    Returns (added, translated, phrases in it), or None with the reason when the file cannot be read."""
     had = {}
     if os.path.isfile(path):
         try:
             with io.open(path, encoding='utf-8') as fh:
                 had = json.load(fh)
         except ValueError as exc:
-            print('%s is there but is not readable as JSON: %s' % (path, exc))
-            return 1
+            return None, '%s is there but is not readable as JSON: %s' % (path, exc)
         if not isinstance(had, dict):
-            print('%s is not a map of phrases' % path)
-            return 1
-
-    phrases = every_phrase(besides=os.path.basename(path))
+            return None, '%s is not a map of phrases' % path
     table = dict(had)
     table.setdefault('@plural', '')                        # the language's counting rule: see above
     table['@plural guide'] = localization.PLURAL_GUIDE    # the choices, where the translator is looking
@@ -123,30 +114,61 @@ def main(argv=None) -> int:
         if text not in table:
             table[text] = ''
             added += 1
-
     folder = os.path.dirname(os.path.abspath(path))
     if folder:
         os.makedirs(folder, exist_ok=True)
     with io.open(path, 'w', encoding='utf-8', newline='\n') as fh:
         fh.write(dump(table))
-
     done = sum(1 for key, value in table.items() if value and not key.startswith('@'))
-    where = os.path.relpath(path, ROOT)
-    if had:
-        print('%s: %d phrases the port can show, %d of them new here.' % (where, len(phrases), added))
+    count = sum(1 for key in table if not key.startswith('@'))
+    return (added, done, count, bool(table.get('@plural')), bool(had)), None
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument('language', nargs='?',
+                        help='one language file to bring up to date, or to start, by its name without .json '
+                             '("Bahasa Melayu", ru); with nothing, every file under localization/ and %s.json'
+                             % TEMPLATE)
+    parser.add_argument('--into', help='write one file somewhere else than localization/')
+    args = parser.parse_args(argv)
+
+    # Which files: the one named, or every language file there is, and the template a new language starts
+    # from.  With nothing named this used to write the template and nothing else, so a phrase the port had
+    # gained reached a new translator and never the languages already written (user request, 2026-09-29).
+    if args.into:
+        paths_ = [args.into]
+    elif args.language:
+        paths_ = [os.path.join(paths.LOCALIZATION, '%s.json' % args.language)]
     else:
-        print('%s: written with %d phrases, every one of them empty.' % (where, len(phrases)))
-    phrases_in = sum(1 for key in table if not key.startswith('@'))
-    print('%d of %d translated. Fill in the empty ones, in the same order or any other.' % (done, phrases_in))
-    if not table.get('@plural'):
-        print('Say how your language counts in "@plural" at the top: the choices are in "@plural guide".')
-    if done < phrases_in:
-        print('An empty phrase stays English, so the file can be used before it is finished.')
-    if args.language == TEMPLATE:
-        print('The game offers it in Settings as a language while it is there, so it can be heard as it is')
-        print('written. When it is ready, rename it to what the Language row should call it.')
-    print('Then: py tools/verify_localization.py --language %s' % args.language)
-    return 0
+        names = [name for name in localization.available() if name != localization.ENGLISH]
+        if TEMPLATE not in names:
+            names.append(TEMPLATE)
+        paths_ = [os.path.join(paths.LOCALIZATION, '%s.json' % name) for name in names]
+
+    failed = False
+    for path in paths_:
+        phrases = every_phrase(besides=os.path.basename(path))
+        result, problem = update(path, phrases)
+        where = os.path.relpath(path, ROOT)
+        if result is None:
+            print(problem)
+            failed = True
+            continue
+        added, done, count, counted, existed = result
+        if existed:
+            print('%s: %d new, %d of %d translated.' % (where, added, done, count))
+        else:
+            print('%s: written with %d phrases, every one of them empty.' % (where, count))
+        if not counted:
+            print('    Say how the language counts in "@plural" at the top: the choices are in "@plural guide".')
+    print('An empty phrase stays English, so a file can be used before it is finished.')
+    if not args.language and not args.into:
+        print('%s.json is for starting a new language: the game offers it in Settings while it is there, and a'
+              % TEMPLATE)
+        print('build leaves it out.  When it is ready, rename it to what the Language row should call it.')
+    print('Then: py tools/verify_localization.py')
+    return 1 if failed else 0
 
 
 if __name__ == '__main__':

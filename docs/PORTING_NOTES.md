@@ -1172,6 +1172,13 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   offered; they are now.  A template asked for with its gaps still empty - to be filled in by whoever asked -
   gets each word's last form, so no brace is ever read out.
 
+  `make_language.py` run with nothing after it brings every language file under `localization/` up to date,
+  and the template with them (user request, 2026-09-29).  It used to write the template and nothing else,
+  so a phrase the port gained reached a new translator and never a language already written, unless each
+  file was named in turn.  And a build leaves `template.json` out (`compiler.DATA_LEAVE_OUT`): it was
+  bundled with the rest of the folder, so a template lying in the folder a build was made from would have
+  been offered to every player as "Template, being translated".
+
   The Language row offers each language by its file's name, whatever the file is called (user request),
   rather than from a list in `GameParameters.LANGUAGES`, which named Russian: a language is added by adding
   its file, and the Russian one is offered as "ru" until somebody renames it.  A language chosen whose file

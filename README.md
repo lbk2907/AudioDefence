@@ -98,11 +98,15 @@ is written — the phrases are data.
   grows. It skips `template.json`, unfinished by definition; ask for it by name
   — `--language template` — to see how far you have got
 
-`template.json` is never committed: it belongs to whoever is writing it.
+`template.json` is never committed, and a build leaves it out even when it is
+in the folder: it belongs to whoever is writing it.
 
-Run `make_language.py` again whenever the port gains text. A file that is
-already there keeps every phrase translated and only the new ones arrive empty;
-nothing is ever removed.
+Run `make_language.py` again whenever the port gains text. With nothing after
+it, it brings **every** language file in `localization/` up to date at once, and
+the template with them: a file keeps every phrase translated, and only the new
+ones arrive empty; nothing is ever removed. Name one file to do just that one,
+or to start a language under the name the Language row should give it —
+`py tools/make_language.py "Bahasa Melayu"`.
 
 A language arrives with a release, because the phrase files are built into the
 game. Adding one to a copy you already have means waiting for the next build.
