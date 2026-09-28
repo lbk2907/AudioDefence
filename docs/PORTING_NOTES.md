@@ -1564,10 +1564,21 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   tinnitus no mechanical effect and it is the player it disables, and `MELEE_COST`, because a wok reaches
   three units and a swing that misses is the end of the run rather than a lost second.
 
-  The chapter is tuned to a deliberate curve of that number and ordered by it: Barnyard with sixteen
-  seconds to spare, The Wall nine, Clockwork seven, The Survivor two, Stampede three short, Powder Keg six
-  short.  Short is not impossible - the tool counts only the gun, where a player also has a wok worth 25 a
-  swing, headshots, and whatever they have spent diamonds on.
+  Both chapters are tuned to a deliberate curve of that number and ordered by it **across the pair rather
+  than within each** (user request), so the thirteen arenas fall from fifteen seconds of slack to eleven
+  seconds short in one line and the first arena of chapter 2 carries on from the last of chapter 1.  Short is
+  not impossible - the tool counts only the gun, where a player also has a wok worth 25 a swing, headshots,
+  and whatever they have spent diamonds on; at level four the hardest of them come out to the good.
+
+  Which arena sits in which chapter therefore follows from the measuring and not from when it was written.
+  Chapter 1 took the easiest seven, which is also every arena a player already owns the guns for; chapter 2
+  took the six where the slack has run out, and Powder Keg went with them - it was chapter 1's finale while
+  chapter 1 was all there was, and by the numbers it belongs fourth from the end of the whole thing.
+
+  The chain and the rewards are worked out from that order (`_derive_order`) rather than written into each
+  arena.  They are facts about the order and nothing else, and while they were written by hand they were
+  wrong twice: once with an arena pointing two places back at itself, once with the rewards climbing inside
+  each chapter but not across the pair.
 
   What each of them is for.  **Barnyard** is listening: three cows walk through every wave and a jukebox
   plays in the last, and its constraint is not the clock but forty-two rounds against four hundred of life,
@@ -1580,8 +1591,8 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   **Stampede** is everything that runs, played with `fasterEnemies`.  **Powder Keg** is all of it at once
   and closes the chapter.
 
-  **Three Bullets** is the one the tool cannot rank, and it is placed fourth by judgement with the reason
-  written here.  Ted, Jim and Bob are zombies with the whole sound set - spawn, approach, aggressive, hit,
+  **Three Bullets** is the one the tool cannot rank, and it is placed by judgement - fourth of the thirteen -
+  with the reason written here.  Ted, Jim and Bob are zombies with the whole sound set - spawn, approach, aggressive, hit,
   death - and a speed of 0: they stand where they spawn and never come.  So the wok cannot touch them
   (reach 3), `brickIsCleared` 0x1000a1658 will not pass a wave until they are dead, and Ted and Jim have
   10 life, which is exactly one revolver round at level one and less at every level above.  Three of them,
@@ -1620,12 +1631,11 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   to Chapter 1".
 
   **Chapter 2** (user request), six arenas built out of the parts of this engine chapter 1 never touched,
-  and it opens on twelve of chapter 1's twenty-one stars - so an arena a player cannot finish does not stop
-  them, and one who took every star is well past it.  In the order they open, with what
-  `tools/arena_pressure.py` measures at level one: Scrapyard (five seconds spare, but ammunition-bound),
-  Do Not Wake It (four), The Long Walk (one short), Sidestep (five short), Hydra (nine short) and Big Game
-  (eleven short).  At level four the last of them comes out twelve seconds to the good, which is the point:
-  chapter 2 is entered by a player who has been playing.
+  written as six arenas of its own and then sorted in with the rest.  It opens on twelve of chapter 1's
+  twenty-one stars - so an arena a player cannot finish does not stop them, and one who took every star is
+  well past it - and at level four its hardest comes out twelve seconds to the good, which is the point:
+  chapter 2 is entered by a player who has been playing.  Two of the six turned out to belong in chapter 1
+  once they were measured (Scrapyard and Do Not Wake It), and Powder Keg came the other way.
 
   **Scrapyard** is an economy.  A Car keeps its own explosion from `enemies.plist` - radius 3, 30 damage,
   dispersal 50, which `hit_by_explosion` makes 15 flat plus 15 falling off inside one unit - so it kills

@@ -374,7 +374,7 @@ PLISTS: dict = {}
 #: all cleared a wave - and Powder Keg's third ring could not be won, because four Hulks stood inside it
 #: surviving the chain three units from the player.  Neither was visible without measuring.
 
-# ------------------------------------------------------------------------- 1. Barnyard, 11 seconds spare
+# ----------------------------------------------------------------------------------------- Barnyard
 #: Listening, and nothing else.  Three cows walk through every wave and a jukebox plays in the last one;
 #: QuietZombie is the one to find, 35 life and the softest walk in the game.  Forty-five rounds against 405
 #: of life is 4.5 rounds of slack at level one, so a cow shot is a kill given away.
@@ -398,12 +398,11 @@ PLISTS['port_barnyard'] = {
     'weapons': [{'name': 'pistol', 'ammo': '42'}, {'name': 'wok'}],
     'bricks': ['port_barnyard_1', 'port_barnyard_2', 'port_barnyard_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'mission_star': {'reward': 200},
     'time_limit_star': {'reward': 150, 'objective': 150},
     'accuracy_star': {'reward': 150, 'objective': 60},
 }
 
-# ------------------------------------------------------------------------ 2. The Wall, 8 seconds spare
+# ----------------------------------------------------------------------------------------- The Wall
 #: A revolver against things that do not die to a cylinder.  A Hulk has 100 life and walks at 0.75, which
 #: is sixteen seconds from twelve units and six seconds of shooting - so one is nothing and three at once
 #: are the arena.  The Riot Gear Zombie is the other half of it: 150 life, and `protect` 0x10005ff4c stops
@@ -423,13 +422,11 @@ PLISTS['port_wall'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_wall_1', 'port_wall_2', 'port_wall_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_barnyard'],
-    'mission_star': {'reward': 250},
     'time_limit_star': {'reward': 150, 'objective': 170},
     'accuracy_star': {'reward': 200, 'objective': 55},
 }
 
-# ------------------------------------------------------------------------ 3. Clockwork, 5 seconds spare
+# ---------------------------------------------------------------------------------------- Clockwork
 #: The same four bearings over and over, on a beat that tightens.  Nothing here is hard to kill and the
 #: pistol never runs dry; the whole of it is whether a player works out that the next one is already coming
 #: from where the last one did, and is turned that way before it arrives.  The last wave opens out to eight
@@ -448,13 +445,11 @@ PLISTS['port_clockwork'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '300'}, {'name': 'wok'}],
     'bricks': ['port_clockwork_1', 'port_clockwork_2', 'port_clockwork_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_wall'],
-    'mission_star': {'reward': 300},
     'time_limit_star': {'reward': 150, 'objective': 150},
     'accuracy_star': {'reward': 150, 'objective': 45},
 }
 
-# --------------------------------------------------------------------- 4. The Survivor, 2 seconds spare
+# ------------------------------------------------------------------------------------- The Survivor
 #: Setting off the ring is free and is meant to be.  What it costs is twenty seconds of hearing, and what
 #: walks in during those twenty seconds is the arena: QuietZombies, which are hard enough to place with
 #: ears that work, and a Runner that gives no time to hunt.
@@ -481,13 +476,11 @@ PLISTS['port_survivor'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '150'}, {'name': 'wok'}],
     'bricks': ['port_survivor_1', 'port_survivor_2', 'port_survivor_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_three_bullets'],
-    'mission_star': {'reward': 400},
     'time_limit_star': {'reward': 200, 'objective': 140},
     'accuracy_star': {'reward': 150, 'objective': 40},
 }
 
-# ------------------------------------------------------------------------ 5. Stampede, 2 seconds short
+# ----------------------------------------------------------------------------------------- Stampede
 #: Everything that runs.  A Runner covers 1.3 units a second, a Chainsaw 1.45 and a Clown 2, so from twelve
 #: units the first one is on a player in six seconds and they keep arriving closer together.  And the arena
 #: asks to be played with `fasterEnemies` twice over, which is `enemi_speed_modifier` at 1.4: the same
@@ -504,16 +497,14 @@ PLISTS['port_stampede'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '400'}, {'name': 'wok'}],
     'bricks': ['port_stampede_1', 'port_stampede_2', 'port_stampede_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_survivor'],
     #: PORT ADDITION (user request): the modifiers this arena is played with, whatever the deck last did.
     #: A flag written twice is applied twice, and `times()` counts the stack, so this is +40% speed.
     'Modifiers': ['fasterEnemies'],
-    'mission_star': {'reward': 450},
     'time_limit_star': {'reward': 200, 'objective': 120},
     'accuracy_star': {'reward': 200, 'objective': 35},
 }
 
-# ------------------------------------------------------------------- 6. Three Bullets, 5 seconds short
+# ------------------------------------------------------------------------------------ Three Bullets
 #: Three rounds, and three things out there that no number of rounds will reach any other way.
 #:
 #: Ted, Jim and Bob are zombies with the whole sound set - spawn, approach, aggressive, hit, death - and a
@@ -546,14 +537,12 @@ PLISTS['port_three_bullets'] = {
     'weapons': [{'name': 'pistol', 'ammo': '3'}, {'name': 'wok'}],
     'bricks': ['port_three_bullets_1', 'port_three_bullets_2', 'port_three_bullets_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_clockwork'],
-    'mission_star': {'reward': 350},
     'time_limit_star': {'reward': 200, 'objective': 150},
     'accuracy_star': {'reward': 200, 'objective': 80},
 }
 
-# --------------------------------------------------------------------- 7. Powder Keg, 9 seconds short
-#: All of it at once, and the last of the chapter.
+# --------------------------------------------------------------------------------------- Powder Keg
+#: All of it at once.
 #:
 #: Three rings, and a crowd walking in behind each while the ring is still ringing in the player's ears.
 #: The rings are free and deafening - nothing tough stands in one, because a Hulk three units away that
@@ -589,8 +578,6 @@ PLISTS['port_keg'] = {
                'port_keg_ring_2', 'port_keg_crowd_2',
                'port_keg_ring_3', 'port_keg_crowd_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_stampede'],
-    'mission_star': {'reward': 500},
     'time_limit_star': {'reward': 200, 'objective': 180},
     'accuracy_star': {'reward': 200, 'objective': 40},
 }
@@ -601,7 +588,7 @@ PLISTS['port_keg'] = {
 #: this engine chapter 1 never touched: the enemies that dodge, the one that runs away, the static bombs, the
 #: 500-life one, and `spawn_after`, which lets a wave answer a kill with more of itself.
 
-# ---------------------------------------------------------------------------------------- 1. Scrapyard
+# ---------------------------------------------------------------------------------------- Scrapyard
 #: Parked cars, and an economy.
 #:
 #: A Car keeps its own explosion out of `enemies.plist` - radius 3, 30 damage, dispersal 50, which by
@@ -650,12 +637,11 @@ PLISTS['port_scrap'] = {
     'weapons': [{'name': 'pistol', 'ammo': '60'}, {'name': 'wok'}],
     'bricks': ['port_scrap_1', 'port_scrap_2', 'port_scrap_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'mission_star': {'reward': 550},
     'time_limit_star': {'reward': 250, 'objective': 190},
     'accuracy_star': {'reward': 250, 'objective': 55},
 }
 
-# ----------------------------------------------------------------------------------------- 2. Sidestep
+# ----------------------------------------------------------------------------------------- Sidestep
 #: The target that will not stay found.  A Dodge has 80 life and `dodge` {dodgeTime 0.7, dodgeSpeed 5}, and
 #: `set_life` 0x100061a00 sends it into state 7 every time it is hit and survives: 3.5 units sideways, which
 #: at ten units out is nineteen degrees and so outside the revolver's spread of thirty.  Eight rounds at
@@ -680,13 +666,11 @@ PLISTS['port_sidestep'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '250'}, {'name': 'wok'}],
     'bricks': ['port_sidestep_1', 'port_sidestep_2', 'port_sidestep_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_longwalk'],
-    'mission_star': {'reward': 700},
     'time_limit_star': {'reward': 250, 'objective': 180},
     'accuracy_star': {'reward': 250, 'objective': 45},
 }
 
-# ------------------------------------------------------------------------------------ 3. Do Not Wake It
+# ----------------------------------------------------------------------------------- Do Not Wake It
 #: The arena that punishes shooting.
 #:
 #: A Berserk has 225 life and a `berserk` dict, and everything about it runs backwards.  In its walking state
@@ -724,13 +708,11 @@ PLISTS['port_nowake'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_nowake_1', 'port_nowake_2', 'port_nowake_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_scrap'],
-    'mission_star': {'reward': 600},
     'time_limit_star': {'reward': 250, 'objective': 200},
     'accuracy_star': {'reward': 300, 'objective': 70},
 }
 
-# -------------------------------------------------------------------------------------------- 4. Hydra
+# -------------------------------------------------------------------------------------------- Hydra
 #: A wave that answers a kill with more of itself, and hands the player the timer.
 #:
 #: `spawn_after` is the original's own key - `challenge_arena1_1` uses it - and `checkSpawnAfterKill:`
@@ -786,13 +768,11 @@ PLISTS['port_hydra'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '200'}, {'name': 'wok'}],
     'bricks': ['port_hydra_1', 'port_hydra_2', 'port_hydra_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_sidestep'],
-    'mission_star': {'reward': 750},
     'time_limit_star': {'reward': 300, 'objective': 150},
     'accuracy_star': {'reward': 250, 'objective': 50},
 }
 
-# ----------------------------------------------------------------------------------- 5. The Long Walk
+# ------------------------------------------------------------------------------------ The Long Walk
 #: Five hundred life at a quarter of a unit a second.  A Colossus spawned twelve units out takes
 #: forty-eight seconds to arrive and thirty seconds of level-one shooting to put down, so it is not a
 #: question of whether it can be killed but of what else happens in the half minute it takes - and what
@@ -818,19 +798,17 @@ PLISTS['port_longwalk'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '400'}, {'name': 'wok'}],
     'bricks': ['port_longwalk_1', 'port_longwalk_2', 'port_longwalk_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_nowake'],
-    'mission_star': {'reward': 650},
     'time_limit_star': {'reward': 300, 'objective': 220},
     'accuracy_star': {'reward': 300, 'objective': 45},
 }
 
-# --------------------------------------------------------------------------------------- 6. Big Game
+# ----------------------------------------------------------------------------------------- Big Game
 #: The first arena of either chapter that wants a gun the player has to buy (user request).  A Hunting Rifle
 #: is 8500 coins and does 15 a shot at level one against the revolver's 10, and this asks for it by name:
 #: `hasWeaponForChallengeWithName:` 0x10001f868 is what the overview checks, and a player who has not bought
 #: one is told to go to the armory instead of being let in.  Everything in here is something the revolver was
 #: never going to be enough for - a Colossus, the Hulks, and two Berserks that had better be left where they
-#: are - and it closes the chapter.
+#: are - and by what the tool measures it is the hardest thing in either chapter.
 PLISTS['port_biggame_1'] = _wave(
     [('Hulk', 60, 12.0), ('HulkB', 300, 12.0, 8.0), ('Berserk', 180, 7.0, 2.0),
      ('Zombie', 120, 10.0, 14.0), ('ZombieB', 240, 10.0, 20.0)], no_blast=True)
@@ -853,8 +831,6 @@ PLISTS['port_biggame'] = {
     'weapons': [{'name': 'hunting', 'ammo': '120'}, {'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_biggame_1', 'port_biggame_2', 'port_biggame_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'challenges_requirement': ['port_hydra'],
-    'mission_star': {'reward': 800},
     'time_limit_star': {'reward': 300, 'objective': 240},
     'accuracy_star': {'reward': 300, 'objective': 60},
 }
@@ -867,6 +843,11 @@ PLISTS['port_biggame'] = {
 #: `hasChallengeRequirementsForChallengeWithName:` 0x10001ffbc - so an arena opens when the one before it is
 #: beaten, and a chapter opens on **stars**, which is how the original gates a world.
 #:
+#: The order is the one `tools/arena_pressure.py` measures, easiest first and across both chapters
+#: rather than within each (user request), so the first arena of chapter 2 carries on from the last of
+#: chapter 1.  Three Bullets is the exception and is placed by judgement: it is fought with the wok, and
+#: what the tool cannot price is that a melee duel with no health is the frightening thing in this game.
+#:
 #: The chapters are the port's own structure and not worlds in `challenges_index`, which they could have
 #: been: `apply_to` reaches that file and the world list would have given locks, star counts and a
 #: "you need N stars" row for nothing.  It would also have changed Somethin' Else's game.
@@ -875,17 +856,42 @@ PLISTS['port_biggame'] = {
 #: early, for a player who had not touched them.  Counting on this side costs a screen and a few lines and
 #: leaves their progression exactly as they shipped it.
 CHAPTERS = (
+    #: Every arena a player already owns the guns for, in the order the tool measures: 15.7 seconds of
+    #: slack down to 2.2.
     ('Chapter 1', 0, ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets',
-                      'port_survivor', 'port_stampede', 'port_keg')),
-    #: Twelve of chapter 1's twenty-one stars, so a player who could not finish one of its arenas is not
-    #: stopped here, and one who took every star is well past it.
-    ('Chapter 2', 12, ('port_scrap', 'port_nowake', 'port_longwalk', 'port_sidestep', 'port_hydra',
+                      'port_scrap', 'port_nowake', 'port_survivor')),
+    #: Where the slack runs out: 1.4 seconds short down to 11.2.  Twelve of chapter 1's twenty-one stars
+    #: opens it, so a player who could not finish one of its arenas is not stopped here, and one who took
+    #: every star is well past it.
+    ('Chapter 2', 12, ('port_longwalk', 'port_stampede', 'port_sidestep', 'port_keg', 'port_hydra',
                        'port_biggame')),
 )
 
 #: Every arena of the port's, in the order they are played.  What `go_to_challenge_list_for` and the
 #: overview's Back ask, to know an arena of ours from one of theirs.
 EXTRA_CHALLENGES = tuple(name for _c, _s, arenas in CHAPTERS for name in arenas)
+
+
+#: What an arena needs before it can be played, and what finishing it pays, worked out from the order above
+#: rather than written into each arena by hand.  They are facts about the order and nothing else, and while
+#: they were written by hand they were wrong twice - once pointing an arena at itself two places back, once
+#: leaving the rewards climbing inside each chapter but not across the pair.  `challenges_requirement` is the
+#: original's own key (`hasChallengeRequirementsForChallengeWithName:` 0x10001ffbc) and this fills it in the
+#: same shape their own challenges use.
+def _derive_order() -> None:
+    reward = 200
+    for _chapter, _stars, arenas in CHAPTERS:
+        for i, name in enumerate(arenas):
+            arena = PLISTS[name]
+            if i:
+                arena['challenges_requirement'] = [arenas[i - 1]]
+            else:
+                arena.pop('challenges_requirement', None)   # the first of a chapter waits on the stars
+            arena['mission_star'] = dict(arena.get('mission_star') or {}, reward=reward)
+            reward += 50
+
+
+_derive_order()
 
 
 def chapter_of(challenge_id: str):
