@@ -64,7 +64,14 @@ TEXT_KEYWORDS = {'label', 'hint', 'text', 'title', 'message', 'subtitle', 'capti
 
 #: Identifiers, paths, formats and code: not text for the player.
 PLUMBING = (
-    re.compile(r'^[\w.\-/\\@:]+$'),                             # one word: an id, a key, a path
+    # One word that is written like an id - a key, a path, a sound, a name for the code: it has an
+    # underscore, a dot, a slash, an at, a colon or a digit in it, or a capital after a small letter
+    # (`displayName`), or it starts small.  A plain capitalised word is a word the player hears.  Until
+    # 2026-09-28 every single word was taken for an id, and it hid sixteen that are not: the port's
+    # one-word arena titles (Fuse, Hydra, Rust...), two tarot cards (Berserker, Executioner) and the
+    # "Extra" a chapter's Back button says.  Measured over every one-word string in the code and the data,
+    # what the narrower rule lets through is 88 words and no ids; 72 of them the language file had already.
+    re.compile(r'^(?=[\w.\-/\\@:]+$)(?:.*[_.\/\\@:\d]|.*[a-z][A-Z]|[a-z])'),
     re.compile(r'^\s*$'),
     re.compile(r'^%[-+ #0-9.*]*[a-zA-Z]$'),                     # a bare substitution
     re.compile(r'^(https?://|www\.)'),
@@ -102,8 +109,29 @@ def _log_calls(tree) -> set:
     return marked
 
 
+def _looked_up(node) -> set:
+    """The string literals used as a key inside this call - `data.get('Bio')` - which name text rather than
+    being it."""
+    keys = set()
+    for item in ast.walk(node):
+        if isinstance(item, ast.Call) and _called_name(item) == 'get':
+            for argument in item.args[:1]:
+                if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
+                    keys.add(id(argument))
+        elif isinstance(item, ast.Subscript) and isinstance(item.slice, ast.Constant):
+            keys.add(id(item.slice))
+    return keys
+
+
 def _text_constants(node):
     """The string literals inside one call that the port carries text through."""
+    keys = _looked_up(node)
+    for item in _text_constants_with_keys(node):
+        if id(item) not in keys:
+            yield item
+
+
+def _text_constants_with_keys(node):
     name = _called_name(node)
     for keyword in node.keywords or ():
         if keyword.arg not in TEXT_KEYWORDS:
@@ -265,8 +293,11 @@ def check(language: str) -> list:
                 covered += 1
                 continue
             # A short piece the port glues into a longer line ("rate boost" into "SAPI 5 rate boost") is
-            # covered when a phrase in the table holds it.
-            if len(text) < 30 and any(text in key for key in table):
+            # covered when a phrase in the table holds it.  Not a single word: one word inside a longer key
+            # is nearly always another word's beginning, and a word said on its own is not translated by
+            # being part of something else - "Rust" was taken as covered by "Rusty Weapons", "Thunder" by
+            # "Thunderstorm" and "Extra" by "Extra button", and all three were spoken in English.
+            if len(text) < 30 and ' ' in text and any(text in key for key in table):
                 covered += 1
                 continue
             misses.append((text, where))

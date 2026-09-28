@@ -1875,6 +1875,17 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   objective and tip were never offered to a translator at all.  Powder Keg's text had been invisible since
   the day it was written.  They are walked now, which is what the tool's own docstring had always promised.
 
+  It still missed the one-word ones, found on 2026-09-28 (user request to fix).  `PLUMBING` took every
+  single word for an id, so twelve arena titles (Fuse, Hydra, Rust...), two tarot cards of the port's
+  (Berserker, Executioner) and the "Extra" a chapter's Back button says were never listed; and a short
+  piece counted as covered whenever a longer key contained it, which passed "Rust" on the strength of
+  "Rusty Weapons" and "Thunder" on "Thunderstorm".  A single word is now an id only when it is written like
+  one - an underscore, a dot, a slash, a digit, `camelCase`, a small first letter - and the containment
+  shortcut is for pieces of more than one word, which is what it was for.  A string used as a lookup key
+  inside a text call (`setup_data.get('Bio')`) is not offered.  Measured over every one-word string in the
+  code and the data: 88 words let through and no ids, 72 of them already in the Russian file, and the list
+  of what is untranslated grew by exactly those fifteen.
+
 * PORT ADDITION: the fourth tarot card, from a deck of the port's own where every card gives with one
   hand and takes with the other (user request).  `Tarot.plist` has no `level_4`, so the overlay makes one
   (`new_key`, the level being a key the original does not have) and fills it with twelve: Glass Cannon
