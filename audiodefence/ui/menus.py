@@ -238,13 +238,13 @@ class ExtraMenuScreen(ViewControllerScreen):
     button a chapter, Back to the play menu.
 
     A chapter opens on stars, the way one of their worlds does, and the row says where a player stands:
-    "Chapter 1, 3 of 21 stars", or "Chapter 2, locked, 12 stars needed".  A locked button does nothing and
-    says nothing when pressed, which is what their selector's locked rows do.
+    "Chapter 1, 3 of 21 stars", or "Chapter 2, You need 12 stars to play this level".  A locked button does
+    nothing and says nothing when pressed, which is what their selector's locked rows do.
     """
     page_title = 'Extra'
 
     def load_view(self) -> None:
-        from ..game.additions import CHAPTERS
+        from ..game.additions import CHAPTERS, chapter_stars_required
         from ..game.challenge_data import ChallengeData
         cd = ChallengeData.shared()
         v = self.view = View('', (0, 0, 568, 320), accessible=False, name='extraMenu')
@@ -261,22 +261,11 @@ class ExtraMenuScreen(ViewControllerScreen):
                                                   cd.stars_available_in_chapter(chapter))
                 b.hint = 'Press Enter to open this chapter.'
             else:
-                # Which of the two things is missing, because "locked" on its own gives a player nothing to
-                # work on.  The arenas come first when both are short: they are the longer job, and finishing
-                # them pays a star each, so that is the way out of either.
-                # PORT INPUT: their world list says "You need %i stars to play this level"
-                # Both forms of each phrase go to `translate` rather than an 's' being stuck on the end
-                # of one: a language whose plural does not work that way needs to be handed both.
-                left = cd.arenas_left_before_chapter(chapter)
-                if left:
-                    reason = '%i %s' % (left, localization.translate(
-                        'arena still to beat before this chapter' if left == 1 else
-                        'arenas still to beat before this chapter'))
-                else:
-                    short = cd.stars_left_before_chapter(chapter)
-                    reason = '%i %s' % (short, localization.translate(
-                        'more star needed' if short == 1 else 'more stars needed'))
-                b.label = '%s, locked, %s' % (chapter, reason)
+                # Their world list's own words for a locked world (user request): "Maya Ruin, You need 40
+                # stars to play this level" (ui/challenges.py, the world selector), so a chapter reads as
+                # one of their worlds does, and a language file that has the line already translates it.
+                b.label = '%s, %s' % (chapter, 'You need %i stars to play this level'
+                                      % chapter_stars_required(chapter))
             self.buttons.append(b)
         if self.buttons:
             self.first_accessible_element = self.buttons[0]

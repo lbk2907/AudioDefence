@@ -1368,23 +1368,18 @@ CHAPTERS = (
     #: slack down to 2.2.
     ('Chapter 1', 0, ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets',
                       'port_scrap', 'port_nowake', 'port_survivor')),
-    #: Where the slack runs out: 1.4 seconds short down to 12.3.  It opens on two things at once and not
-    #: either of them (user request, `ChallengeData.chapter_is_open`): every arena of chapter 1 beaten, and
-    #: twelve of its twenty-one stars.  Beating all seven is seven stars, so five more have to come out of
-    #: the accuracy and time stars of arenas already finished - which means going back to one and playing it
-    #: better, rather than only going forward.
+    #: Where the slack runs out: 1.4 seconds short down to 12.3.  Like each chapter after it, it opens on
+    #: stars alone, counted over every arena of the port's (`ChallengeData.chapter_is_open`, user request) -
+    #: twelve of chapter 1's twenty-one, however they were won.
     ('Chapter 2', 12, ('port_longwalk', 'port_stampede', 'port_sidestep', 'port_keg', 'port_hydra',
                        'port_biggame')),
-    #: Harder again (user request): 13.6 seconds short down to 25.6.  It opens on every arena of both
-    #: chapters before it being beaten and twenty-six of their thirty-nine stars: finishing all thirteen is
-    #: thirteen stars, so half again as many have to come from going back and taking the accuracy and time
-    #: stars too.
+    #: Harder again (user request): 13.6 seconds short down to 25.6.  Twenty-six stars of the thirty-nine
+    #: the two chapters before it hold.
     ('Chapter 3', 26, ('port_ironsights', 'port_thunder', 'port_rust', 'port_drop', 'port_carousel',
                        'port_last')),
     #: The armory (user request): 27.7 seconds short down to 39.8, by the tool's crowd-weapon reckoning
-    #: (`area_pressure`).  It opens on all nineteen arenas before it beaten and forty of their fifty-seven
-    #: stars - the nineteen for finishing them and twenty-one more, which is seven of the arenas played
-    #: again for both of the others, or most of them for one.
+    #: (`area_pressure`).  Forty stars of the fifty-seven the three chapters before it hold, which is Maya
+    #: Ruin's own number.
     ('Chapter 4', 40, ('port_pointblank', 'port_oneswing', 'port_fuse', 'port_collateral', 'port_crossfire',
                        'port_armory')),
 )
