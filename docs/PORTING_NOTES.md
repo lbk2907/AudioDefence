@@ -1761,6 +1761,10 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   real engine with the listener silenced before being kept: 84 voices at once at the most, against the 255
   mono sources `Device` asks for, and none refused.
 
+  The Extra info page was rewritten with it (user request): it says plainly that these arenas are not the
+  original game's, and otherwise says as little as it can - none of them tells you how it is won, one opens
+  the next, and stars open another chapter - since what an arena wants is the arena's to be found out.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at
