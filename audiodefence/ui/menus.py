@@ -244,7 +244,7 @@ class ExtraMenuScreen(ViewControllerScreen):
     page_title = 'Extra'
 
     def load_view(self) -> None:
-        from ..game.additions import CHAPTERS, chapter_stars_required
+        from ..game.additions import CHAPTERS
         from ..game.challenge_data import ChallengeData
         cd = ChallengeData.shared()
         v = self.view = View('', (0, 0, 568, 320), accessible=False, name='extraMenu')
@@ -261,10 +261,22 @@ class ExtraMenuScreen(ViewControllerScreen):
                                                   cd.stars_available_in_chapter(chapter))
                 b.hint = 'Press Enter to open this chapter.'
             else:
+                # Which of the two things is missing, because "locked" on its own gives a player nothing to
+                # work on.  The arenas come first when both are short: they are the longer job, and finishing
+                # them pays a star each, so that is the way out of either.
                 # PORT INPUT: their world list says "You need %i stars to play this level"
-                b.label = '%s, locked, %i stars needed' % (
-                    chapter,
-                    chapter_stars_required(chapter) - cd.total_stars_unlocked_for_chapters())
+                # Both forms of each phrase go to `translate` rather than an 's' being stuck on the end
+                # of one: a language whose plural does not work that way needs to be handed both.
+                left = cd.arenas_left_before_chapter(chapter)
+                if left:
+                    reason = '%i %s' % (left, localization.translate(
+                        'arena still to beat before this chapter' if left == 1 else
+                        'arenas still to beat before this chapter'))
+                else:
+                    short = cd.stars_left_before_chapter(chapter)
+                    reason = '%i %s' % (short, localization.translate(
+                        'more star needed' if short == 1 else 'more stars needed'))
+                b.label = '%s, locked, %s' % (chapter, reason)
             self.buttons.append(b)
         if self.buttons:
             self.first_accessible_element = self.buttons[0]

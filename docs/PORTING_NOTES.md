@@ -1631,10 +1631,22 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   to Chapter 1".
 
   **Chapter 2** (user request), six arenas built out of the parts of this engine chapter 1 never touched,
-  written as six arenas of its own and then sorted in with the rest.  It opens on twelve of chapter 1's
-  twenty-one stars - so an arena a player cannot finish does not stop them, and one who took every star is
-  well past it - and at level four its hardest comes out twelve seconds to the good, which is the point:
-  chapter 2 is entered by a player who has been playing.  Two of the six turned out to belong in chapter 1
+  written as six arenas of its own and then sorted in with the rest.  At level four its hardest comes out
+  twelve seconds to the good, which is the point: chapter 2 is entered by a player who has been playing.
+
+  It opens on **two** things and not either of them (user request): every arena of chapter 1 beaten, *and*
+  twelve of its twenty-one stars.  Either test on its own lets a player past in a way they would notice -
+  seven arenas each finished once is seven stars and should not be enough, and four arenas taken for every
+  star they have is twelve stars with three of the chapter never played - and both were reachable before
+  this was asked for.  Since beating all seven pays seven stars, the remaining five have to come out of the
+  accuracy and time stars of arenas already finished, so the way into chapter 2 runs back through chapter 1
+  rather than only forward.  The cost of the pair is that an arena a player cannot beat does stop them; that
+  is the trade that was asked for, and it is why nothing in chapter 1 needs a gun to be bought.
+
+  A locked chapter says which of the two is missing and counts it down - "1 arena still to beat before this
+  chapter", then "5 more stars needed" - because `locked` on its own gives a player nothing to work on.
+  Both the singular and the plural of each phrase go to `translate`, rather than an `s` being stuck on the
+  end of one, because a language whose plural does not work that way needs to be handed both.  Two of the six turned out to belong in chapter 1
   once they were measured (Scrapyard and Do Not Wake It), and Powder Keg came the other way.
 
   **Scrapyard** is an economy.  A Car keeps its own explosion from `enemies.plist` - radius 3, 30 damage,

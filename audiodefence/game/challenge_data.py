@@ -121,10 +121,43 @@ class ChallengeData:
         from .additions import CHAPTERS
         return sum(self.stars_unlocked_for_chapter(name) for name, _s, _a in CHAPTERS)
 
+    def chapter_is_finished(self, chapter) -> bool:
+        """Every arena in it beaten - not merely reachable."""
+        from .additions import chapter_arenas
+        return all(self.has_completed_challenge_with_name(cid) for cid in chapter_arenas(chapter))
+
+    def chapters_before(self, chapter) -> list:
+        from .additions import CHAPTERS
+        out = []
+        for name, _stars, _arenas in CHAPTERS:
+            if name == chapter:
+                break
+            out.append(name)
+        return out
+
     def chapter_is_open(self, chapter) -> bool:
-        """A chapter opens on the stars won in every chapter of ours, theirs counting for nothing."""
+        """Both of the two things, and not either of them (user request).
+
+        Every arena of every chapter before this one has to be **beaten**, and the stars have to be there as
+        well.  Either test on its own lets a player past too early in a way they would notice: seven arenas
+        each finished once is seven stars and should not be enough, and four arenas taken for every star they
+        have is twelve stars with three of the chapter never played.
+        """
         from .additions import chapter_stars_required
+        if not all(self.chapter_is_finished(before) for before in self.chapters_before(chapter)):
+            return False
         return self.total_stars_unlocked_for_chapters() >= chapter_stars_required(chapter)
+
+    def arenas_left_before_chapter(self, chapter) -> int:
+        """How many arenas of the chapters before this one are still unbeaten."""
+        from .additions import chapter_arenas
+        return sum(1 for before in self.chapters_before(chapter)
+                   for cid in chapter_arenas(before)
+                   if not self.has_completed_challenge_with_name(cid))
+
+    def stars_left_before_chapter(self, chapter) -> int:
+        from .additions import chapter_stars_required
+        return max(0, chapter_stars_required(chapter) - self.total_stars_unlocked_for_chapters())
 
     def has_challenge_after(self, challenge, world) -> bool:   # 0x10001f230
         # PORT ADDITION: a challenge of the port's own (Play, Extra) belongs to no world, so nothing

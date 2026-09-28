@@ -860,9 +860,11 @@ CHAPTERS = (
     #: slack down to 2.2.
     ('Chapter 1', 0, ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets',
                       'port_scrap', 'port_nowake', 'port_survivor')),
-    #: Where the slack runs out: 1.4 seconds short down to 11.2.  Twelve of chapter 1's twenty-one stars
-    #: opens it, so a player who could not finish one of its arenas is not stopped here, and one who took
-    #: every star is well past it.
+    #: Where the slack runs out: 1.4 seconds short down to 11.2.  It opens on two things at once and not
+    #: either of them (user request, `ChallengeData.chapter_is_open`): every arena of chapter 1 beaten, and
+    #: twelve of its twenty-one stars.  Beating all seven is seven stars, so five more have to come out of
+    #: the accuracy and time stars of arenas already finished - which means going back to one and playing it
+    #: better, rather than only going forward.
     ('Chapter 2', 12, ('port_longwalk', 'port_stampede', 'port_sidestep', 'port_keg', 'port_hydra',
                        'port_biggame')),
 )
