@@ -229,39 +229,92 @@ class MainMenuScreen(ViewControllerScreen):
 # =========================================================================================== extra
 @register('Port_ExtraMenuViewController')
 class ExtraMenuScreen(ViewControllerScreen):
-    """PORT ADDITION (user request): the challenges the port wrote, which the original has no screen for.
+    """PORT ADDITION (user request): the chapters of arenas the port wrote, which the original has no
+    screen for.
 
-    It is built like the play menu rather than like the challenge selector: the selector is a table of
-    worlds and stars, and these belong to no world.  One button a challenge, Back to the play menu.  What
-    they are is in `additions.PLISTS`, and they are read by name through `data.plist` exactly as the
-    original's challenges are.
+    It is built like the play menu rather than like their world list, which is a table of worlds read out
+    of `challenges_index` - and these are deliberately not worlds in that file, because `totalStarsUnlocked`
+    0x10001ecd4 sums every world in it and gates theirs on the answer (`additions.CHAPTERS` says why).  One
+    button a chapter, Back to the play menu.
 
-    Locked as the original's are, though (user request): each arena names the one before it in
-    `challenges_requirement`, which is the original's own key, and the status a button reads out is the one
-    `Accessible_ADChallengeSelectorViewController` gives - `locked`, or how many of its three stars are
-    won.  A locked button does nothing and says nothing when it is pressed, which is what the selector's
-    locked rows do.
+    A chapter opens on stars, the way one of their worlds does, and the row says where a player stands:
+    "Chapter 1, 3 of 21 stars", or "Chapter 2, locked, 12 stars needed".  A locked button does nothing and
+    says nothing when pressed, which is what their selector's locked rows do.
     """
     page_title = 'Extra'
 
     def load_view(self) -> None:
-        from ..game.additions import EXTRA_CHALLENGES
-        from .challenges import AccessibleChallengeSelectorScreen
+        from ..game.additions import CHAPTERS, chapter_stars_required
+        from ..game.challenge_data import ChallengeData
+        cd = ChallengeData.shared()
         v = self.view = View('', (0, 0, 568, 320), accessible=False, name='extraMenu')
         self.buttons = []
-        for i, name in enumerate(EXTRA_CHALLENGES):
+        for i, (chapter, _stars, _arenas) in enumerate(CHAPTERS):
+            open_now = cd.chapter_is_open(chapter)
+            b = Button(chapter, (192, 34 + i * 38, 187, 34), parent=v, font_button=open_now,
+                       actions=[lambda c=chapter: self.chapter_chosen(c)] if open_now else (),
+                       name='extra %s' % chapter)
+            # What is drawn stays the chapter's name; what is read is the name and where the player stands
+            # with it, because on this screen there is nothing else to say it.
+            if open_now:
+                b.label = '%s, %i of %i stars' % (chapter, cd.stars_unlocked_for_chapter(chapter),
+                                                  cd.stars_available_in_chapter(chapter))
+                b.hint = 'Press Enter to open this chapter.'
+            else:
+                # PORT INPUT: their world list says "You need %i stars to play this level"
+                b.label = '%s, locked, %i stars needed' % (
+                    chapter,
+                    chapter_stars_required(chapter) - cd.total_stars_unlocked_for_chapters())
+            self.buttons.append(b)
+        if self.buttons:
+            self.first_accessible_element = self.buttons[0]
+        self.roots = [v]
+
+    def view_did_load(self) -> None:
+        super().view_did_load()
+        sb = self.status_bar_view_controller
+        sb.set_armory_button_visibility(False)
+        sb.set_currencies_visibility(False)
+        sb.back_button.set_title('Play')
+
+    @staticmethod
+    def chapter_chosen(chapter: str) -> None:
+        App.delegate().go_to_extra_chapter(chapter)
+
+    def back_button_pressed(self) -> None:
+        App.delegate().go_to_play_menu()
+
+
+@register('Port_ExtraChapterViewController')
+class ExtraChapterScreen(ViewControllerScreen):
+    """PORT ADDITION (user request): the arenas of one chapter.
+
+    One button an arena, and the status each reads out is the one their accessible selector gives -
+    `locked`, or how many of its three stars are won (`statusForChallengeWithDict:` 0x100054960) - because
+    inside a chapter each arena names the one before it in `challenges_requirement`, the original's own key.
+    What the arenas are is in `additions.PLISTS`, read by name through `data.plist` exactly as theirs are.
+    """
+    def __init__(self, host, chapter: str = ''):
+        super().__init__(host)
+        self.chapter = chapter
+        self.page_title = chapter or 'Extra'
+
+    def load_view(self) -> None:
+        from ..game.additions import chapter_arenas
+        from .challenges import AccessibleChallengeSelectorScreen
+        v = self.view = View('', (0, 0, 568, 320), accessible=False, name='extraChapter')
+        self.buttons = []
+        for i, name in enumerate(chapter_arenas(self.chapter)):
             d = data.plist(name) or {}
             title = str(d.get('title') or name)
             status = AccessibleChallengeSelectorScreen.status_for_challenge_with_dict(d)
             locked = status == 'locked'
-            # Seven of them in a view 320 points tall, so they sit closer together than the play
-            # menu's do.  One column: `reading_order` sorts by a frame's vertical centre, and a
-            # column is the order they unlock in.
+            # Seven of them in a view 320 points tall, so they sit closer together than the play menu's
+            # buttons do.  One column: `reading_order` sorts by a frame's vertical centre, and a column is
+            # the order they unlock in.
             b = Button(title, (192, 34 + i * 38, 187, 34), parent=v, font_button=not locked,
                        actions=() if locked else [lambda n=name: self.challenge_chosen(n)],
                        name='extra %s' % name)
-            # What is drawn stays the title; what is read is the title and where the player stands with it,
-            # because on this screen there is nothing else to say it.
             b.label = '%s, %s' % (title, status)
             b.hint = None if locked else str(d.get('objective') or '')
             self.buttons.append(b)
@@ -274,7 +327,7 @@ class ExtraMenuScreen(ViewControllerScreen):
         sb = self.status_bar_view_controller
         sb.set_armory_button_visibility(False)
         sb.set_currencies_visibility(False)
-        sb.back_button.set_title('Play')
+        sb.back_button.set_title('Extra')
 
     @staticmethod
     def challenge_chosen(name: str) -> None:
@@ -293,7 +346,7 @@ class ExtraMenuScreen(ViewControllerScreen):
             App.dictionary_for_challenge_with_name(name))
 
     def back_button_pressed(self) -> None:
-        App.delegate().go_to_play_menu()
+        App.delegate().go_to_extra_menu()
 
 
 # =========================================================================================== play menu

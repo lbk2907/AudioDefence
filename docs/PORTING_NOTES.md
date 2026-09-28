@@ -1601,6 +1601,24 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   match: it used to say the Zombies were rigged and that one kill took the ring, which is the whole of the
   puzzle given away in the first sentence a player hears.
 
+  **Chapters** (user request), and a chapter opens on stars as one of their worlds does.  Extra is a list
+  of chapters now and each chapter a list of arenas, which is one screen more than before and the shape
+  the original uses for worlds; inside a chapter the arenas still unlock one behind the next.
+
+  They are the port's own structure (`additions.CHAPTERS`) and deliberately **not** worlds in
+  `challenges_index`, which they could have been - `apply_to` reaches that file, and their world list would
+  have given the locks, the star counting and a "you need N stars" row for nothing.  It would also have
+  changed Somethin' Else's game.  `totalStarsUnlocked` 0x10001ecd4 sums every world in that file and is
+  what gates theirs, and City Crossroad opens at 25 stars with Maya Ruin at 40 - so twenty-one stars' worth
+  of arenas of ours would have opened worlds the player had never touched.  Counting on this side
+  (`ChallengeData.stars_unlocked_for_chapter` and the three beside it) costs a screen and a few lines, and
+  a test asserts the thing that matters: with all seven arenas beaten and 21 stars won,
+  `total_stars_unlocked` is still 0.
+
+  Everything behind an arena now goes back to the arena's own chapter rather than to Extra -
+  `App.go_to_challenge_list_for` asks `chapter_of` - and the completed screen's button says which one, "back
+  to Chapter 1".
+
   An info button for Extra, beside the two the play menu already has (user request).
   `ADInfoViewController` takes a page name and reads its title and its text out of `Localizable.strings`,
   which is Somethin' Else's file and holds nothing for a mode they never wrote; so the words for this one

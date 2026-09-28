@@ -131,9 +131,10 @@ class App:
         with no rows, on a screen showing only the coins and the diamonds, whose own Back went out to the
         world list.  Every one of those screens asks here now, so the port's own go back to Extra.
         """
-        from .game.additions import EXTRA_CHALLENGES
-        if challenge_id in EXTRA_CHALLENGES:
-            self.go_to_extra_menu()
+        from .game.additions import chapter_of
+        chapter = chapter_of(challenge_id)
+        if chapter is not None:
+            self.go_to_extra_chapter(chapter)
             return
         self.go_to_challenge_selector()
 
@@ -176,9 +177,10 @@ class App:
         cd = ChallengeData.shared()
         world = GameParameters.shared().last_challenge_world
         if not cd.has_challenge_after(challenge, world):
-            from .game.additions import EXTRA_CHALLENGES  # PORT ADDITION: back to the list it came from
-            if challenge in EXTRA_CHALLENGES:
-                self.go_to_extra_menu()
+            from .game.additions import chapter_of       # PORT ADDITION: back to the list it came from
+            chapter = chapter_of(challenge)
+            if chapter is not None:
+                self.go_to_extra_chapter(chapter)
             else:
                 self.go_to_world_selector()
             return
@@ -220,9 +222,13 @@ class App:
         self.start_menu_music('main_menu_theme')
         self.load_view_controller_named('ADMainMenuViewController')
 
-    def go_to_extra_menu(self) -> None:                   # PORT ADDITION: the port's own challenges
+    def go_to_extra_menu(self) -> None:                   # PORT ADDITION: the port's own chapters
         self.start_menu_music('main_menu_theme')
         self.load_view_controller_named('Port_ExtraMenuViewController')
+
+    def go_to_extra_chapter(self, chapter) -> None:       # PORT ADDITION: the arenas of one chapter
+        self.start_menu_music('main_menu_theme')
+        self.load_view_controller_named('Port_ExtraChapterViewController', chapter=chapter)
 
     def go_to_play_menu(self) -> None:                    # 0x100082474
         # PORT ADDITION (user request): everything from here until the main menu is "inside Play", and that

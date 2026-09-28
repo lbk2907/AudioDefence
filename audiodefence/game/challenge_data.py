@@ -97,6 +97,35 @@ class ChallengeData:
         last = challenges[-1] if challenges else None
         return (data.plist_ro(last) or {}).get('challenge_id') if last is not None else None
 
+    # --- the port's own chapters (additions.CHAPTERS) --------------------------------------------
+    # PORT ADDITION (user request): the arenas under Play, Extra are gathered into chapters, and a chapter
+    # opens on stars as one of their worlds does.  The counting is here beside theirs and separate from it:
+    # `totalStarsUnlocked` 0x10001ecd4 walks `challenges_index` and is what gates their worlds, so an arena
+    # of ours must never reach it - twenty-one stars of ours would otherwise open City Crossroad (25) and
+    # most of Maya Ruin (40) for a player who had never played either.
+    def stars_for_challenge_with_name(self, name) -> int:
+        """Nought to three, the way the accessible selector counts them."""
+        return (int(self.has_completed_challenge_with_name(name))
+                + int(self.has_accuracy_star_for_challenge_with_name(name))
+                + int(self.has_time_limit_star_for_challenge_with_name(name)))
+
+    def stars_unlocked_for_chapter(self, chapter) -> int:
+        from .additions import chapter_arenas
+        return sum(self.stars_for_challenge_with_name(cid) for cid in chapter_arenas(chapter))
+
+    def stars_available_in_chapter(self, chapter) -> int:
+        from .additions import chapter_arenas
+        return 3 * len(chapter_arenas(chapter))
+
+    def total_stars_unlocked_for_chapters(self) -> int:
+        from .additions import CHAPTERS
+        return sum(self.stars_unlocked_for_chapter(name) for name, _s, _a in CHAPTERS)
+
+    def chapter_is_open(self, chapter) -> bool:
+        """A chapter opens on the stars won in every chapter of ours, theirs counting for nothing."""
+        from .additions import chapter_stars_required
+        return self.total_stars_unlocked_for_chapters() >= chapter_stars_required(chapter)
+
     def has_challenge_after(self, challenge, world) -> bool:   # 0x10001f230
         # PORT ADDITION: a challenge of the port's own (Play, Extra) belongs to no world, so nothing
         # follows it.  Without this the world lookup came back empty and the index arithmetic below ran

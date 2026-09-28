@@ -595,10 +595,47 @@ PLISTS['port_keg'] = {
     'accuracy_star': {'reward': 200, 'objective': 40},
 }
 
-#: The port's own challenges, in the order the Extra menu lists them - which is also the order they are
-#: unlocked in (user request), each one naming the one before it in `challenges_requirement`.  That key is
-#: the original's own: `hasChallengeRequirementsForChallengeWithName:` 0x10001ffbc reads it, and the
-#: accessible selector calls a challenge whose requirement is unmet `locked`.  The order is the one
-#: `tools/arena_pressure.py` measures, easiest first.
-EXTRA_CHALLENGES = ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets',
-                    'port_survivor', 'port_stampede', 'port_keg')
+#: The port's own arenas, gathered into chapters (user request).
+#:
+#: A chapter is `(name, stars needed to open it, the arenas in it)`.  Inside a chapter each arena names the
+#: one before it in `challenges_requirement` - the original's own key, read by
+#: `hasChallengeRequirementsForChallengeWithName:` 0x10001ffbc - so an arena opens when the one before it is
+#: beaten, and a chapter opens on **stars**, which is how the original gates a world.
+#:
+#: The chapters are the port's own structure and not worlds in `challenges_index`, which they could have
+#: been: `apply_to` reaches that file and the world list would have given locks, star counts and a
+#: "you need N stars" row for nothing.  It would also have changed Somethin' Else's game.
+#: `totalStarsUnlocked` 0x10001ecd4 sums every world in that file, and their City Crossroad opens at 25
+#: stars and Maya Ruin at 40 - so twenty-one stars' worth of arenas of ours would have opened their worlds
+#: early, for a player who had not touched them.  Counting on this side costs a screen and a few lines and
+#: leaves their progression exactly as they shipped it.
+CHAPTERS = (
+    ('Chapter 1', 0, ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets',
+                      'port_survivor', 'port_stampede', 'port_keg')),
+)
+
+#: Every arena of the port's, in the order they are played.  What `go_to_challenge_list_for` and the
+#: overview's Back ask, to know an arena of ours from one of theirs.
+EXTRA_CHALLENGES = tuple(name for _c, _s, arenas in CHAPTERS for name in arenas)
+
+
+def chapter_of(challenge_id: str):
+    """The chapter an arena belongs to, or None for a challenge that is not one of ours."""
+    for name, _stars, arenas in CHAPTERS:
+        if challenge_id in arenas:
+            return name
+    return None
+
+
+def chapter_arenas(chapter: str) -> tuple:
+    for name, _stars, arenas in CHAPTERS:
+        if name == chapter:
+            return arenas
+    return ()
+
+
+def chapter_stars_required(chapter: str) -> int:
+    for name, stars, _arenas in CHAPTERS:
+        if name == chapter:
+            return stars
+    return 0

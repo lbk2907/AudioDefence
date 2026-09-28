@@ -631,12 +631,15 @@ class AccessibleChallengeCompletedScreen(AccessibleGameOverEndlessScreen):
         if ChallengeData.shared().has_challenge_after(self.challenge_dict.get('challenge_id'),
                                                       GameParameters.shared().last_challenge_world):
             return
-        from ..game.additions import EXTRA_CHALLENGES
-        if self.challenge_dict.get('challenge_id') in EXTRA_CHALLENGES:
-            # PORT ADDITION: an Extra challenge is part of no arena, so "next arena" would be a lie and
-            # the world selector the wrong place to send anybody.  It goes back to the list it came from.
-            self.next_challenge_button.label = 'back to Extra'
-            self.next_challenge_button.set_title('back to Extra')
+        from ..game.additions import chapter_of
+        chapter = chapter_of(self.challenge_dict.get('challenge_id'))
+        if chapter is not None:
+            # PORT ADDITION: an arena of the port's is part of no arena of theirs, so "next arena" would be
+            # a lie and the world selector the wrong place to send anybody.  It goes back to the chapter it
+            # came from, and says which one that is.
+            back = 'back to %s' % chapter
+            self.next_challenge_button.label = back
+            self.next_challenge_button.set_title(back)
             return
         self.next_challenge_button.label = 'next arena'
         self.next_challenge_button.set_title('next arena')
