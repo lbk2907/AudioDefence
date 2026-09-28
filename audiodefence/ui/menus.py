@@ -238,7 +238,7 @@ class ExtraMenuScreen(ViewControllerScreen):
     button a chapter, Back to the play menu.
 
     A chapter opens on stars, the way one of their worlds does, and the row says where a player stands:
-    "Chapter 1, 3 of 21 stars", or "Chapter 2, You need 12 stars to play this level".  A locked button does
+    "Chapter 1, 3 of 21 stars", or "Chapter 2, You need 19 stars to play this level".  A locked button does
     nothing and says nothing when pressed, which is what their selector's locked rows do.
     """
     page_title = 'Extra'
@@ -249,7 +249,7 @@ class ExtraMenuScreen(ViewControllerScreen):
         cd = ChallengeData.shared()
         v = self.view = View('', (0, 0, 568, 320), accessible=False, name='extraMenu')
         self.buttons = []
-        for i, (chapter, _stars, _arenas) in enumerate(CHAPTERS):
+        for i, (chapter, _arenas) in enumerate(CHAPTERS):
             open_now = cd.chapter_is_open(chapter)
             b = Button(chapter, (192, 34 + i * 38, 187, 34), parent=v, font_button=open_now,
                        actions=[lambda c=chapter: self.chapter_chosen(c)] if open_now else (),

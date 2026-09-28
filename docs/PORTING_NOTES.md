@@ -1637,13 +1637,22 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   written as six arenas of its own and then sorted in with the rest.  At level four its hardest comes out
   twelve seconds to the good, which is the point: chapter 2 is entered by a player who has been playing.
 
-  It opens on twelve stars, and on stars alone, as one of their worlds opens (user request): every star won
-  in the port's arenas counts, whichever chapter it was won in (`ChallengeData.chapter_is_open`).  For a
-  day it wanted every arena of chapter 1 beaten as well, and said which of the two was missing ("1 arena
-  still to beat before this chapter", "5 more stars needed"); that was asked for and then asked to be taken
-  out again on 2026-09-28, so that a chapter behaves as their worlds do.  A locked chapter now reads as a
-  locked world in their world list reads - "Chapter 2, You need 12 stars to play this level" - which is
-  their own line, so a language file that has it translates it already.  Two of the six turned out to belong
+  It opens on stars alone, as one of their worlds opens (user request): every star won in the port's arenas
+  counts, whichever chapter it was won in (`ChallengeData.chapter_is_open`), and a chapter asks for every
+  star the chapters before it hold **but two** (`SPARE_STARS`, user request) - 19 of 21 here, 37 of 39 for
+  chapter 3, 55 of 57 for chapter 4, and the same rule for any chapter added after, since the number is
+  worked out from the chapters and not written down (`chapter_stars_required`).  Two is less than the three
+  an arena is worth, so no arena can be skipped on the way; what may be missed is two accuracy or time stars
+  across everything behind you.  It stays two rather than shrinking, because at nought one star a player
+  cannot win would shut every chapter after it for good.
+
+  How it got there, all on 2026-09-28 and all asked for: first every arena of the chapter before had to be
+  beaten *and* a lower count of stars won, and a locked chapter said which of the two was missing ("1 arena
+  still to beat before this chapter", "5 more stars needed"); then stars alone, as their worlds do, at 12,
+  26 and 40; then the counts raised to these, because at 12 a player could walk into chapter 2 with a third
+  of chapter 1 unplayed.  A locked chapter reads as a locked world in their world list reads - "Chapter 2,
+  You need 19 stars to play this level" - which is their own line, so a language file that has it
+  translates it already.  Two of the six turned out to belong
   in chapter 1 once they were measured (Scrapyard and Do Not Wake It), and Powder Keg came the other way.
 
   **Scrapyard** is an economy.  A Car keeps its own explosion from `enemies.plist` - radius 3, 30 damage,
@@ -1699,9 +1708,9 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   was meant, and the key now leaves an enemy's own explosion alone.
 
   **Chapter 3** (user request: harder again), six arenas on the last levers the engine had, opening on
-  twenty-six of the thirty-nine stars the chapters before it hold.  It runs from thirteen
+  thirty-seven of the thirty-nine stars the chapters before it hold.  It runs from thirteen
   seconds short to twenty-five, which carries straight on from Big Game's twelve; at level four the same six
-  come out between five short and eleven to the good, which is what a chapter reached with thirty stars
+  come out between five short and eleven to the good, which is what a chapter reached with thirty-seven stars
   should feel like.
 
   **Iron Sights** narrows the cone.  `spread_modifier` is five degrees a card and `Weapon.__init__` adds it
@@ -1728,8 +1737,8 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   their data.
 
   **Chapter 4** (user request: harder again, and built on the weapons no arena had used yet), six arenas
-  each fought with a weapon from the armory and built against what that weapon is bad at.  It opens on forty
-  of the fifty-seven stars the chapters before it hold - Maya Ruin's own number - and by the tool's
+  each fought with a weapon from the armory and built against what that weapon is bad at.  It opens on
+  fifty-five of the fifty-seven stars the chapters before it hold, and by the tool's
   crowd-weapon reckoning (`area_pressure`, see the second correction to the tool below) it runs from 27.7
   seconds short to 39.8, carrying on from The Last Word's 25.6.  It is the steepest chapter so far and the
   one the tool is surest to overstate: it counts no critical hits, and the Sawn-off's are two and a half

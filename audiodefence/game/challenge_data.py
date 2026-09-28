@@ -119,7 +119,7 @@ class ChallengeData:
 
     def total_stars_unlocked_for_chapters(self) -> int:
         from .additions import CHAPTERS
-        return sum(self.stars_unlocked_for_chapter(name) for name, _s, _a in CHAPTERS)
+        return sum(self.stars_unlocked_for_chapter(name) for name, _a in CHAPTERS)
 
     def chapter_is_open(self, chapter) -> bool:
         """On stars and nothing else, as one of their worlds opens (user request): every star won in the

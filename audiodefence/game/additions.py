@@ -1344,10 +1344,11 @@ PLISTS['port_armory'] = {
 
 #: The port's own arenas, gathered into chapters (user request).
 #:
-#: A chapter is `(name, stars needed to open it, the arenas in it)`.  Inside a chapter each arena names the
-#: one before it in `challenges_requirement` - the original's own key, read by
-#: `hasChallengeRequirementsForChallengeWithName:` 0x10001ffbc - so an arena opens when the one before it is
-#: beaten, and a chapter opens on **stars**, which is how the original gates a world.
+#: A chapter is `(name, the arenas in it)`.  Inside a chapter each arena names the one before it in
+#: `challenges_requirement` - the original's own key, read by `hasChallengeRequirementsForChallengeWithName:`
+#: 0x10001ffbc - so an arena opens when the one before it is beaten, and a chapter opens on **stars**, which
+#: is how the original gates a world; how many is `chapter_stars_required`, worked out from the chapters
+#: before it rather than written down.
 #:
 #: The order is the one `tools/arena_pressure.py` measures, easiest first and across every chapter
 #: rather than within each (user request), so the first arena of a chapter carries on from the last of the
@@ -1366,27 +1367,32 @@ PLISTS['port_armory'] = {
 CHAPTERS = (
     #: Every arena a player already owns the guns for, in the order the tool measures: 15.7 seconds of
     #: slack down to 2.2.
-    ('Chapter 1', 0, ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets',
-                      'port_scrap', 'port_nowake', 'port_survivor')),
-    #: Where the slack runs out: 1.4 seconds short down to 12.3.  Like each chapter after it, it opens on
-    #: stars alone, counted over every arena of the port's (`ChallengeData.chapter_is_open`, user request) -
-    #: twelve of chapter 1's twenty-one, however they were won.
-    ('Chapter 2', 12, ('port_longwalk', 'port_stampede', 'port_sidestep', 'port_keg', 'port_hydra',
-                       'port_biggame')),
-    #: Harder again (user request): 13.6 seconds short down to 25.6.  Twenty-six stars of the thirty-nine
-    #: the two chapters before it hold.
-    ('Chapter 3', 26, ('port_ironsights', 'port_thunder', 'port_rust', 'port_drop', 'port_carousel',
-                       'port_last')),
+    ('Chapter 1', ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets',
+                   'port_scrap', 'port_nowake', 'port_survivor')),
+    #: Where the slack runs out: 1.4 seconds short down to 12.3.
+    ('Chapter 2', ('port_longwalk', 'port_stampede', 'port_sidestep', 'port_keg', 'port_hydra',
+                   'port_biggame')),
+    #: Harder again (user request): 13.6 seconds short down to 25.6.
+    ('Chapter 3', ('port_ironsights', 'port_thunder', 'port_rust', 'port_drop', 'port_carousel',
+                   'port_last')),
     #: The armory (user request): 27.7 seconds short down to 39.8, by the tool's crowd-weapon reckoning
-    #: (`area_pressure`).  Forty stars of the fifty-seven the three chapters before it hold, which is Maya
-    #: Ruin's own number.
-    ('Chapter 4', 40, ('port_pointblank', 'port_oneswing', 'port_fuse', 'port_collateral', 'port_crossfire',
-                       'port_armory')),
+    #: (`area_pressure`).
+    ('Chapter 4', ('port_pointblank', 'port_oneswing', 'port_fuse', 'port_collateral', 'port_crossfire',
+                   'port_armory')),
 )
+
+#: How many of the stars in the chapters before it a chapter may be opened without (user request): two.
+#: Every chapter asks for all the stars the chapters before it hold but these - 19 of chapter 1's 21 for
+#: chapter 2, 37 of 39 for chapter 3, 55 of 57 for chapter 4 - and two is less than the three an arena is
+#: worth, so no arena can be left unbeaten on the way: what may be missed is two accuracy or time stars,
+#: across everything behind you.  It does not shrink as the chapters go on, because at nought a single star
+#: a player cannot win - The Last Word's time star, say - would shut every chapter after it for good.
+#: It was 12, 26 and 40 at first, which let a player into a chapter with a third of the one before unplayed.
+SPARE_STARS = 2
 
 #: Every arena of the port's, in the order they are played.  What `go_to_challenge_list_for` and the
 #: overview's Back ask, to know an arena of ours from one of theirs.
-EXTRA_CHALLENGES = tuple(name for _c, _s, arenas in CHAPTERS for name in arenas)
+EXTRA_CHALLENGES = tuple(name for _c, arenas in CHAPTERS for name in arenas)
 
 
 #: What an arena needs before it can be played, and what finishing it pays, worked out from the order above
@@ -1397,7 +1403,7 @@ EXTRA_CHALLENGES = tuple(name for _c, _s, arenas in CHAPTERS for name in arenas)
 #: same shape their own challenges use.
 def _derive_order() -> None:
     reward = 200
-    for _chapter, _stars, arenas in CHAPTERS:
+    for _chapter, arenas in CHAPTERS:
         for i, name in enumerate(arenas):
             arena = PLISTS[name]
             if i:
@@ -1413,21 +1419,24 @@ _derive_order()
 
 def chapter_of(challenge_id: str):
     """The chapter an arena belongs to, or None for a challenge that is not one of ours."""
-    for name, _stars, arenas in CHAPTERS:
+    for name, arenas in CHAPTERS:
         if challenge_id in arenas:
             return name
     return None
 
 
 def chapter_arenas(chapter: str) -> tuple:
-    for name, _stars, arenas in CHAPTERS:
+    for name, arenas in CHAPTERS:
         if name == chapter:
             return arenas
     return ()
 
 
 def chapter_stars_required(chapter: str) -> int:
-    for name, stars, _arenas in CHAPTERS:
+    """Every star the chapters before this one hold, less `SPARE_STARS`; the first chapter is open."""
+    before = 0
+    for name, arenas in CHAPTERS:
         if name == chapter:
-            return stars
+            return max(0, 3 * before - SPARE_STARS)
+        before += len(arenas)
     return 0
