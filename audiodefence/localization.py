@@ -69,6 +69,8 @@ _SPEC = re.compile(r'%[-+#0]*[0-9]*(?:\.[0-9]+)?[a-zA-Z]')
 
 #: How the port joins the pieces of one line: "Gyro, Turns slowest", "Aiming. Selected", "A and B".
 _SEGMENT_COMMA = re.compile(r'(, |; |: | -- )')
+#: the glue the port puts between a row's title and its status
+_TAIL_COMMA = re.compile(r', ')
 _SEGMENT_SENTENCE = re.compile(r'(\. )')
 _SEGMENT_JOIN = re.compile(r'( and | or )')
 _SEPARATORS = ('. ', ', ', '; ', ': ', ' -- ')
@@ -193,7 +195,17 @@ def _template_regex(key: str):
         spec = match.group(0)
         is_number = spec[-1] in 'diu'
         numeric.append(is_number)
-        parts.append(r'(-?\d[\d\s\u00a0]*)' if is_number else r'(.+?)')
+        if is_number:
+            parts.append(r'(-?\d[\d\s\u00a0]*)')
+        elif match.start() == 0:
+            # A substitution the line opens with does not reach back across ", ": the port glues a row's
+            # title in front of its status with one ("Fuse, Grenade Launcher required, press Enter to go
+            # to armory"), and "%s required, ..." swallowed the title with the weapon - "\u043d\u0443\u0436\u043d\u043e Fuse,
+            # \u0413\u0440\u0430\u043d\u0430\u0442\u043e\u043c\u0451\u0442", as though the arena were for sale.  Such a line now reaches
+            # `_translate_segments`, which translates the head and the phrase behind it apart.
+            parts.append(r'((?:(?!, ).)+?)')
+        else:
+            parts.append(r'(.+?)')
         # The counted word is the word straight after the number, or the two ("per cent").  This took the
         # whole run of words to the end of the line until 2026-09-28, so a count in the middle of a sentence
         # was never recognised - "You need %i stars to play this level" looked for a unit called "stars to
@@ -421,6 +433,15 @@ def _translate_segments(text: str):
         translated = (_table.get(head) or _apply_rules(head, _MANUAL) or _apply_rules(head, _rules))
         if translated:
             return translated + match.group(0) + translate(text[match.end():])
+    # Then a tail that is a phrase with a separator of its own, which splitting at every separator would cut
+    # in two: a row's title glued in front of "%s required, press Enter to go to armory".
+    for match in _TAIL_COMMA.finditer(text):
+        tail = text[match.end():].strip()
+        if not _SEGMENT_COMMA.search(tail):
+            continue
+        translated = (_table.get(tail) or _apply_rules(tail, _MANUAL) or _apply_rules(tail, _rules))
+        if translated:
+            return translate(text[:match.start()]) + match.group(0) + translated
     by_comma = _parts(text, _SEGMENT_COMMA)
     if by_comma is not None:
         return by_comma

@@ -1156,6 +1156,17 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   their own file.  Three rules that did it in `_MANUAL` for Russian were written and taken out again the
   same day for that reason, so every language is handed the same general layer and edits its own lines.
 
+  A substitution a template opens with no longer reaches back across ", " (`_template_regex`).  A table row
+  is spoken as its title, a comma and its status, and "%s required, press Enter to go to armory" swallowed
+  the title with the weapon, so a locked challenge that wanted a gun was read "нужно The Mixed Bag, Обрез" -
+  the challenge said as though it were the thing to buy - in their challenge list and in Extra's alike.  A
+  line like that now falls through to `_translate_segments`, which has learned to take a tail that is a
+  whole phrase with separators of its own and translate the head in front of it apart.  Compared over
+  3,133 lines - every template in the Russian file filled in, the same with a title glued in front, every
+  phrase the verifier collects, and every challenge's row in each state - 114 weapon rows are put right,
+  the rest that changed now use a whole line the translator wrote (a stats row, "теперь" after the title
+  rather than before it), and none reads worse.
+
 * PORT ADDITION: the additions overlay - the plists are the original, and everything the port adds is in
   code (user request).  `game/` holds Somethin' Else's files exactly as they shipped them: not re-encoded,
   not appended to, not corrected.  They are binary plists, a rewrite of one is an unreviewable diff, and on
