@@ -16,6 +16,7 @@ There is an Extra menu under Play, with chapters of arenas written for this vers
 Pausing holds every sound where it is and picks it up from there, so a Zombie you paused mid-growl finishes that growl. The arena keeps its ambience while you are paused.
 Going back has a sound of its own now, so leaving a screen no longer sounds the same as pressing a button on it.
 Two tarot cards that do the same thing now add up. Ten per cent more damage from each is twenty per cent, not ten, and a card never turns out to be worth nothing because another one got there first.
+In a translated game, a word counted by a number takes the right form for that number, wherever it falls in the sentence.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.
