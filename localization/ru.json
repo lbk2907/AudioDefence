@@ -1,4 +1,5 @@
 {
+ "@plural": "east-slavic",
  " and ": " и ",
  " or ": " или ",
  "%.0f kilobytes": "%.0f килобайт",
@@ -43,8 +44,6 @@
  "(press Enter to change for %i diamonds)": "(нажми Enter, чтобы поменять за %i {алмаз|алмаза|алмазов})",
  "<Entry %s %d bytes crc %08x>": "<Элемент %s %d байт crc %08x>",
  "<Release %s %s>": "<Выпуск %s %s>",
- "@name": "Русский",
- "@plural": "east-slavic",
  "A button": "кнопка A",
  "A formidable zombie you don't want to mess with. The Berserk is a blind zombie who looks for his prey by sniffing around. If you don't shoot him, he will go away in a few seconds. A single bullet that hits him will cause him to go into a frenzy and charge towards you very fast, and be warned: he can take a lot of bullets!": "Грозный зомби, с которым лучше не связываться. Берсерк слеп и ищет добычу по запаху. Если не стрелять в него, он через несколько секунд уйдёт. Одна попавшая в него пуля приводит его в ярость, и он очень быстро бросается на вас. И предупреждение: пуль в него уйдёт много!",
  "A herd of cows is pasturing in the arena! They'll get in the way of shooting zombies.": "По арене пасётся стадо коров! Они будут мешать стрелять по зомби.",

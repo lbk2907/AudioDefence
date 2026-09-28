@@ -15,13 +15,12 @@ Some phrases have a gap the game fills in: `%i` a number, `%s` a name or a word 
 this level").  Write your sentence round the same gaps.  They are filled in the English order; to change the
 order, number them by their place in the English (`%2$s ... %1$s`).  A word that changes with a number is
 written with all its forms in braces, where your language puts it: "I have %i {apple|apples}".  How your
-language counts goes once in the file, in the entry "@plural", which this writes empty: one of the names in
-`localization.PLURAL_RULES`, printed when you run this.
+language counts goes once in the file, in the entry "@plural", which this writes empty, with the choices
+written out beside it in "@plural guide" (`localization.PLURAL_GUIDE`).
 
-When it is ready, rename it to the language's code - `de.json`, `fr.json`, `ja.json` - and put what the
-language calls itself in its "@name" entry ("Deutsch", "Français"): that is the name the Language row offers
-it by, and nothing in the code needs to change.  `template.json` is not committed: it belongs to whoever is
-writing it.
+When it is ready, rename it to whatever the Language row should say - `Deutsch.json`, `de.json`: the row
+offers a language by its file's name, whatever that is, and nothing in the code needs to change.
+`template.json` is not committed: it belongs to whoever is writing it.
 
 Run this again whenever the port gains text.  A file that is already there keeps every phrase translated
 and only the new ones arrive empty; nothing is ever removed.  Pass a language code to do the same for one
@@ -84,6 +83,16 @@ def every_phrase(besides: str = '') -> list:
     return sorted(seen)
 
 
+def dump(table: dict) -> str:
+    """The file as it is written: the entries about the file ("@plural" and its guide) first, where a
+    translator opening it sees them, then every phrase in order.  Sorted whole, they would come after the
+    phrases that start with a space or a percent sign, a hundred and eighty lines down."""
+    about = sorted(key for key in table if key.startswith('@'))
+    ordered = {key: table[key] for key in about}
+    ordered.update((key, table[key]) for key in sorted(table) if not key.startswith('@'))
+    return json.dumps(ordered, ensure_ascii=False, indent=1) + '\n'
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('language', nargs='?', default=TEMPLATE,
@@ -108,7 +117,7 @@ def main(argv=None) -> int:
     phrases = every_phrase(besides=os.path.basename(path))
     table = dict(had)
     table.setdefault('@plural', '')                        # the language's counting rule: see above
-    table.setdefault('@name', '')                          # what the language calls itself
+    table['@plural guide'] = localization.PLURAL_GUIDE    # the choices, where the translator is looking
     added = 0
     for text in phrases:
         if text not in table:
@@ -119,7 +128,7 @@ def main(argv=None) -> int:
     if folder:
         os.makedirs(folder, exist_ok=True)
     with io.open(path, 'w', encoding='utf-8', newline='\n') as fh:
-        fh.write(json.dumps(table, ensure_ascii=False, indent=1, sort_keys=True) + '\n')
+        fh.write(dump(table))
 
     done = sum(1 for key, value in table.items() if value and not key.startswith('@'))
     where = os.path.relpath(path, ROOT)
@@ -130,13 +139,12 @@ def main(argv=None) -> int:
     phrases_in = sum(1 for key in table if not key.startswith('@'))
     print('%d of %d translated. Fill in the empty ones, in the same order or any other.' % (done, phrases_in))
     if not table.get('@plural'):
-        print('Name how your language counts in "@plural": %s.' % ', '.join(localization.PLURAL_RULES))
+        print('Say how your language counts in "@plural" at the top: the choices are in "@plural guide".')
     if done < phrases_in:
         print('An empty phrase stays English, so the file can be used before it is finished.')
     if args.language == TEMPLATE:
         print('The game offers it in Settings as a language while it is there, so it can be heard as it is')
-        print('written. When it is ready, rename it to the language code and put what the language calls')
-        print('itself in "@name".')
+        print('written. When it is ready, rename it to what the Language row should call it.')
     print('Then: py tools/verify_localization.py --language %s' % args.language)
     return 0
 

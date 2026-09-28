@@ -1169,10 +1169,17 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   changed with it: `make_language.py` gives a new language every line with a gap and an empty "@plural", and
   `verify_localization.py` says when a line has more or fewer forms than its "@plural" allows.  Six tarot card
   descriptions with a percent sign in them ("10% more damage") had also been taken for templates and never
-  offered; they are now.  And the Language row reads what each file calls its language from its "@name"
-  entry rather than from a list in `GameParameters.LANGUAGES`, which named Russian: a language is added by
-  adding its file.  A template asked for with its gaps still empty - to be filled in by whoever asked - gets
-  each word's last form, so no brace is ever read out.
+  offered; they are now.  A template asked for with its gaps still empty - to be filled in by whoever asked -
+  gets each word's last form, so no brace is ever read out.
+
+  The Language row offers each language by its file's name, whatever the file is called (user request),
+  rather than from a list in `GameParameters.LANGUAGES`, which named Russian: a language is added by adding
+  its file, and the Russian one is offered as "ru" until somebody renames it.  A language chosen whose file
+  is no longer there - renamed, or left out of a build - falls back to English, and English is saved, so the
+  game does not go on looking for it.  "@plural" is typed by hand, so it is read forgivingly (capitals,
+  spaces, underscores and hyphens do not count, and a name a letter or two out is taken for the nearest), a
+  new file carries the choices beside it in "@plural guide", and `verify_localization.py` names a rule it
+  cannot read and says which one was probably meant.
 
   A substitution a template opens with no longer reaches back across ", " (`_template_regex`).  A table row
   is spoken as its title, a comma and its status, and "%s required, press Enter to go to armory" swallowed

@@ -35,6 +35,7 @@ import json
 import logging
 import os
 import re
+import unicodedata
 
 from . import paths
 
@@ -142,29 +143,55 @@ def file_for(language: str) -> str:
 
 
 def available() -> tuple:
-    """The languages a build carries, the port's own first: ('en', 'ru') for a build with a Russian file."""
-    codes = [ENGLISH]
+    """The languages a build carries, the port's own first: a language is a file, and its name is the
+    file's own name without ".json" - the name the Language row offers it by, so a translator names the
+    file what the language calls itself.  Taken in the composed form, so a name spelt with a letter a Mac
+    keeps as two characters (the Russian short i) is the same name everywhere."""
+    names = [ENGLISH]
     folder = paths.LOCALIZATION
     if os.path.isdir(folder):
-        for name in sorted(os.listdir(folder)):
-            if name.endswith('.json'):
-                code = name[:-len('.json')]
-                if code != ENGLISH and code not in codes:
-                    codes.append(code)
-    return tuple(codes)
+        for entry in sorted(os.listdir(folder)):
+            if entry.endswith('.json'):
+                name = unicodedata.normalize('NFC', entry[:-len('.json')])
+                if name != ENGLISH and name not in names:
+                    names.append(name)
+    return tuple(names)
 
 
-def name_of(language: str) -> str:
-    """What a language calls itself, from its file's "@name" entry - the name the Language row offers it
-    by - or its code when the file names none."""
-    if language == ENGLISH:
-        return 'English'
-    try:
-        with open(file_for(language), encoding='utf-8') as fh:
-            raw = json.load(fh)
-    except (OSError, ValueError):
-        return language
-    return str(raw.get('@name') or language) if isinstance(raw, dict) else language
+# --- how a language counts ------------------------------------------------------------------------
+
+def plural_rule_named(text) -> tuple:
+    """(the rule, or None; the rule it was probably meant to be, or None) for what a file wrote in "@plural".
+
+    Forgiving about how it is written, since a translator types it by hand: capitals, spaces, underscores
+    and hyphens do not matter ("East Slavic", "east_slavic", "eastslavic"), and a name one or two letters
+    out ("east-slavik") is taken for the one it is nearest, as long as nothing else is as near."""
+    import difflib
+    if not text:
+        return None, None
+    wanted = re.sub(r'[^a-z]', '', str(text).lower())
+    squashed = {re.sub(r'[^a-z]', '', name): name for name in PLURAL_RULES}
+    if wanted in squashed:
+        return squashed[wanted], None
+    near = difflib.get_close_matches(wanted, list(squashed), n=2, cutoff=0.8)
+    if len(near) == 1:
+        return squashed[near[0]], squashed[near[0]]
+    return None, (squashed[near[0]] if near else None)
+
+
+#: What a language file is given to say which rule it counts by, and what each one is for: written into a
+#: new file by `tools/make_language.py`, beside "@plural", so a translator has the choices in front of them.
+PLURAL_GUIDE = ('Write one of these in "@plural": '
+                'none - words never change with a number (Malay, Indonesian, Chinese, Japanese, Korean, Thai, '
+                'Vietnamese): no braces needed. '
+                'one-other - two forms, {apple|apples}, the first for 1 (English, German, Dutch, Spanish, '
+                'Italian, Swedish, Greek). '
+                'french - two forms, the first for 0 and 1 (French, Brazilian Portuguese). '
+                'east-slavic - three forms, for 1, 21, 31... then 2-4, 22-24... then the rest (Russian, '
+                'Ukrainian, Belarusian). '
+                'polish - three forms, for 1 only, then 2-4, 22-24..., then the rest (Polish). '
+                'czech - three forms, for 1, then 2-4, then the rest (Czech, Slovak). '
+                'arabic - six forms, for 0, 1, 2, 3-10, 11-99, then the rest (Arabic).')
 
 
 def load(language: str, force: bool = False) -> bool:
@@ -189,9 +216,10 @@ def load(language: str, force: bool = False) -> bool:
         log.warning('localization: %s is not a map of phrases', path)
         return False
     _table = {str(key): str(value) for key, value in phrases.items() if value and not str(key).startswith('@')}
-    rule = str(phrases.get('@plural') or DEFAULT_PLURAL)
-    if rule not in PLURAL_RULES:
-        log.warning('localization: %s names a plural rule there is none of: %s', path, rule)
+    rule, _meant = plural_rule_named(phrases.get('@plural'))
+    if rule is None:
+        if phrases.get('@plural'):
+            log.warning('localization: %s names a plural rule there is none of: %s', path, phrases.get('@plural'))
         rule = DEFAULT_PLURAL
     _plural = PLURAL_RULES[rule]
     _rules, _weak_rules = _build_rules(_table)

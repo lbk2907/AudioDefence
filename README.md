@@ -90,10 +90,9 @@ is written — the phrases are data.
 - **you can hear it while you write it.** While `template.json` is there the
   game offers it in the Language row as *Template, being translated* — no code
   chosen, nothing renamed
-- when it is ready, rename it to the language's code — `de.json`, `fr.json`,
-  `ja.json` — and put what the language calls itself in its `"@name"` entry
-  ("Deutsch", "Français"). That is the name the Language row offers it by; no
-  code needs changing
+- when it is ready, rename it to whatever the Language row should say —
+  `Deutsch.json`, `de.json`. The row offers each language by its file's name,
+  whatever that is, and no code needs changing
 - run `py tools/verify_localization.py`, which fails if a phrase a player can
   reach is still English, so a language cannot quietly fall behind as the port
   grows. It skips `template.json`, unfinished by definition; ask for it by name
@@ -122,7 +121,9 @@ gaps, in whatever order your language wants:
   (Malay, Indonesian, Chinese, Japanese…), `one-other` (English, German,
   Spanish…), `french`, `east-slavic` (Russian, Ukrainian), `polish`, `czech` or
   `arabic`. That says how many forms to write and which number takes which; the
-  Russian file is an example of three, `{звезда|звезды|звёзд}`
+  Russian file is an example of three, `{звезда|звезды|звёзд}`. The choices are
+  written out in the file too, in `"@plural guide"`, and a slip in the spelling
+  (`East Slavic`, `east_slavic`) is still understood
 
 `verify_localization.py` tells you when a line has more or fewer forms than
 your `"@plural"` says. Nothing of any one language is in the game's code: what

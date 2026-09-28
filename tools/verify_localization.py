@@ -288,25 +288,41 @@ def _strings_file(path: str):
 
 
 def forms_problems(language: str) -> list:
-    """Lines whose word forms do not fit the language's rule: "{apple|apples}" in a file whose "@plural"
-    has three forms, say, or a rule there is none of."""
+    """What is wrong with how a file counts: a "@plural" that names no rule, a file that writes a word's
+    forms in braces without saying how its language counts, and a line with more or fewer forms than its
+    rule has.  Said in words a translator can act on, since they write "@plural" by hand."""
     try:
         with io.open(localization.file_for(language), encoding='utf-8') as fh:
             raw = json.load(fh)
     except (OSError, ValueError) as exc:
-        return ['localization/%s.json cannot be read: %s' % (language, exc)]
-    rule = raw.get('@plural') or localization.DEFAULT_PLURAL
-    if rule not in localization.PLURAL_RULES:
-        return ['"@plural" is %r, and the rules there are are %s' % (rule, ', '.join(localization.PLURAL_RULES))]
-    wanted = localization.PLURAL_RULES[rule][0]
+        return ['the file for %s cannot be read: %s' % (language, exc)]
+    lines = [(key, value) for key, value in raw.items()
+             if not key.startswith('@') and isinstance(value, str) and FORMS.search(value)]
+    written = raw.get('@plural')
+    rule, meant = localization.plural_rule_named(written)
     out = []
-    for key, value in raw.items():
-        if key.startswith('@') or not isinstance(value, str):
-            continue
-        for forms in re.findall(r'\{([^{}|]*(?:\|[^{}|]*)+)\}', value):
+    if written and rule is None:
+        out.append('"@plural" is %r, which is not one of %s%s' % (
+            written, ', '.join(localization.PLURAL_RULES), '; did you mean %s?' % meant if meant else ''))
+        return out
+    if meant:
+        out.append('"@plural" is %r, which is read as %s; write that, to be sure' % (written, meant))
+    if not written:
+        if not lines:
+            return out
+        out.append('this file writes forms in braces but does not say how the language counts: '
+                   'fill in "@plural" (the choices are in "@plural guide")')
+        rule = localization.DEFAULT_PLURAL
+    wanted = localization.PLURAL_RULES[rule][0]
+    for key, value in lines:
+        for forms in FORMS.findall(value):
             if len(forms.split('|')) != wanted:
-                out.append('%s   (%d forms where "%s" has %d)' % (key[:90], len(forms.split('|')), rule, wanted))
+                out.append('%s   (%d forms, where %s has %d)' % (key[:90], len(forms.split('|')), rule, wanted))
     return out
+
+
+#: a word's forms in a translation, "{apple|apples}"
+FORMS = re.compile(r'\{([^{}|]*(?:\|[^{}|]*)+)\}')
 
 
 def check(language: str) -> list:

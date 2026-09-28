@@ -285,8 +285,8 @@ class GameParameters:
     #: spoken in (audiodefence/localization.py, localization/<code>.json).  English by default, so a player
     #: who does not choose one sees exactly what the port always showed.
     #:
-    #: Only the port's own language is written here.  Every other is a file under `localization/`, which
-    #: says what the language calls itself in its "@name" entry, so a language is added by adding its file
+    #: Only the port's own language is written here.  Every other is a file under `localization/`, named
+    #: what the language calls itself, and offered by that name, so a language is added by adding its file
     #: and nothing in the code names one (user request, 2026-09-28).
     LANGUAGES = (('en', 'English'),)
     DEFAULT_LANGUAGE = 'en'
@@ -300,19 +300,27 @@ class GameParameters:
         PORT ADDITION: a translator fills in `localization/template.json` and can hear it in the game before
         renaming it to a language code, which is the point at which it becomes a language like any other.
         """
-        from ..localization import available, file_for, name_of
+        from ..localization import available, file_for
         import os
         offered = list(self.LANGUAGES)
-        for code in available():
-            if code not in dict(offered) and code != self.TEMPLATE_LANGUAGE[0]:
-                offered.append((code, name_of(code)))
+        for name in available():
+            if name not in dict(offered) and name != self.TEMPLATE_LANGUAGE[0]:
+                offered.append((name, name))
         if os.path.isfile(file_for(self.TEMPLATE_LANGUAGE[0])):
             offered.append(self.TEMPLATE_LANGUAGE)
         return tuple(offered)
 
     def language(self) -> str:
         value = self.defaults.object('language')
-        return value if value in dict(self.languages()) else self.DEFAULT_LANGUAGE
+        if value in dict(self.languages()):
+            return value
+        if value is not None and value != self.DEFAULT_LANGUAGE:
+            # The file of the language chosen is not there any more - renamed, or taken out of the build:
+            # English, and English kept, so the game does not go on looking for it (user request).  A
+            # language renamed is chosen again once, in the Language row.
+            self.defaults.set_object(self.DEFAULT_LANGUAGE, 'language')
+            self.defaults.synchronize()
+        return self.DEFAULT_LANGUAGE
 
     def set_language(self, value: str) -> None:
         from ..localization import load                   # here: localization asks this module for it
