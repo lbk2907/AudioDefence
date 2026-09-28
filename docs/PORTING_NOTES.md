@@ -1598,8 +1598,11 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   10 life, which is exactly one revolver round at level one and less at every level above.  Three of them,
   three rounds, no modifier holding it up - and everything else in the arena walks and has to be met at
   arm's length, because there is nothing left to shoot it with.  Its difficulty is categorical rather than
-  arithmetic: the tool measures the wok at 25 damage a second and calls it comfortable, and what it cannot
-  price is that a melee duel with no health is the frightening thing in this game.
+  arithmetic: what the tool cannot price is that a melee duel with no health is the frightening thing in
+  this game.  (It used to measure the wok at 25 damage a second as though a swing reached ten units, and
+  called the arena comfortable; priced as a weapon that reaches three, since 2026-09-28, it puts it a second
+  below Scrapyard, which follows it - and Scrapyard's sixty rounds are two hundred damage short of its
+  zombies, which the margin does not count at all.  So it stays where judgement put it.)
 
   Three rounds and not one spare means a wasted round leaves a wave that can never be cleared, with the
   arena gone quiet and nothing arriving - which for a player with no screen is the worst thing a design can
@@ -1671,16 +1674,22 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
 
   **Sidestep** is a target that will not stay found.  `dodge` {dodgeTime 0.7, dodgeSpeed 5} fires from
   `hit_by_weapon` every time a Dodge is hit and survives, and it strafes **3.5 units** - measured, not
-  assumed - which at ten units out is nineteen degrees and so outside the revolver's spread of thirty.  Eight
-  rounds at level one is being found again eight times, while it closes at 0.9 and the walkers behind it do
-  not wait.  The tool charges `DODGE_COST` of overhead per hit for that.
+  assumed - at random to one side, which at ten units out is nineteen degrees.  (This said "and so outside
+  the revolver's spread of thirty" until 2026-09-28, which is wrong: `calculateHitEnemies` 0x1000c41c4
+  measures `spread` either side of the aim, so the revolver reaches thirty degrees each way and one strafe is
+  still inside it.  It is outside the ten either side where a hit is lined up, and two the same way are
+  outside both.)  Eight rounds at level one is being found again near enough eight times, while it closes at
+  0.9 and the walkers behind it do not wait.  The tool charges `DODGE_COST` of overhead per hit for that.
 
   **Hydra** hands the player the timer.  `spawn_after` is the original's own key (`challenge_arena1_1` uses
   it) and `checkSpawnAfterKill:` 0x1000a20ac reads it: an enemy spawns so many seconds after the one it names
-  **dies**.  So seeds stand out there with a pair waiting behind each, and nothing happens at all until a
-  seed is killed - kill them one at a time and the clock runs out, kill them together and eight arrive at
+  **dies**.  So heads stand out there with more waiting behind each, and nothing happens at all until one is
+  cut off - kill them one at a time and the clock runs out, kill them together and they all come back at
   once.  An enemy with a `spawn_after` and no `spawn_time` is built and then left in the state it was born
-  in, which a test confirms: thirty seconds pass and the brood has not moved.
+  in, which a test confirms: thirty seconds pass and the brood has not moved.  Since 2026-09-28 what grows
+  back grows back closer, two seconds after the cut, and some of it has heads of its own (`_heads`, a tree),
+  because measured properly the first version was a chapter 1 arena - see the second correction to the tool
+  below.
 
   **The Long Walk** is 500 life at a quarter of a unit a second - forty-eight seconds to arrive and thirty
   seconds of level-one shooting to put down - and the arena is what walks in behind the player during those
@@ -1748,6 +1757,49 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   is what makes `reading_order` read it straight after Extra - the original's own two are placed the same
   way, and one consequence of that is that Endless Info is read *before* Endless.  Play on that screen goes
   to the Extra menu, as Challenge Info's Play goes to the challenge screen.
+* CORRECTION to `tools/arena_pressure.py`, the second: three things it had been getting wrong, found on
+  2026-09-28 by playing the waves out tick by tick against a simple bot in a scratch file and asking why the
+  two answers disagreed.  The bot is not kept - what it answers depends on how cleverly it is written, and
+  one change to how it chose its next target moved an arena by fourteen seconds - but where the two
+  disagreed, the reason each time was something the tool did not count.
+
+  **`spawn_after` was ignored.**  An enemy that `checkSpawnAfterKill:` 0x1000a20ac only starts when another
+  dies went into the order with a spawn time of nought, as though it had been standing there from the first
+  second.  Hydra is made of nothing else, and it had measured nine seconds short when it had three to
+  spare.  Such an enemy now enters the order when the one it names has been dealt with.
+
+  **What a hit costs a Dodge was not counted.**  Case 7 of `update:` moves a Dodge sideways for `dodgeTime`
+  and not an inch towards the player, and a step square to its line leaves it further out than it was, so
+  every hit but the last gives the player about a second and a half back (`dodge_delay`).  The tool charged
+  the hits as time spent finding it again and never as time it lost: Sidestep measured five seconds short
+  with four to spare, and Iron Sights and The Last Word read several seconds harder than they are.
+
+  **A melee weapon could be swung at anything.**  An arena fought with the wok was priced at the wok's
+  damage a second, as though it reached ten units.  It reaches three, so nothing can be started on until it
+  has walked that far, and it kills in whole swings a cooldown apart (`wave_pressure`'s `swing`); the
+  player turns to face it on the way in.  Three Bullets read eleven seconds to spare and has four - and its
+  last wave had a Runner reaching arm's length a second before two Zombies did, which leaves one second at
+  the very best.  That Runner is a Zombie now.
+
+  The four arenas those errors had misplaced were tuned back into their places rather than the order being
+  changed under a player who has already been through it.  Sidestep has more walkers and a third Dodge;
+  Hydra's heads grow back closer and some of them have heads of their own; Iron Sights has a walker more in
+  each wave; and The Last Word's last wave comes in sooner with a second Chainsaw, so that it closes
+  chapter 3 again.  The line printed afterwards falls without a break from 15.7 seconds of slack to 25.6
+  short, Three Bullets excepted for the reason given with it.
+
+  The tool also prices weapons that hit a crowd now, which it had no way to do (`area_pressure`).  A wave is
+  taken pack by pack - enemies spawned together, a few degrees and a couple of units apart, at nearly one
+  pace - and each pack goes to whichever weapon in hand kills it soonest.  An explosive puts `dispersal`
+  percent of its damage into all of a pack and the rest only into the one it lands on (`hit_by_explosion`
+  0x100061284, whose fall-off only reaches one unit), and whatever outlives the rest of its pack takes whole
+  blasts after that; where it lands is the price, since inside five units it rings the ears, and the choice
+  of weapon counts that ringing before making it.  A pack holding a Berserk, a Dodge or a Riot Gear Zombie
+  is only ever given the explosive, which wakes nothing, sends nothing sideways and never asks after a
+  shield.  A shotgun is not fired until a shell is worth `SHOTGUN_WAIT` of its best, a judgement constant
+  that says so where it is defined, because the Sawn-off's damage is almost all distance.  And since a round
+  of a crowd weapon is not worth its damage once, the tool counts the rounds each gun spends and prints them
+  against what the arena hands out.
 * PORT ADDITION: a challenge may name the modifiers it is played with (user request).  The original has no
   such key and none of its challenges wants one: a challenge is the same arena for everybody, which is the
   point of its stars.  One of the port's own needs a modifier to be an arena at all - Three Bullets hands

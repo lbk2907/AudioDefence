@@ -359,15 +359,17 @@ def _cows(*places) -> dict:
 PLISTS: dict = {}
 
 # =========================================================================================== the arenas
-#: Chapter 1, in the order they open, which is the order `tools/arena_pressure.py` puts them in.
+#: The port's own arenas, in the order they were written rather than the order they are played: `CHAPTERS`
+#: at the end of this file says which chapter each is in and where, and that order is the one
+#: `tools/arena_pressure.py` puts them in.
 #:
 #: That tool exists because of how this game kills you.  There is no health: an enemy that reaches the
 #: player ends the game there and then, so what makes a wave hard is not how much life is in it but whether
 #: every one of them can be killed before its own clock runs out - and the clock of the one behind it is
 #: already running.  It works that out wave by wave and prints the slack at the tightest moment, and the
-#: seven arenas below are tuned to a deliberate curve of it, from eleven seconds to spare down to nine
-#: seconds short.  Short is not impossible: the tool counts only the gun, and a player also has a wok
-#: worth 25 a swing inside three units, headshots, and whatever they have spent diamonds on.
+#: arenas are tuned to one curve of it across every chapter.  Short is not impossible: the tool counts only
+#: the gun, and a player also has a wok worth 25 a swing inside three units, headshots, and whatever they
+#: have spent diamonds on.
 #:
 #: The first build of these was tuned by eye, and by eye every one of them was wrong.  Three Bullets could
 #: not be lost - three rigged rings and a modifier that made every hit a kill, so firing in any direction at
@@ -517,14 +519,19 @@ PLISTS['port_stampede'] = {
 #: left to shoot it with.  A WeakZombie is one swing and a Zombie is two; they arrive far enough apart to be
 #: taken one at a time and near enough together that there is no time to think between them.  Spend a round
 #: on one of them and the wave it belongs to cannot be finished at all.
+#:
+#: The last wave had a Runner in it until 2026-09-28, arriving at arm's length a second before two Zombies
+#: did.  A Runner is two seconds inside the wok's reach and two swings, so it leaves one second to spare at
+#: the very best, and with two more behind it that was a chapter 2 moment in the fourth arena of chapter 1 -
+#: invisible while the tool let the wok swing at things ten units away (`wave_pressure`'s `swing`).
 PLISTS['port_three_bullets_1'] = _wave(
     [('Ted', 200, 9.0), ('WeakZombie', 0, 9.0, 2.0), ('Zombie', 120, 9.0, 8.0)], no_blast=True)
 PLISTS['port_three_bullets_2'] = _wave(
     [('Jim', 60, 10.0), ('Zombie', 250, 9.0, 1.0), ('WeakZombie', 140, 9.0, 4.0),
      ('ZombieB', 20, 9.0, 8.0)], no_blast=True)
 PLISTS['port_three_bullets_3'] = _wave(
-    [('Ted', 310, 10.0), ('Zombie', 45, 9.0, 1.0), ('ZombieB', 190, 9.0, 3.0),
-     ('Runner', 105, 9.0, 7.0), ('WeakZombieB', 265, 9.0, 11.0), ('ZombieC', 330, 9.0, 15.0)],
+    [('Ted', 310, 10.0), ('Zombie', 45, 9.0, 1.0), ('ZombieB', 190, 9.0, 5.0),
+     ('ZombieC', 105, 9.0, 10.0), ('WeakZombieB', 265, 9.0, 14.0), ('Zombie', 330, 9.0, 18.0)],
     no_blast=True)
 PLISTS['port_three_bullets'] = {
     'challenge_id': 'port_three_bullets',
@@ -643,19 +650,26 @@ PLISTS['port_scrap'] = {
 
 # ----------------------------------------------------------------------------------------- Sidestep
 #: The target that will not stay found.  A Dodge has 80 life and `dodge` {dodgeTime 0.7, dodgeSpeed 5}, and
-#: `set_life` 0x100061a00 sends it into state 7 every time it is hit and survives: 3.5 units sideways, which
-#: at ten units out is nineteen degrees and so outside the revolver's spread of thirty.  Eight rounds at
-#: level one means being found again eight times, while it closes at 0.9 - and the walkers arriving behind it
-#: do not wait for that.
+#: `hit_by_weapon` 0x100060b30 sends it into state 7 every time it is hit and survives: 3.5 units sideways, at
+#: random to one side, which at ten units out is nineteen degrees.  That is still inside the thirty either
+#: side the revolver reaches, but outside the ten either side where a hit is lined up, and two the same way
+#: are outside both - so eight rounds at level one means being found again, near enough eight times.
+#:
+#: What it costs the Dodge is ground: case 7 of `update:` does not walk it in, and a step square to its line
+#: puts it further out than it was.  Until 2026-09-28 the tool only counted what it cost the player, and on
+#: that half of the sum this arena measured five seconds short; on the whole of it, four to spare, which is
+#: chapter 1.  So it has more walkers and a third Dodge now, to be the arena it was placed as.
 PLISTS['port_sidestep_1'] = _wave(
-    [('Dodge', 60, 12.0), ('WeakZombie', 200, 10.0, 4.0), ('Zombie', 300, 10.0, 10.0)], no_blast=True)
+    [('Dodge', 60, 12.0), ('WeakZombie', 200, 10.0, 3.0), ('Zombie', 300, 10.0, 7.0),
+     ('ZombieB', 140, 10.0, 11.0)], no_blast=True)
 PLISTS['port_sidestep_2'] = _wave(
-    [('Dodge', 30, 12.0), ('DodgeB', 210, 12.0, 10.0), ('Zombie', 120, 10.0, 3.0),
-     ('WeakZombie', 280, 10.0, 11.0), ('ZombieB', 160, 10.0, 18.0)], no_blast=True)
+    [('Dodge', 30, 12.0), ('DodgeB', 210, 12.0, 9.0), ('Zombie', 120, 10.0, 2.0),
+     ('WeakZombie', 280, 10.0, 7.0), ('ZombieB', 160, 10.0, 12.0), ('QuietZombie', 330, 10.0, 17.0)],
+    no_blast=True)
 PLISTS['port_sidestep_3'] = _wave(
-    [('Dodge', 20, 12.0), ('DodgeB', 150, 12.0, 9.0),
-     ('Zombie', 90, 10.0, 2.0), ('Runner', 330, 11.0, 8.0), ('ZombieB', 190, 10.0, 15.0),
-     ('QuietZombie', 60, 10.0, 21.0)], no_blast=True)
+    [('Dodge', 20, 12.0), ('DodgeB', 150, 12.0, 7.0), ('Dodge', 270, 12.0, 18.0),
+     ('Zombie', 90, 10.0, 2.0), ('Runner', 330, 11.0, 6.0), ('ZombieB', 190, 10.0, 11.0),
+     ('QuietZombie', 60, 10.0, 15.0), ('Zombie', 230, 10.0, 22.0)], no_blast=True)
 PLISTS['port_sidestep'] = {
     'challenge_id': 'port_sidestep',
     'title': 'Sidestep',
@@ -717,47 +731,57 @@ PLISTS['port_nowake'] = {
 #:
 #: `spawn_after` is the original's own key - `challenge_arena1_1` uses it - and `checkSpawnAfterKill:`
 #: 0x1000a20ac reads it: an enemy whose `spawn_after` names another by the key it is written under spawns
-#: that many seconds after the named one **dies**.  So three seeds stand out there, each with two behind it,
-#: and nothing else happens until a seed is killed.  Which means the player decides when the next pair comes,
+#: that many seconds after the named one **dies**.  So a few heads stand out there, each with more behind it,
+#: and nothing else happens until a head is cut off.  Which means the player decides when the next ones come,
 #: and the arena is really a question about pacing: kill them one at a time and the wave takes for ever
-#: against the clock, kill them together and six arrive at once.
-def _hydra(seeds, broods, after: float = 3.0) -> dict:
-    """Seeds standing out there, and behind each of them a brood that waits for it to die.
+#: against the clock, kill them together and they all come back at once.
+#:
+#: Until 2026-09-28 each head had one brood of two, walking in from eleven units, and the tool counted every
+#: brood as standing there from the first second - so it called the arena nine seconds short when it had
+#: three to spare.  Measured as it plays, it was a chapter 1 arena.  So what grows back now grows back
+#: closer, two seconds after the cut, and some of what grows back has heads of its own.
+def _heads(tree, after: float = 2.0) -> dict:
+    """A hydra, as a tree of `(kind, angle, distance, [what grows back when it dies])`.
 
     `spawn_after` names another enemy by the key it is written under, so the numbering `_wave` gives has to
-    be worked out here: the seeds go in first and are keys 1..n, and each brood follows.  An enemy with a
-    `spawn_after` and no `spawn_time` is built and then left alone by `Brick.__init__`, and
+    be worked out here: the tree is laid out depth first and each head is pointed at the one above it.  An
+    enemy with a `spawn_after` and no `spawn_time` is built and then left alone by `Brick.__init__`, and
     `checkSpawnAfterKill:` 0x1000a20ac is what eventually starts its clock.
     """
-    spec = list(seeds) + [one for brood in broods for one in brood]
+    spec, above = [], []
+
+    def lay(node, parent):
+        spec.append(tuple(node[:3]))
+        above.append(parent)
+        me = len(spec) - 1
+        for child in (node[3] if len(node) > 3 else ()):
+            lay(child, me)
+    for root in tree:
+        lay(root, None)
     wave = _wave(spec, no_blast=True)
     keys = list(wave['Enemies'])
-    seed_keys = keys[:len(seeds)]
-    i = len(seeds)
-    for seed_key, brood in zip(seed_keys, broods):
-        for _one in brood:
-            wave['Enemies'][keys[i]] = dict(wave['Enemies'][keys[i]],
-                                            spawn_after={'enemy': seed_key, 'time': after})
-            wave['Enemies'][keys[i]].pop('spawn_time', None)
-            i += 1
+    for i, parent in enumerate(above):
+        if parent is not None:
+            one = dict(wave['Enemies'][keys[i]], spawn_after={'enemy': keys[parent], 'time': after})
+            one.pop('spawn_time', None)
+            wave['Enemies'][keys[i]] = one
     return wave
 
 
-PLISTS['port_hydra_1'] = _hydra(
-    (('Zombie', 45, 9.0), ('Zombie', 225, 9.0)),
-    ([('WeakZombie', 20, 11.0), ('WeakZombieB', 70, 11.0)],
-     [('WeakZombieC', 200, 11.0), ('WeakZombieD', 250, 11.0)]))
-PLISTS['port_hydra_2'] = _hydra(
-    (('Zombie', 30, 9.0), ('Zombie', 150, 9.0), ('Zombie', 270, 9.0)),
-    ([('WeakZombie', 10, 11.0), ('WeakZombieB', 50, 11.0)],
-     [('WeakZombieC', 130, 11.0), ('WeakZombieD', 170, 11.0)],
-     [('Zombie', 250, 11.0), ('ZombieB', 290, 11.0)]))
-PLISTS['port_hydra_3'] = _hydra(
-    (('Zombie', 20, 8.5), ('Zombie', 110, 8.5), ('Zombie', 200, 8.5), ('Zombie', 290, 8.5)),
-    ([('WeakZombie', 0, 11.0), ('ZombieB', 40, 11.0)],
-     [('WeakZombieB', 90, 11.0), ('ZombieC', 130, 11.0)],
-     [('Runner', 180, 11.0), ('WeakZombieC', 220, 11.0)],
-     [('Runner', 270, 11.0), ('WeakZombieD', 310, 11.0)]))
+PLISTS['port_hydra_1'] = _heads([
+    ('Zombie', 45, 9.0, [('WeakZombie', 20, 8.0), ('WeakZombieB', 70, 8.0)]),
+    ('Zombie', 225, 9.0, [('WeakZombieC', 200, 8.0), ('WeakZombieD', 250, 8.0)])])
+PLISTS['port_hydra_2'] = _heads([
+    ('Zombie', 30, 9.0, [('Zombie', 10, 7.5, [('WeakZombie', 350, 7.0)]), ('WeakZombieB', 50, 7.5)]),
+    ('Zombie', 150, 9.0, [('ZombieB', 130, 7.5, [('WeakZombieC', 110, 7.0)]), ('WeakZombieD', 170, 7.5)]),
+    ('Zombie', 270, 9.0, [('Zombie', 250, 7.5), ('Runner', 290, 9.0)])])
+PLISTS['port_hydra_3'] = _heads([
+    ('Zombie', 20, 8.5, [('ZombieB', 0, 7.0, [('Runner', 340, 9.0)]),
+                         ('Zombie', 40, 7.0, [('WeakZombieB', 60, 6.5)])]),
+    ('Zombie', 110, 8.5, [('ZombieC', 90, 7.0, [('RunnerB', 70, 9.0)]),
+                          ('Zombie', 130, 7.0, [('WeakZombieC', 150, 6.5)])]),
+    ('Zombie', 200, 8.5, [('ZombieB', 180, 7.0, [('Runner', 160, 9.0)]), ('QuietZombie', 220, 7.0)]),
+    ('Zombie', 290, 8.5, [('Zombie', 270, 7.0, [('WeakZombie', 250, 6.5)]), ('ZombieC', 310, 7.0)])])
 PLISTS['port_hydra'] = {
     'challenge_id': 'port_hydra',
     'title': 'Hydra',
@@ -889,19 +913,22 @@ PLISTS['port_thunder'] = {
 #: up perfectly is worth no more than one that merely landed.
 #:
 #: And the things in it move when hit: Dodges strafe 3.5 units every time, which in a twenty degree cone is
-#: further outside it than in a thirty.
+#: further outside it than in a thirty.  (Every strafe also loses them ground, which the tool did not count
+#: until 2026-09-28; counted, this was a chapter 2 arena, and it has a walker more in each wave now and a
+#: tighter last one.)
 PLISTS['port_ironsights_1'] = _wave(
-    [('Dodge', 40, 12.0), ('Zombie', 200, 10.0, 3.0), ('WeakZombie', 300, 10.0, 8.0),
-     ('ZombieB', 120, 10.0, 13.0)], no_blast=True)
+    [('Dodge', 40, 12.0), ('Zombie', 200, 10.0, 3.0), ('WeakZombie', 300, 10.0, 7.0),
+     ('ZombieB', 120, 10.0, 11.0), ('QuietZombie', 250, 10.0, 15.0)], no_blast=True)
 PLISTS['port_ironsights_2'] = _wave(
-    [('Dodge', 20, 12.0), ('DodgeB', 190, 12.0, 8.0), ('Zombie', 90, 10.0, 2.0),
-     ('QuietZombie', 280, 10.0, 6.0), ('ZombieB', 140, 10.0, 11.0), ('WeakZombieB', 330, 10.0, 16.0)],
-    no_blast=True)
+    [('Dodge', 20, 12.0), ('DodgeB', 190, 12.0, 7.0), ('Zombie', 90, 10.0, 2.0),
+     ('QuietZombie', 280, 10.0, 5.0), ('ZombieB', 140, 10.0, 9.0), ('WeakZombieB', 330, 10.0, 13.0),
+     ('Zombie', 240, 10.0, 17.0)], no_blast=True)
 PLISTS['port_ironsights_3'] = _wave(
     [('Dodge', 30, 12.0), ('DodgeB', 150, 12.0, 10.0),
      ('QuietZombie', 80, 10.0, 2.0), ('ZombieB', 200, 10.0, 5.0), ('Runner', 320, 11.0, 9.0),
-     ('QuietZombie', 110, 10.0, 13.0), ('ZombieC', 280, 10.0, 17.0),
-     ('ZombieB', 60, 10.0, 21.0), ('QuietZombie', 240, 10.0, 25.0)], no_blast=True)
+     ('QuietZombie', 110, 10.0, 12.0), ('ZombieC', 280, 10.0, 15.0),
+     ('ZombieB', 60, 10.0, 17.5), ('QuietZombie', 240, 10.0, 20.0), ('Zombie', 170, 10.0, 22.5)],
+    no_blast=True)
 PLISTS['port_ironsights'] = {
     'challenge_id': 'port_ironsights',
     'title': 'Iron Sights',
@@ -1005,8 +1032,11 @@ PLISTS['port_drop'] = {
 #:
 #: Two Colossus at 500 life each, Hulks, the Riot Gear Zombie, Berserks that had better be left alone, a
 #: Dodge that will not stay found, and Clowns circling - all of it through `ambient_storm`, and all of it
-#: with `strongerEnemies`.  It is the last arena of the last chapter and it is meant to be the hardest thing
-#: in the game; the rifle is here because nothing else would be honest.
+#: with `strongerEnemies`.  It closes chapter 3 and is meant to be the hardest thing in it; the rifle is here
+#: because nothing else would be honest.
+#:
+#: Counting what a hit costs a Dodge (2026-09-28) took six seconds off it and left Carousel harder, so the
+#: last wave's Hulks and the four after them come in sooner, and a second Chainsaw closes it.
 PLISTS['port_last_1'] = _wave(
     [('Colossus', 0, 12.0), ('Hulk', 120, 12.0, 20.0), ('Berserk', 240, 7.0, 3.0),
      ('Dodge', 300, 12.0, 34.0), ('Clown', 60, 11.0, 44.0), ('Zombie', 180, 10.0, 52.0)], no_blast=True)
@@ -1015,10 +1045,10 @@ PLISTS['port_last_2'] = _wave(
      ('Berserk', 30, 7.0, 3.0), ('DodgeB', 150, 12.0, 50.0), ('Chainsaw', 270, 11.0, 60.0),
      ('Clown', 60, 11.0, 68.0)], no_blast=True)
 PLISTS['port_last_3'] = _wave(
-    [('Colossus', 0, 12.0), ('Colossus', 180, 12.0, 20.0), ('Hulk', 90, 12.0, 40.0),
-     ('HulkB', 270, 12.0, 54.0), ('Berserk', 45, 6.5, 3.0), ('Berserk', 315, 6.5, 10.0),
-     ('Dodge', 135, 12.0, 66.0), ('Clown', 225, 11.0, 76.0), ('Chainsaw', 300, 11.0, 84.0),
-     ('Runner', 60, 11.0, 92.0)], no_blast=True)
+    [('Colossus', 0, 12.0), ('Colossus', 180, 12.0, 20.0), ('Hulk', 90, 12.0, 34.0),
+     ('HulkB', 270, 12.0, 46.0), ('Berserk', 45, 6.5, 3.0), ('Berserk', 315, 6.5, 10.0),
+     ('Dodge', 135, 12.0, 60.0), ('Clown', 225, 11.0, 68.0), ('Chainsaw', 300, 11.0, 76.0),
+     ('Runner', 60, 11.0, 80.0), ('Chainsaw', 120, 11.0, 84.0)], no_blast=True)
 PLISTS['port_last'] = {
     'challenge_id': 'port_last',
     'title': 'The Last Word',
@@ -1043,10 +1073,12 @@ PLISTS['port_last'] = {
 #: `hasChallengeRequirementsForChallengeWithName:` 0x10001ffbc - so an arena opens when the one before it is
 #: beaten, and a chapter opens on **stars**, which is how the original gates a world.
 #:
-#: The order is the one `tools/arena_pressure.py` measures, easiest first and across both chapters
-#: rather than within each (user request), so the first arena of chapter 2 carries on from the last of
-#: chapter 1.  Three Bullets is the exception and is placed by judgement: it is fought with the wok, and
-#: what the tool cannot price is that a melee duel with no health is the frightening thing in this game.
+#: The order is the one `tools/arena_pressure.py` measures, easiest first and across every chapter
+#: rather than within each (user request), so the first arena of a chapter carries on from the last of the
+#: one before.  Three Bullets is the one exception, a second easier by the tool than Scrapyard, which comes
+#: after it: it is fought with the wok, and a melee duel with no health is the frightening thing in this
+#: game, while Scrapyard's sixty rounds are two hundred damage short of its zombies and the tool does not
+#: count that shortfall in its margin at all.
 #:
 #: The chapters are the port's own structure and not worlds in `challenges_index`, which they could have
 #: been: `apply_to` reaches that file and the world list would have given locks, star counts and a
@@ -1060,16 +1092,17 @@ CHAPTERS = (
     #: slack down to 2.2.
     ('Chapter 1', 0, ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets',
                       'port_scrap', 'port_nowake', 'port_survivor')),
-    #: Where the slack runs out: 1.4 seconds short down to 11.2.  It opens on two things at once and not
+    #: Where the slack runs out: 1.4 seconds short down to 12.3.  It opens on two things at once and not
     #: either of them (user request, `ChallengeData.chapter_is_open`): every arena of chapter 1 beaten, and
     #: twelve of its twenty-one stars.  Beating all seven is seven stars, so five more have to come out of
     #: the accuracy and time stars of arenas already finished - which means going back to one and playing it
     #: better, rather than only going forward.
     ('Chapter 2', 12, ('port_longwalk', 'port_stampede', 'port_sidestep', 'port_keg', 'port_hydra',
                        'port_biggame')),
-    #: Harder again (user request).  It opens on every arena of both chapters before it being beaten and
-    #: twenty-six of their thirty-nine stars: finishing all thirteen is thirteen stars, so half again as
-    #: many have to come from going back and taking the accuracy and time stars too.
+    #: Harder again (user request): 13.6 seconds short down to 25.6.  It opens on every arena of both
+    #: chapters before it being beaten and twenty-six of their thirty-nine stars: finishing all thirteen is
+    #: thirteen stars, so half again as many have to come from going back and taking the accuracy and time
+    #: stars too.
     ('Chapter 3', 26, ('port_ironsights', 'port_thunder', 'port_rust', 'port_drop', 'port_carousel',
                        'port_last')),
 )

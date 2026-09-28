@@ -109,10 +109,24 @@ it can be shot never gets harder however large it is.  Sized by eye on 2026-09-2
 lost and another could not be won, and neither was visible until it was measured.  Run it after changing any
 wave, and keep the chapter ordered by what it prints.
 
-Two of its numbers are judgement rather than disassembly and say so where they are defined: `DEAF_COST`,
-what a ring in the ears is worth given the game gives tinnitus no mechanical effect at all, and
-`MELEE_COST`, what having only a wok is worth given it reaches three units and a miss ends the run.  Change
-them with a reason, not to make a number look better.
+Some of its numbers are judgement rather than disassembly and say so where they are defined: `DEAF_COST`,
+what a ring in the ears is worth given the game gives tinnitus no mechanical effect at all, `MELEE_COST`,
+what having only a wok is worth given it reaches three units and a miss ends the run, and the handful
+beside them (`STORM_COST`, `DODGE_COST`, `SHOTGUN_WAIT`).  Change them with a reason, not to make a number
+look better.
+
+A weapon that hits more than one thing - a shotgun, a grenade - is priced pack by pack rather than enemy by
+enemy, and for those the line under an arena gives the rounds it spent against the rounds it was handed,
+since a crowd weapon's round is not worth its damage once.  Keep a cushion between the two: the tool never
+misses.
+
+**When an arena uses something the tool has never priced, get a second opinion before trusting it.**  On
+2026-09-28 a scratch simulation that played each wave out tick by tick disagreed with it on four arenas,
+and each time the reason was a thing the tool did not count - an enemy waiting on another's death, the
+ground a Dodge loses when it is hit, a melee weapon that only reaches three units.  Four arenas had been
+put in the wrong places on those numbers.  The simulation is not a better measure (what it answers depends
+on how well its bot plays), which is why it was not kept; it is a way of finding out what the measure is
+missing.
 
 A line with a substitution in it - "Tarot card number %i : %s" - is never offered to a translator: it is a
 template, and the tool drops it whole (`PLUMBING`).  So a phrase written inside one is invisible, and stays
