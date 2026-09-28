@@ -535,8 +535,9 @@ class InfoScreen(ViewControllerScreen):
             self.title_label.label = localization.translate('EXTRA MODE')
             self.info_text_view.label = localization.translate(
                 'Arenas written for this version of the game, in chapters. Each one opens when the one '
-                'before it is beaten, and none of them tells you how it is won.\n \nThey use the '
-                'weapons they hand you, and the stars you earn here open the chapters that follow.')
+                'before it is beaten, and none of them tells you how it is won.\n \nEach arena hands you '
+                'its own weapons, and a few ask for one you will have to buy first. The stars you earn here '
+                'open the chapters that follow.')
         # [[self view] bringSubviewToFront:statusBar view] does not change the reading order
 
     def continue_button_pressed(self) -> None:            # continueButtonPressed: 0x100039f94

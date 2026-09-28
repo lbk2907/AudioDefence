@@ -1066,6 +1066,282 @@ PLISTS['port_last'] = {
 }
 
 
+# =========================================================================================== chapter 4
+#: Chapter 4, the armory (user request): every arena is fought with a weapon no arena before it used, and is
+#: built against what that weapon is bad at.  Harder than chapter 3 again, by the one measure the chapters
+#: are ordered on.
+#:
+#: Three of them have to be bought - the Sawn-off, the Grenade Launcher and the Claymore - and
+#: `hasWeaponForChallengeWithName:` 0x10001f868 sends a player without one to the armory, as it does for the
+#: original's own challenges.  The Sawn-off and the Hunting Rifle are ones the original's own worlds make a
+#: player buy anyway (Roman Theater, City Crossroad); the Grenade Launcher and the Claymore are the chapter's
+#: price.  The Bazooka, the Police Shotgun, the Machine Gun and the Sonic Cannon are not used: between them
+#: they cost more than eighty thousand coins and a hundred diamonds, which is not a challenge but a bill.
+#:
+#: These are crowds, and crowds of a size the original never sent - its biggest wave is fifteen, and some of
+#: these are forty.  Measured in the real engine on 2026-09-28 (a scratch test, listener silenced), the
+#: busiest of them holds 84 voices at once against the 255 the device is asked for, so none of them is ever
+#: silent for want of one.
+#:
+#: What makes a crowd weapon's arena hard is not how many there are but how they arrive, and three shapes
+#: carry it: a **pack** walks in together and is one shot to a gun that hits a crowd; an **escort** is a pack
+#: with something in the middle of it a bullet should not find; and a **pair** is two packs at once from
+#: opposite sides, which no shotgun can face together.
+def _pack(kinds, bearing: float, distance: float, at: float, spread: float = 6.0, depth: float = 0.7):
+    """A few walking together: bearings `spread` degrees apart, every other one a little behind, and a
+    third of a second between them, so that each can still be heard arriving."""
+    n = len(kinds)
+    return [(k, bearing + (i - (n - 1) / 2.0) * spread, distance + (i % 2) * depth, at + 0.3 * i)
+            for i, k in enumerate(kinds)]
+
+
+def _escort(kinds, special: str, bearing: float, distance: float, at: float):
+    """A pack with `special` in the middle of it, half a unit ahead: the one a shot aimed at the pack's
+    sound finds first."""
+    pack = _pack(kinds, bearing, distance, at, spread=8.0)
+    return pack[:len(pack) // 2] + [(special, bearing, distance - 0.5, at)] + pack[len(pack) // 2:]
+
+
+def _pair(near, far, bearing: float, at: float, runners: bool = False):
+    """Two packs at once, from opposite sides."""
+    spread, distance = (5.0, 11.0) if runners else (6.0, 10.0)
+    return (_pack(near, bearing, distance, at, spread=spread)
+            + _pack(far, bearing + 180.0, distance, at + 0.3, spread=spread))
+
+
+def _turned(k: int):
+    """SCATTER, starting somewhere else in it, so two waves built from it do not open on the same bearing."""
+    return SCATTER[k:] + SCATTER[:k]
+
+
+_Z4 = ('Zombie', 'ZombieB', 'ZombieC', 'Zombie')
+_Z4B = ('ZombieB', 'Zombie', 'ZombieC', 'QuietZombie')
+_R3 = ('Runner', 'RunnerB', 'RunnerC')
+_R4 = ('Runner', 'RunnerB', 'RunnerC', 'Runner')
+
+# -------------------------------------------------------------------------------------------- Point Blank
+#: Two shells, a hundred and twenty degrees of spread, and damage that is almost all distance.  The Sawn-off
+#: has `dispersal` 1, so `hit_by_weapon` 0x100060b30 scales nearly all of its 30 by `1 - d^2 / 121`: 5 at ten
+#: units, 21 at six, 28 at three.  Fired at a pack as it arrives it is wasted; fired at a pack that has been
+#: let in to arm's length it takes the whole of it, and every one beside it in a cone that wide.  So the
+#: arena is the wait, and it is packs all the way down - with Runners, which leave very little of one, and
+#: Hulks, which need four shells at the best distance there is.
+PLISTS['port_pointblank_1'] = _wave(
+    _pack(('Zombie', 'WeakZombie', 'ZombieB'), 0, 10.0, 0.0)
+    + _pack(('WeakZombieB', 'Zombie', 'ZombieC', 'Zombie'), 130, 10.0, 5.0)
+    + _pack(('Zombie', 'ZombieB', 'WeakZombieC'), 250, 10.0, 10.0)
+    + _pack(('ZombieC', 'Zombie', 'ZombieB', 'WeakZombie'), 70, 10.0, 15.0), no_blast=True)
+PLISTS['port_pointblank_2'] = _wave(
+    _pack(('Zombie', 'ZombieB', 'ZombieC', 'WeakZombie'), 40, 10.0, 0.0)
+    + _pack(_R3, 200, 11.0, 4.0, spread=5.0)
+    + _pack(_Z4B, 300, 10.0, 7.0)
+    + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 120, 10.0, 11.0)
+    + _pack(('Runner', 'RunnerB'), 330, 11.0, 14.0, spread=5.0)
+    + _pack(('QuietZombie', 'Zombie', 'ZombieB', 'QuietZombie'), 170, 10.0, 17.0), no_blast=True)
+PLISTS['port_pointblank_3'] = _wave(
+    _pack(_Z4, 10, 10.0, 0.0) + _pack(_Z4B, 190, 10.0, 0.5)
+    + _pack(_R3, 100, 11.0, 4.0, spread=5.0) + _pack(_R3, 280, 11.0, 4.5, spread=5.0)
+    + _pack(('Hulk', 'HulkB'), 330, 10.0, 7.0)
+    + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 60, 10.0, 9.0)
+    + _pack(('Zombie', 'ZombieC', 'ZombieB', 'QuietZombie'), 240, 10.0, 9.5)
+    + _pack(_R3, 150, 11.0, 12.0, spread=5.0)
+    + _pack(('Hulk', 'HulkB'), 30, 10.0, 14.0)
+    + _pack(_Z4B, 210, 10.0, 15.0) + _pack(_Z4, 120, 10.0, 17.0)
+    + _pack(_R3, 300, 11.0, 18.0, spread=5.0), no_blast=True)
+PLISTS['port_pointblank'] = {
+    'challenge_id': 'port_pointblank',
+    'title': 'Point Blank',
+    'objective': 'Sixty shells, and far more than sixty of them. Every shell will have to count for several.',
+    'tip': 'The closer they are, the more each shell is worth. Find out how close you can bear to let them '
+           'come.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'PB',
+    'weapons': [{'name': 'sawnoff', 'ammo': '60'}, {'name': 'wok'}],
+    'bricks': ['port_pointblank_1', 'port_pointblank_2', 'port_pointblank_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
+    'time_limit_star': {'reward': 400, 'objective': 190},
+    'accuracy_star': {'reward': 400, 'objective': 70},
+}
+
+# -------------------------------------------------------------------------------------------- One Swing
+#: The Claymore: 70 a swing, which is anything but a Hulk in one, and two and a half seconds between swings.
+#: And for those seconds nothing else can be used either - `isWeaponReadyToShoot` 0x1000aa350 answers no
+#: while the melee weapon is mid-swing, so the six rounds in the revolver wait for it too.  The arena is
+#: nothing but arrivals, one after another from bearings all round, closer together each wave, until two of
+#: them come inside the same two and a half seconds.
+PLISTS['port_oneswing_1'] = _crowd(('Zombie', 'WeakZombie', 'ZombieB', 'Runner'), 8, 9.0, 3.5)
+PLISTS['port_oneswing_2'] = _crowd(('Zombie', 'Runner', 'ZombieB', 'QuietZombie', 'Chainsaw'), 12, 9.0, 2.9,
+                                   bearings=_turned(3))
+PLISTS['port_oneswing_3'] = _crowd(('Zombie', 'Runner', 'Hulk', 'Chainsaw', 'ZombieB', 'RunnerB', 'Clown',
+                                    'QuietZombie'), 19, 9.0, 2.4, bearings=_turned(7))
+PLISTS['port_oneswing'] = {
+    'challenge_id': 'port_oneswing',
+    'title': 'One Swing',
+    'objective': 'One blade, one swing at a time, and six rounds for the moment that is not enough.',
+    'tip': 'After every swing there is a long moment when you can do nothing at all. Listen for who will '
+           'arrive in it.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'OS',
+    'weapons': [{'name': 'pistol', 'ammo': '6'}, {'name': 'claymore'}],
+    'bricks': ['port_oneswing_1', 'port_oneswing_2', 'port_oneswing_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'time_limit_star': {'reward': 400, 'objective': 240},
+    'accuracy_star': {'reward': 450, 'objective': 50},
+}
+
+# ------------------------------------------------------------------------------------------------- Fuse
+#: The Grenade Launcher: 45 into whatever it lands on and 22.5 into everything else inside five units, which
+#: is a pack in two.  Two things make it an arena rather than a massacre, and both are the original's own.
+#: `targetEnemiForExplosiveWeapon:` 0x1000c57b8 aims the grenade at the **nearest** thing in front of the
+#: player, not the one they meant, and a blast inside five units rings the ears like any other.  So every
+#: pack here walks in behind something that got there first, a little to one side of it - close enough to be
+#: in front when the pack is, and near enough that a grenade meant for the pack lands at the player's feet.
+PLISTS['port_fuse_1'] = _wave(
+    _pack(('WeakZombie', 'Zombie', 'WeakZombieB', 'ZombieB'), 20, 11.0, 0.0)
+    + _pack(('Zombie', 'WeakZombieC', 'ZombieC', 'WeakZombie'), 150, 11.0, 5.0)
+    + _pack(('ZombieB', 'Zombie', 'WeakZombieB', 'ZombieC'), 270, 11.0, 10.0)
+    + [('Zombie', 90, 9.0, 14.0)], no_blast=True)
+PLISTS['port_fuse_2'] = _wave(
+    [('QuietZombie', 60, 7.0, 0.0)] + _pack(_Z4, 40, 11.0, 1.0)
+    + [('QuietZombie', 220, 7.0, 3.0)] + _pack(('ZombieB', 'Zombie', 'ZombieC', 'WeakZombie'), 200, 11.0, 4.0)
+    + _pack(_R3, 320, 11.0, 7.0, spread=5.0)
+    + [('Zombie', 110, 7.0, 8.0)] + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 130, 11.0, 9.0)
+    + _pack(('Zombie', 'ZombieB', 'QuietZombie', 'ZombieC'), 280, 11.0, 12.0), no_blast=True)
+PLISTS['port_fuse_3'] = _wave(
+    [('QuietZombie', 30, 7.0, 0.0)] + _pack(_Z4 + ('ZombieB',), 10, 11.0, 1.0)
+    + [('QuietZombie', 250, 6.5, 2.0)] + _pack(('Hulk', 'HulkB'), 230, 11.0, 3.0)
+    + _pack(_R3, 120, 11.0, 5.0, spread=5.0)
+    + [('Zombie', 160, 7.0, 6.0)] + _pack(_Z4B, 180, 11.0, 7.0)
+    + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 300, 11.0, 9.0)
+    + [('Runner', 330, 9.0, 10.0)] + _pack(_R3, 60, 11.0, 11.0, spread=5.0)
+    + _pack(('Hulk', 'HulkB'), 90, 11.0, 13.0) + [('QuietZombie', 270, 7.0, 13.0)]
+    + _pack(('Zombie', 'ZombieB', 'ZombieC', 'Zombie', 'ZombieC'), 210, 11.0, 15.0), no_blast=True)
+PLISTS['port_fuse'] = {
+    'challenge_id': 'port_fuse',
+    'title': 'Fuse',
+    'objective': 'Forty-five grenades, and a crowd for every few of them. Something always gets there first.',
+    'tip': 'A grenade goes to whatever is nearest in front of you, not to what you meant, and it is loud '
+           'wherever it lands.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'FU',
+    'weapons': [{'name': 'grenade', 'ammo': '45'}, {'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_fuse_1', 'port_fuse_2', 'port_fuse_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
+    'time_limit_star': {'reward': 400, 'objective': 200},
+    'accuracy_star': {'reward': 450, 'objective': 80},
+}
+
+# ------------------------------------------------------------------------------------------- Collateral
+#: What a blast does not do.  `hit_by_explosion` 0x100061284 takes the life off and nothing else: it does not
+#: send a Dodge sideways and it does not wake a Berserk, both of which are `hit_by_weapon`'s doing (0x100060b30),
+#: and it never asks whether a Riot Gear Zombie's shield is up.  So every pack here is escorting one of those,
+#: in the middle of it where a revolver aimed at the pack's sound will find it first - a Berserk woken that
+#: close is 225 life charging, a Dodge is a pack that scatters, a shield is a wall - and the grenades are the
+#: way through, if they last.
+PLISTS['port_collateral_1'] = _wave(
+    _escort(_Z4, 'Berserk', 30, 9.0, 0.0)
+    + _escort(('ZombieB', 'Zombie', 'ZombieC', 'WeakZombie'), 'Berserk', 170, 9.0, 7.0)
+    + _escort(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 'Berserk', 290, 9.0, 14.0), no_blast=True)
+PLISTS['port_collateral_2'] = _wave(
+    _escort(_Z4, 'Dodge', 60, 10.0, 0.0)
+    + _escort(_Z4B, 'Berserk', 200, 9.0, 4.0)
+    + _escort(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 'DodgeB', 320, 10.0, 8.0)
+    + [('Zombie', 130, 10.0, 6.0), ('ZombieB', 250, 10.0, 11.0)]
+    + _escort(_R4, 'Berserk', 100, 10.0, 12.0), no_blast=True)
+PLISTS['port_collateral_3'] = _wave(
+    _escort(_Z4, 'Dodge', 0, 10.0, 0.0)
+    + _escort(_Z4B, 'Berserk', 120, 9.0, 2.0)
+    + _escort(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 'Shield', 240, 10.0, 4.0)
+    + _escort(_R4, 'Berserk', 60, 10.0, 7.0)
+    + _escort(('ZombieB', 'Zombie', 'ZombieC', 'Zombie'), 'DodgeB', 180, 10.0, 9.0)
+    + [('Zombie', 300, 10.0, 6.0), ('ZombieC', 90, 10.0, 11.0), ('Zombie', 210, 10.0, 17.0)]
+    + _escort(_Z4, 'Berserk', 300, 9.0, 15.0)
+    + _escort(_R4, 'Dodge', 150, 11.0, 19.0), no_blast=True)
+PLISTS['port_collateral'] = {
+    'challenge_id': 'port_collateral',
+    'title': 'Collateral',
+    'objective': 'Every crowd out here has something in the middle of it, and none of them should be '
+                 'disturbed.',
+    'tip': 'Some of them take a bullet personally. Nothing out here seems to take a blast that way.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'CL',
+    'weapons': [{'name': 'grenade', 'ammo': '50'}, {'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_collateral_1', 'port_collateral_2', 'port_collateral_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
+    'time_limit_star': {'reward': 450, 'objective': 210},
+    'accuracy_star': {'reward': 450, 'objective': 75},
+}
+
+# -------------------------------------------------------------------------------------------- Crossfire
+#: Point Blank's shotgun, facing both ways at once.  Its cone is sixty degrees either side, which is a third
+#: of the arena and never the half behind, so every pack here comes with another from the opposite side at the
+#: same moment.  The Hunting Rifle is the other half of the answer: it reaches what the shotgun cannot, one at
+#: a time, and forty rounds of it is not much.
+PLISTS['port_crossfire_1'] = _wave(
+    _pack(('Zombie', 'ZombieB', 'ZombieC'), 0, 10.0, 0.0) + _pack(('Zombie', 'ZombieC', 'ZombieB'), 180, 10.0, 0.5)
+    + _pack(('ZombieB', 'Zombie', 'WeakZombie'), 90, 10.0, 10.0)
+    + _pack(('ZombieC', 'Zombie', 'ZombieB'), 270, 10.0, 10.5)
+    + [('Zombie', 45, 11.0, 5.0), ('ZombieB', 225, 11.0, 14.0)], no_blast=True)
+PLISTS['port_crossfire_2'] = _wave(
+    _pack(_Z4, 30, 10.0, 0.0) + _pack(_R3, 210, 11.0, 2.0, spread=5.0)
+    + _pack(_Z4B, 120, 10.0, 8.0) + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 300, 10.0, 8.5)
+    + [('Hulk', 75, 11.0, 4.0), ('Zombie', 255, 11.0, 12.0)]
+    + _pack(_R3, 345, 11.0, 15.0, spread=5.0) + _pack(('Zombie', 'ZombieB', 'ZombieC'), 165, 10.0, 15.5),
+    no_blast=True)
+PLISTS['port_crossfire_3'] = _wave(
+    _pair(_Z4, _Z4B, 10, 0.0) + _pair(_R3, _R3, 100, 4.0, runners=True)
+    + _pack(('Hulk', 'HulkB'), 55, 10.0, 7.0) + _pack(_Z4, 235, 10.0, 7.3)
+    + _pair(_Z4B, _Z4, 150, 10.0) + [('Hulk', 330, 11.0, 11.0)]
+    + _pair(_R3, _R3, 20, 14.0, runners=True) + _pair(_Z4, _Z4B, 70, 17.0)
+    + _pack(_R3, 300, 11.0, 20.0, spread=5.0), no_blast=True)
+PLISTS['port_crossfire'] = {
+    'challenge_id': 'port_crossfire',
+    'title': 'Crossfire',
+    'objective': 'They come two crowds at a time, from opposite sides, and a shotgun only faces one way.',
+    'tip': 'One side can wait, as long as you choose which, and have something that reaches it.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'CF',
+    'weapons': [{'name': 'sawnoff', 'ammo': '70'}, {'name': 'hunting', 'ammo': '40'}, {'name': 'wok'}],
+    'bricks': ['port_crossfire_1', 'port_crossfire_2', 'port_crossfire_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
+    'time_limit_star': {'reward': 450, 'objective': 220},
+    'accuracy_star': {'reward': 450, 'objective': 70},
+}
+
+# ------------------------------------------------------------------------------------------- The Armory
+#: All three of the chapter's weapons, and everything each of them was bought for: packs for the grenades
+#: far out and the shotgun close in, escorts that only a blast should touch, Hulks in pairs, and the
+#: Chainsaws and Clowns that come round the side for the Claymore.  The Colossus was here in the first draft
+#: and came out: five hundred life is twelve direct grenades or twenty-four shells, which none of these
+#: weapons is for, and an arena about choosing the right tool should not have a target that has none.
+PLISTS['port_armory_1'] = _wave(
+    _pack(_Z4, 20, 11.0, 0.0) + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 200, 10.0, 0.5)
+    + [('Hulk', 110, 10.0, 3.0)] + _pack(_R3, 290, 11.0, 6.0, spread=5.0)
+    + _escort(_Z4, 'Berserk', 150, 9.0, 9.0)
+    + [('Chainsaw', 330, 10.0, 12.0)] + _pack(_Z4B, 70, 11.0, 14.0), no_blast=True)
+PLISTS['port_armory_2'] = _wave(
+    _escort(_Z4, 'Dodge', 0, 10.0, 0.0) + _pack(('Hulk', 'HulkB'), 180, 10.0, 1.0)
+    + _pack(_R3, 90, 11.0, 4.0, spread=5.0) + _pack(_R3, 270, 11.0, 4.5, spread=5.0)
+    + _pack(('Hulk', 'HulkB'), 45, 11.0, 6.0) + _escort(_Z4B, 'Berserk', 225, 9.0, 8.0)
+    + [('Chainsaw', 135, 10.0, 10.0), ('Clown', 315, 10.0, 11.0)]
+    + _pack(_Z4, 160, 10.0, 13.0) + _pack(_Z4, 340, 10.0, 13.5), no_blast=True)
+PLISTS['port_armory_3'] = _wave(
+    _pack(_Z4 + ('ZombieB',), 10, 11.0, 0.0) + _pack(_Z4 + ('ZombieC',), 190, 11.0, 0.3)
+    + _pack(('Hulk', 'HulkB'), 100, 11.0, 2.0) + _pack(('Hulk', 'HulkB'), 280, 11.0, 6.0)
+    + _escort(_R4, 'Dodge', 55, 11.0, 5.0) + _escort(_Z4, 'Berserk', 235, 9.0, 7.0)
+    + _pack(('Hulk', 'HulkB'), 145, 11.0, 10.0) + _escort(_Z4B, 'Shield', 325, 10.0, 16.0)
+    + [('Chainsaw', 80, 10.0, 14.0), ('Clown', 260, 10.0, 15.0)]
+    + _pack(_R3, 170, 11.0, 18.0, spread=5.0) + _pack(_Z4, 350, 10.0, 19.0), no_blast=True)
+PLISTS['port_armory'] = {
+    'challenge_id': 'port_armory',
+    'title': 'The Armory',
+    'objective': 'Everything you bought for this chapter, and everything you bought it for.',
+    'tip': 'Each of them is right for something out here and wrong for the rest. There is no time to find '
+           'out which by trying.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'AR',
+    'weapons': [{'name': 'grenade', 'ammo': '25'}, {'name': 'sawnoff', 'ammo': '70'}, {'name': 'claymore'}],
+    'bricks': ['port_armory_1', 'port_armory_2', 'port_armory_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'time_limit_star': {'reward': 500, 'objective': 280},
+    'accuracy_star': {'reward': 500, 'objective': 70},
+}
+
+
 #: The port's own arenas, gathered into chapters (user request).
 #:
 #: A chapter is `(name, stars needed to open it, the arenas in it)`.  Inside a chapter each arena names the
@@ -1105,6 +1381,12 @@ CHAPTERS = (
     #: stars too.
     ('Chapter 3', 26, ('port_ironsights', 'port_thunder', 'port_rust', 'port_drop', 'port_carousel',
                        'port_last')),
+    #: The armory (user request): 27.7 seconds short down to 39.8, by the tool's crowd-weapon reckoning
+    #: (`area_pressure`).  It opens on all nineteen arenas before it beaten and forty of their fifty-seven
+    #: stars - the nineteen for finishing them and twenty-one more, which is seven of the arenas played
+    #: again for both of the others, or most of them for one.
+    ('Chapter 4', 40, ('port_pointblank', 'port_oneswing', 'port_fuse', 'port_collateral', 'port_crossfire',
+                       'port_armory')),
 )
 
 #: Every arena of the port's, in the order they are played.  What `go_to_challenge_list_for` and the

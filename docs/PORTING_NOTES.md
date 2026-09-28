@@ -1733,6 +1733,41 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   wave, but the line would never be heard.  Their arenas talk; ours cannot, without putting recordings into
   their data.
 
+  **Chapter 4** (user request: harder again, and built on the weapons no arena had used yet), six arenas
+  each fought with a weapon from the armory and built against what that weapon is bad at.  It opens on every
+  arena of the three chapters before it beaten and forty of their fifty-seven stars, and by the tool's
+  crowd-weapon reckoning (`area_pressure`, see the second correction to the tool below) it runs from 27.7
+  seconds short to 39.8, carrying on from The Last Word's 25.6.  It is the steepest chapter so far and the
+  one the tool is surest to overstate: it counts no critical hits, and the Sawn-off's are two and a half
+  times at thirty per cent inside fifteen degrees.
+
+  **Point Blank** is the Sawn-off, whose `dispersal` of 1 makes its damage almost all distance - 5 at ten
+  units, 21 at six, 28 at three (`hit_by_weapon` 0x100060b30) - so the arena is waiting, and every wave is
+  packs.  **One Swing** is the Claymore, 70 a swing and two and a half seconds between swings, during which
+  `isWeaponReadyToShoot` 0x1000aa350 will not let the revolver fire either; nothing in it but arrivals, closer
+  together each wave.  **Fuse** is the Grenade Launcher, which `targetEnemiForExplosiveWeapon:` 0x1000c57b8
+  aims at the **nearest** thing in front of the player rather than the one meant, and which rings the ears
+  inside five units - so every pack walks in behind something that got there first, a little to one side.
+  **Collateral** is what a blast does not do: `hit_by_explosion` 0x100061284 wakes no Berserk, sends no
+  Dodge sideways and never asks whether a shield is up, and every pack there escorts one of the three in the
+  middle, where a revolver aimed at the pack's sound finds it first.  **Crossfire** is the Sawn-off against
+  two packs at once from opposite sides - its cone is sixty degrees each way and never the half behind -
+  with the Hunting Rifle for whichever has to wait.  **The Armory** is all three of the chapter's weapons.
+  A Colossus was in its first draft and came out: five hundred life is twelve direct grenades or twenty-four
+  shells, which none of those weapons is for.
+
+  Three weapons have to be bought, and `hasWeaponForChallengeWithName:` 0x10001f868 sends a player without
+  one to the armory as it does for the original's own challenges.  The Sawn-off is one the original's Roman
+  Theater makes a player buy anyway; the Grenade Launcher and the Claymore are the chapter's price.  The
+  Bazooka, the Police Shotgun, the Machine Gun and the Sonic Cannon are left out: between them they cost
+  more than eighty thousand coins and a hundred diamonds, which is a bill rather than a challenge.
+
+  Its waves are bigger than anything the original sends - its largest is fifteen, and some of these are
+  forty - and every enemy of the port's holds its own voices (`voice_of`), so the busiest were played in the
+  real engine with the listener silenced before being kept: 84 voices at once at the most, against the 255
+  mono sources `Device` asks for, and none refused.  The Extra info page says now that a few arenas ask for a
+  weapon to be bought first, where it used to say they use the weapons they hand you.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at

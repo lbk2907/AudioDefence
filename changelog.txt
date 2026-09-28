@@ -19,6 +19,7 @@ Going back has a sound of its own now, so leaving a screen no longer sounds the 
 Two tarot cards that do the same thing now add up. Ten per cent more damage from each is twenty per cent, not ten, and a card never turns out to be worth nothing because another one got there first.
 Some Extra arenas were retuned, so that every arena is harder than the one before it from the first chapter to the last.
 In an Extra chapter, an arena that needs a weapon you have not bought takes you straight to the armory, and a locked arena can no longer be played early.
+Extra has a fourth chapter, fought with weapons from the armory. Some of them have to be bought before their arena will open.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.
