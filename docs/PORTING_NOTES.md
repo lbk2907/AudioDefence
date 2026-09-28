@@ -1695,6 +1695,51 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   enemy's own explosion first and only then consults the flag, so setting the flag alone says exactly what
   was meant, and the key now leaves an enemy's own explosion alone.
 
+  **Chapter 3** (user request: harder again), six arenas on the last levers the engine had, opening on every
+  arena of both chapters before it beaten and twenty-six of their thirty-nine stars.  It runs from thirteen
+  seconds short to twenty-five, which carries straight on from Big Game's twelve; at level four the same six
+  come out between five short and eleven to the good, which is what a chapter reached with thirty stars
+  should feel like.
+
+  **Iron Sights** narrows the cone.  `spread_modifier` is five degrees a card and `Weapon.__init__` adds it
+  to the weapon's own, so `narrowedSpread` twice takes the revolver from thirty degrees to twenty - a third
+  less arena to find a zombie in by ear - and `noCritical` removes the doubling on top, so a shot lined up
+  perfectly is worth no more than one that merely landed.  **Thunder** is the storm, which is the original's
+  own idea: `maya_2`, "A storm is coming!", whose tip says plainly that it is hard to hear zombies through
+  one.  Naming `ambient_storm` as the arena's ambient is the whole of it - `startWithambient:gain:`
+  0x100098004 starts the storm playlist on that name alone, with no modifier set, and stops the random scare
+  sounds while it runs - so nothing in that arena is hard to kill and all of it is hard to place.  **Rust**
+  is the gun itself: `rustyWeapons` to jam it, `lessBullets` twice to take the cylinder from six rounds to
+  four, and `slowerReloadTime` twice to make the 1.8 second reload two and a half, which between them drop
+  the revolver's sustained damage from 16.7 a second to 9.5.  **The Drop** counts the rounds short on purpose
+  and hands over a power-up instead: `PowerUp` {force_spawn_time, type} is the original's own key, and
+  `forceToPopPowerUpContainerWithType:` 0x1000c7b68 puts a container on a random bearing five units out with
+  one life on it, to be found and shot in the middle of everything else.  **Carousel** is the ones that do
+  not come at you, and **The Last Word** is all of it in a storm with `strongerEnemies`.
+
+  What chapter 3 cannot have is Dr. Bastard.  `Brick.init_sounds` asks the engine for a playlist named after
+  the brick (`play_list_with_name(self.name)`), and all ninety-two of those belong to their challenges, each
+  with a folder of its own under `game/sounds/challenges/`.  A brick of ours has no playlist and no folder,
+  so a `Sounds` entry on one would load nothing at all - `brickIsCleared`'s guard keeps that from hanging the
+  wave, but the line would never be heard.  Their arenas talk; ours cannot, without putting recordings into
+  their data.
+
+* CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
+  with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
+  `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at
+  `circlingFactor` 0.9 and speed 2, covers two tenths of a unit a second and takes **forty-five seconds** to
+  arrive from eleven units rather than the nine the tool had been claiming.  Stampede and Big Game had both
+  been sized on the wrong number and were a good deal easier than they measured - Stampede came out at plus
+  3.5 seconds once this was fixed, having been tuned to minus 2.7 - so both were tuned again.  The aggressive
+  state has no circling in it and comes straight in, which is why the last three units are unaffected.
+
+  The tool also models what a challenge's `Modifiers` do to a gun now, which is arithmetic rather than
+  judgement: `lessBullets` and `goldenBullet` on the capacity, the reload modifiers on the reload, and the
+  spread modifiers as a change to how much overhead finding a target costs.  Two more judgement constants sit
+  beside `DEAF_COST` and `MELEE_COST` and say so where they are defined: `STORM_COST`, because the game gives
+  a storm no mechanical effect and it is the player it disables, and `DODGE_COST`, charged per hit an enemy
+  with a `dodge` dict takes.
+
   An info button for Extra, beside the two the play menu already has (user request).
   `ADInfoViewController` takes a page name and reads its title and its text out of `Localizable.strings`,
   which is Somethin' Else's file and holds nothing for a mode they never wrote; so the words for this one

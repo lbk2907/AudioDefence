@@ -76,8 +76,16 @@ ENEMIES = load('enemies')
 WEAPONS = {w['name']: w for w in load('Weapons')['Weapons']}
 
 
-def sustained_dps(weapon: str, level: str = 'level_1') -> float:
-    """Damage a second with the reloads in it, which is what a wave is actually fought with."""
+def sustained_dps(weapon: str, level: str = 'level_1', flags=()) -> float:
+    """Damage a second with the reloads in it, which is what a wave is actually fought with.
+
+    A challenge's `Modifiers` can change the clip and the reload, and those are arithmetic rather than
+    judgement: `Weapon.__init__` takes a tenth off the capacity for each `lessBullets` and adds one for each
+    `goldenBullet` (never below 1), and `reload_time_modifier` is a fifth either way per card.
+    """
+    n = {}
+    for f in flags or ():
+        n[f] = n.get(f, 0) + 1
     w = WEAPONS[weapon]
     lv = w.get(level) or {}
     dmg = float(lv.get('damages') or 0)
@@ -85,7 +93,28 @@ def sustained_dps(weapon: str, level: str = 'level_1') -> float:
     if w.get('melee'):
         return dmg / rate                                 # no clip and no reload, but see `reach`
     cap = float(lv.get('capacity') or 1)
-    return (cap * dmg) / (cap * rate + float(lv.get('reloadTime') or 0))
+    for _ in range(n.get('goldenBullet', 0)):
+        cap += max(int(cap // 10), 1)
+    for _ in range(n.get('lessBullets', 0)):
+        cap = max(1.0, cap - max(int(cap // 10), 1))
+    reload_at = float(lv.get('reloadTime') or 0) / max(
+        0.2, 1.0 + 0.2 * n.get('fasterReloadTime', 0) - 0.2 * n.get('slowerReloadTime', 0))
+    return (cap * dmg) / (cap * rate + reload_at)
+
+
+def aim_cost(weapon: str, level: str, flags=()) -> float:
+    """What the spread modifiers do to finding and facing a target.
+
+    `spread_modifier` is five degrees a card either way and `Weapon.__init__` adds it to the weapon's own
+    spread, so `narrowedSpread` twice takes the revolver's thirty degrees down to twenty.  A narrower cone is
+    a smaller thing to hit by ear, and this charges the overhead in proportion.
+    """
+    n = {}
+    for f in flags or ():
+        n[f] = n.get(f, 0) + 1
+    base = float((WEAPONS[weapon].get(level) or {}).get('spread') or 30)
+    now = max(1.0, base + 5.0 * n.get('widerSpread', 0) - 5.0 * n.get('narrowedSpread', 0))
+    return base / now
 
 
 def walks_away(kind: str) -> bool:
@@ -106,9 +135,21 @@ def deadline(kind: str, distance: float, spawn_time: float) -> float:
     if not speed:
         return float('inf')                               # it never comes to you
     aggressive = float(e.get('agressiveSpeed') or e.get('speed') or 0) * MULT['speed']
-    walk = max(0.0, distance - AGGRESSIVE_AT) / speed
+    # An enemy with a `circling` dict does not walk at the player.  State 2 heads along
+    # (1 - circlingFactor) * toward-the-player + circlingFactor * sideways, so only that fraction of its
+    # speed closes the distance: a Clown at 0.9 covers two tenths of a unit a second out of two.  The
+    # aggressive state has no circling in it and comes straight in.
+    f = _f(e.get('circling'), 'circlingFactor')
+    walk = max(0.0, distance - AGGRESSIVE_AT) / (speed * max(0.05, 1.0 - f))
     close = (min(distance, AGGRESSIVE_AT) - ATTACK_AT) / aggressive
     return spawn_time + SPAWN_SOUND + walk + close
+
+
+def _f(d, key: str, default: float = 0.0) -> float:
+    if not isinstance(d, dict):
+        return default
+    v = d.get(key)
+    return default if v is None else float(v)
 
 
 def blast_damage(d2: float) -> float:
@@ -185,6 +226,12 @@ DODGE_COST = 1.0
 #: it is counted here - and everything of the one who shoots it, which cannot be counted here at all.
 BERSERK_IS_FREE = True
 
+#: PORT JUDGEMENT: what a storm is worth.  `ambient_storm` is the original's own device - maya_2, "A storm
+#: is coming!", whose tip says "it's hard to hear zombies through a storm" - and the game gives it no
+#: mechanical effect at all beyond silencing the scare sounds (`ambient.py`).  It is the player it disables,
+#: like tinnitus, so finding anything is charged this much more for the whole arena.
+STORM_COST = 1.8
+
 
 def extra_overhead(kind: str, overhead: float, per_shot: float) -> float:
     """What this enemy costs beyond its life, for having to be found again."""
@@ -245,13 +292,14 @@ def report(name: str, overhead: float, level: str) -> None:
     if not d:
         print('%s: no such challenge' % name)
         return
-    shown_mods = set_modifiers(d.get('Modifiers'))
+    flags = tuple(d.get('Modifiers') or ())
+    shown_mods = set_modifiers(flags)
     guns = [w['name'] for w in d.get('weapons') or []]
     rounds = {w['name']: int(w.get('ammo') or 0) for w in d.get('weapons') or []}
     ranged = [g for g in guns if not WEAPONS[g].get('melee')]
     melee = [g for g in guns if WEAPONS[g].get('melee')]
-    ranged_dps = max((sustained_dps(g, level) for g in ranged), default=0.0)
-    melee_dps = max((sustained_dps(g, level) for g in melee), default=0.0)
+    ranged_dps = max((sustained_dps(g, level, flags) for g in ranged), default=0.0)
+    melee_dps = max((sustained_dps(g, level, flags) for g in melee), default=0.0)
 
     # what the whole challenge asks for, and what its magazines hold
     need = 0.0
@@ -283,13 +331,20 @@ def report(name: str, overhead: float, level: str) -> None:
         overhead = overhead * MELEE_COST
     gun = (melee if fought_with_wok else ranged)[0]
     per_shot = float((WEAPONS[gun].get(level) or {}).get('damages') or 0)
+    # a narrower cone is a smaller thing to find by ear, and a storm is the original's own way of making
+    # everything harder to place (`ambient_storm`, maya_2)
+    overhead = overhead * aim_cost(gun, level, flags)
+    storm = (d.get('ambient') or {}).get('ambientPlaylist') == 'ambient_storm'
+    if storm:
+        overhead = overhead * STORM_COST
 
     print('%s  (%s)' % (d.get('title', name), name))
     print('  guns %s%s' % (', '.join('%s%s' % (g, ' x%i' % rounds[g] if rounds.get(g) else '')
                                       for g in guns),
                             '   modifiers: %s' % shown_mods if shown_mods else ''))
-    print('  fought with the %s: %.1f damage a second sustained at %s'
-          % ('wok' if fought_with_wok else ranged[0] if ranged else melee[0], dps, level.replace('_', ' ')))
+    print('  fought with the %s: %.1f damage a second sustained at %s%s'
+          % ('wok' if fought_with_wok else ranged[0] if ranged else melee[0], dps, level.replace('_', ' '),
+             ', in a storm' if storm else ''))
     worst, worst_wave = float('inf'), ''
     for brick in d['bricks']:
         wave = load(brick)

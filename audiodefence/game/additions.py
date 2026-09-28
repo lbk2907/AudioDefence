@@ -486,8 +486,8 @@ PLISTS['port_survivor'] = {
 #: asks to be played with `fasterEnemies` twice over, which is `enemi_speed_modifier` at 1.4: the same
 #: crowd, forty per cent less time to deal with it.
 PLISTS['port_stampede_1'] = _crowd(('Runner', 'RunnerB'), 4, 12.0, 4.0)
-PLISTS['port_stampede_2'] = _crowd(('Runner', 'Chainsaw', 'RunnerB', 'RunnerC'), 6, 12.0, 3.2)
-PLISTS['port_stampede_3'] = _crowd(('Runner', 'Clown', 'Chainsaw', 'RunnerB', 'RunnerC'), 9, 12.0, 3.2)
+PLISTS['port_stampede_2'] = _crowd(('Runner', 'Chainsaw', 'RunnerB', 'RunnerC'), 8, 12.0, 2.4)
+PLISTS['port_stampede_3'] = _crowd(('Runner', 'Chainsaw', 'RunnerB', 'Clown', 'RunnerC'), 11, 12.0, 2.1)
 PLISTS['port_stampede'] = {
     'challenge_id': 'port_stampede',
     'title': 'Stampede',
@@ -819,8 +819,8 @@ PLISTS['port_biggame_2'] = _wave(
 PLISTS['port_biggame_3'] = _wave(
     [('Colossus', 0, 12.0), ('Hulk', 80, 12.0, 10.0), ('HulkB', 280, 12.0, 20.0),
      ('Shield', 160, 12.0, 28.0), ('Berserk', 40, 6.5, 2.0), ('Berserk', 320, 6.5, 9.0),
-     ('Runner', 200, 11.0, 34.0), ('RunnerB', 120, 11.0, 39.0), ('Chainsaw', 240, 11.0, 44.0),
-     ('Clown', 60, 11.0, 49.0)], no_blast=True)
+     ('Runner', 200, 11.0, 34.0), ('RunnerB', 120, 11.0, 39.0), ('Chainsaw', 240, 11.0, 40.0),
+     ('Chainsaw', 60, 11.0, 45.0), ('Runner', 150, 11.0, 50.0)], no_blast=True)
 PLISTS['port_biggame'] = {
     'challenge_id': 'port_biggame',
     'title': 'Big Game',
@@ -833,6 +833,206 @@ PLISTS['port_biggame'] = {
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
     'time_limit_star': {'reward': 300, 'objective': 240},
     'accuracy_star': {'reward': 300, 'objective': 60},
+}
+
+
+
+# =========================================================================================== chapter 3
+#: Chapter 3, harder than chapter 2 at the user's asking, and built on the last levers in the engine: the
+#: storm, the modifiers that take a gun apart, the power-up a wave can hand over on cue, and the enemies that
+#: circle rather than walk.
+#:
+#: What it cannot have is Dr. Bastard.  `Brick.init_sounds` asks the engine for a playlist named after the
+#: brick (`play_list_with_name(self.name)`), and all ninety-two of those belong to their challenges, each
+#: with its own folder under `game/sounds/challenges/`.  A brick of ours has no playlist and no folder, so a
+#: `Sounds` entry on one would load nothing - `brickIsCleared`'s guard keeps that from hanging the wave, but
+#: the line would never be heard.  Their arenas talk; ours cannot, without adding recordings to their data.
+
+# ------------------------------------------------------------------------------------------------ Thunder
+#: The storm, which is the original's own idea: `maya_2`, "A storm is coming!", whose tip says plainly that
+#: it is hard to hear zombies through one.  Naming `ambient_storm` as the arena's ambient is all it takes -
+#: `AmbientManager.start_with_ambient` starts the storm playlist on that name alone, and stops the random
+#: scare sounds while it runs - and everything in here has to be found through it.
+#:
+#: So nothing in it is hard to kill.  Weak and ordinary Zombies, and the QuietZombie that is difficult to
+#: place on a still night, and the noise of a jukebox and a machine on top of the weather.
+PLISTS['port_thunder_1'] = _crowd(('WeakZombie', 'QuietZombie', 'Zombie'), 8, 10.0, 2.4)
+PLISTS['port_thunder_1']['PasserBy'] = {
+    'Jukebox': {'spawn_angle': 200.0, 'spawn_distance': 9.0, 'spawn_time': 2.0}}
+PLISTS['port_thunder_2'] = _crowd(('QuietZombie', 'WeakZombie', 'ZombieB', 'QuietZombie'), 12, 10.0, 2.0)
+PLISTS['port_thunder_2']['PasserBy'] = {
+    'Jukebox': {'spawn_angle': 60.0, 'spawn_distance': 9.0, 'spawn_time': 2.0},
+    'Machine': {'spawn_angle': 280.0, 'spawn_distance': 8.0, 'spawn_time': 5.0}}
+PLISTS['port_thunder_3'] = _crowd(('QuietZombie', 'ZombieB', 'QuietZombie', 'WeakZombieB', 'ZombieC'),
+                                  18, 10.0, 1.5)
+PLISTS['port_thunder_3']['PasserBy'] = {
+    'Jukebox': {'spawn_angle': 140.0, 'spawn_distance': 9.0, 'spawn_time': 2.0},
+    'Machine': {'spawn_angle': 320.0, 'spawn_distance': 8.0, 'spawn_time': 4.0},
+    'Cow': {'spawn_angle': 30.0, 'spawn_distance': 11.0, 'spawn_time': 7.0}}
+PLISTS['port_thunder'] = {
+    'challenge_id': 'port_thunder',
+    'title': 'Thunder',
+    'objective': 'Nothing out here is dangerous. Good luck finding any of it.',
+    'tip': 'Wait for the weather. It is not constant, and neither are they.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'TH',
+    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '250'}, {'name': 'wok'}],
+    'bricks': ['port_thunder_1', 'port_thunder_2', 'port_thunder_3'],
+    'ambient': {'ambientPlaylist': 'ambient_storm', 'gain': 0.5},
+    'time_limit_star': {'reward': 300, 'objective': 200},
+    'accuracy_star': {'reward': 350, 'objective': 60},
+}
+
+# --------------------------------------------------------------------------------------------- Iron Sights
+#: A narrower cone and nothing forgiven.  `spread_modifier` is five degrees a card and `Weapon.__init__` adds
+#: it to the weapon's own, so `narrowedSpread` twice takes the revolver from thirty degrees to twenty - a
+#: third less arena to find a zombie in by ear.  `noCritical` takes the doubling away on top, so a shot lined
+#: up perfectly is worth no more than one that merely landed.
+#:
+#: And the things in it move when hit: Dodges strafe 3.5 units every time, which in a twenty degree cone is
+#: further outside it than in a thirty.
+PLISTS['port_ironsights_1'] = _wave(
+    [('Dodge', 40, 12.0), ('Zombie', 200, 10.0, 3.0), ('WeakZombie', 300, 10.0, 8.0),
+     ('ZombieB', 120, 10.0, 13.0)], no_blast=True)
+PLISTS['port_ironsights_2'] = _wave(
+    [('Dodge', 20, 12.0), ('DodgeB', 190, 12.0, 8.0), ('Zombie', 90, 10.0, 2.0),
+     ('QuietZombie', 280, 10.0, 6.0), ('ZombieB', 140, 10.0, 11.0), ('WeakZombieB', 330, 10.0, 16.0)],
+    no_blast=True)
+PLISTS['port_ironsights_3'] = _wave(
+    [('Dodge', 30, 12.0), ('DodgeB', 150, 12.0, 10.0),
+     ('QuietZombie', 80, 10.0, 2.0), ('ZombieB', 200, 10.0, 5.0), ('Runner', 320, 11.0, 9.0),
+     ('QuietZombie', 110, 10.0, 13.0), ('ZombieC', 280, 10.0, 17.0),
+     ('ZombieB', 60, 10.0, 21.0), ('QuietZombie', 240, 10.0, 25.0)], no_blast=True)
+PLISTS['port_ironsights'] = {
+    'challenge_id': 'port_ironsights',
+    'title': 'Iron Sights',
+    'objective': 'Your aim has to be better than it has ever needed to be.',
+    'tip': 'There is less room for error in every shot, and no reward for a perfect one. Take the time to '
+           'be right.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'IS',
+    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_ironsights_1', 'port_ironsights_2', 'port_ironsights_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
+    'Modifiers': ['narrowedSpread', 'narrowedSpread', 'noCritical'],
+    'time_limit_star': {'reward': 300, 'objective': 200},
+    'accuracy_star': {'reward': 350, 'objective': 65},
+}
+
+# ---------------------------------------------------------------------------------------------------- Rust
+#: The gun itself is the arena.  `rustyWeapons` gives every shot a chance of jamming; `lessBullets` twice
+#: takes a tenth off the cylinder each time, six rounds down to four; and `slowerReloadTime` twice makes the
+#: 1.8 second reload two and a half.  Between them the revolver's sustained damage falls from 16.7 a second
+#: to 9.5, which is a different weapon.
+#:
+#: So the crowd is an ordinary crowd and the answer is entirely in when to reload.
+PLISTS['port_rust_1'] = _crowd(('WeakZombie', 'Zombie', 'WeakZombieB'), 8, 10.0, 2.6)
+PLISTS['port_rust_2'] = _crowd(('Zombie', 'WeakZombie', 'ZombieB', 'QuietZombie'), 11, 10.0, 2.2)
+PLISTS['port_rust_3'] = _crowd(('Zombie', 'ZombieB', 'WeakZombie', 'QuietZombie', 'ZombieC'), 15, 10.0, 1.7)
+PLISTS['port_rust'] = {
+    'challenge_id': 'port_rust',
+    'title': 'Rust',
+    'objective': 'The crowd is the easy part. What Dr. Bastard has done to your revolver is not.',
+    'tip': 'It holds less, it takes longer to fill, and sometimes it does nothing at all. Reload on your '
+           'terms or it will happen on theirs.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'RU',
+    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_rust_1', 'port_rust_2', 'port_rust_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
+    'Modifiers': ['rustyWeapons', 'lessBullets', 'lessBullets',
+                  'slowerReloadTime', 'slowerReloadTime'],
+    'time_limit_star': {'reward': 300, 'objective': 210},
+    'accuracy_star': {'reward': 350, 'objective': 55},
+}
+
+# ------------------------------------------------------------------------------------------------ Carousel
+#: The ones that do not come straight at you.  A Chainsaw carries `circling` {circlingFactor 0.5} and a Clown
+#: {circlingFactor 0.9}, and state 2 mixes that fraction of a sideways heading into its approach - so a Clown
+#: at 0.9 is very nearly orbiting, and closes so slowly that the arena is long rather than sharp.  Which is
+#: the point: they are never where the ear last put them, and there is no moment when they are not moving.
+#:
+#: Played with `fasterEnemies` twice, because a circling enemy that is not quick is barely an enemy at all.
+PLISTS['port_carousel_1'] = _crowd(('Chainsaw', 'Clown', 'Chainsaw'), 7, 10.0, 2.6)
+PLISTS['port_carousel_2'] = _crowd(('Chainsaw', 'Clown', 'Chainsaw', 'Clown'), 10, 10.0, 2.2)
+PLISTS['port_carousel_3'] = _crowd(('Chainsaw', 'Clown', 'Chainsaw', 'Runner', 'Clown'), 16, 10.0, 1.6)
+PLISTS['port_carousel'] = {
+    'challenge_id': 'port_carousel',
+    'title': 'Carousel',
+    'objective': 'They are not walking towards you. They are going around you.',
+    'tip': 'Where it was is not where it is. Lead it, or wait for it to come round.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'CR',
+    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '350'}, {'name': 'wok'}],
+    'bricks': ['port_carousel_1', 'port_carousel_2', 'port_carousel_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
+    'Modifiers': ['fasterEnemies', 'fasterEnemies'],
+    'time_limit_star': {'reward': 350, 'objective': 220},
+    'accuracy_star': {'reward': 350, 'objective': 40},
+}
+
+# ------------------------------------------------------------------------------------------------ The Drop
+#: A wave with more in it than the gun can answer, and one thing coming that can.
+#:
+#: `PowerUp` is the original's own key and `Brick.update` reads it: at `force_spawn_time` it calls
+#: `forceToPopPowerUpContainerWithType:` 0x1000c7b68, which puts a PowerUpContainer on a random bearing five
+#: units out with one life on it.  It has to be **found and shot** to be collected, in the middle of
+#: everything else, and it is the only reason the last wave can be finished at all.
+#:
+#: The rounds are counted to make that true: 90 of them against nearly a thousand of life.
+def _drop(kinds, count: int, distance: float, every: float, at: float, kind: str) -> dict:
+    wave = _crowd(kinds, count, distance, every)
+    wave['PowerUp'] = {'force_spawn_time': at, 'type': kind}
+    return wave
+
+
+PLISTS['port_drop_1'] = _drop(('Zombie', 'WeakZombie', 'ZombieB'), 7, 10.0, 3.0, 12.0, 'minigun')
+PLISTS['port_drop_2'] = _drop(('Zombie', 'ZombieB', 'Runner', 'QuietZombie'), 12, 10.0, 2.2, 14.0, 'tesla')
+PLISTS['port_drop_3'] = _drop(('Zombie', 'Hulk', 'ZombieB', 'Runner', 'HulkB'), 14, 10.0, 1.9, 16.0,
+                              'minigun')
+PLISTS['port_drop'] = {
+    'challenge_id': 'port_drop',
+    'title': 'The Drop',
+    'objective': 'Ninety rounds against all of that. Something else is on its way.',
+    'tip': 'Do not spend everything before it arrives, and do not miss it when it does. It has one life and '
+           'it will not come to you.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'DR',
+    'weapons': [{'name': 'pistol', 'ammo': '90'}, {'name': 'wok'}],
+    'bricks': ['port_drop_1', 'port_drop_2', 'port_drop_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
+    'time_limit_star': {'reward': 350, 'objective': 230},
+    'accuracy_star': {'reward': 400, 'objective': 60},
+}
+
+# -------------------------------------------------------------------------------------------- The Last Word
+#: Everything, in a storm, with the zombies a fifth tougher than they have ever been.
+#:
+#: Two Colossus at 500 life each, Hulks, the Riot Gear Zombie, Berserks that had better be left alone, a
+#: Dodge that will not stay found, and Clowns circling - all of it through `ambient_storm`, and all of it
+#: with `strongerEnemies`.  It is the last arena of the last chapter and it is meant to be the hardest thing
+#: in the game; the rifle is here because nothing else would be honest.
+PLISTS['port_last_1'] = _wave(
+    [('Colossus', 0, 12.0), ('Hulk', 120, 12.0, 20.0), ('Berserk', 240, 7.0, 3.0),
+     ('Dodge', 300, 12.0, 34.0), ('Clown', 60, 11.0, 44.0), ('Zombie', 180, 10.0, 52.0)], no_blast=True)
+PLISTS['port_last_2'] = _wave(
+    [('Colossus', 90, 12.0), ('HulkB', 210, 12.0, 22.0), ('Shield', 330, 12.0, 38.0),
+     ('Berserk', 30, 7.0, 3.0), ('DodgeB', 150, 12.0, 50.0), ('Chainsaw', 270, 11.0, 60.0),
+     ('Clown', 60, 11.0, 68.0)], no_blast=True)
+PLISTS['port_last_3'] = _wave(
+    [('Colossus', 0, 12.0), ('Colossus', 180, 12.0, 20.0), ('Hulk', 90, 12.0, 40.0),
+     ('HulkB', 270, 12.0, 54.0), ('Berserk', 45, 6.5, 3.0), ('Berserk', 315, 6.5, 10.0),
+     ('Dodge', 135, 12.0, 66.0), ('Clown', 225, 11.0, 76.0), ('Chainsaw', 300, 11.0, 84.0),
+     ('Runner', 60, 11.0, 92.0)], no_blast=True)
+PLISTS['port_last'] = {
+    'challenge_id': 'port_last',
+    'title': 'The Last Word',
+    'objective': 'All of it, in weather, and none of it is the size it was.',
+    'tip': 'Two of them will take half a minute each and one of them will take nothing at all if you leave '
+           'it be. Choose in that order.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'LD',
+    'weapons': [{'name': 'hunting', 'ammo': '220'}, {'name': 'pistol', 'ammo': '999'},
+                {'name': 'wok'}],
+    'bricks': ['port_last_1', 'port_last_2', 'port_last_3'],
+    'ambient': {'ambientPlaylist': 'ambient_storm', 'gain': 0.5},
+    'Modifiers': ['strongerEnemies'],
+    'time_limit_star': {'reward': 400, 'objective': 300},
+    'accuracy_star': {'reward': 400, 'objective': 65},
 }
 
 
@@ -867,6 +1067,11 @@ CHAPTERS = (
     #: better, rather than only going forward.
     ('Chapter 2', 12, ('port_longwalk', 'port_stampede', 'port_sidestep', 'port_keg', 'port_hydra',
                        'port_biggame')),
+    #: Harder again (user request).  It opens on every arena of both chapters before it being beaten and
+    #: twenty-six of their thirty-nine stars: finishing all thirteen is thirteen stars, so half again as
+    #: many have to come from going back and taking the accuracy and time stars too.
+    ('Chapter 3', 26, ('port_ironsights', 'port_thunder', 'port_rust', 'port_drop', 'port_carousel',
+                       'port_last')),
 )
 
 #: Every arena of the port's, in the order they are played.  What `go_to_challenge_list_for` and the
