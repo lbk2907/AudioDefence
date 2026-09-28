@@ -11,9 +11,17 @@ the first line: what is translated is translated, and the rest stays English.  W
 offers it in Settings as a language of its own, so it can be heard while it is being written, without a
 code being chosen or anything being renamed.
 
-When it is ready, rename it to the language's code - `de.json`, `fr.json`, `ja.json` - and add that code
-and the language's own name to `LANGUAGES` (audiodefence/game/parameters.py).  `template.json` is not
-committed: it belongs to whoever is writing it.
+Some phrases have a gap the game fills in: `%i` a number, `%s` a name or a word ("You need %i stars to play
+this level").  Write your sentence round the same gaps.  They are filled in the English order; to change the
+order, number them by their place in the English (`%2$s ... %1$s`).  A word that changes with a number is
+written with all its forms in braces, where your language puts it: "I have %i {apple|apples}".  How your
+language counts goes once in the file, in the entry "@plural", which this writes empty: one of the names in
+`localization.PLURAL_RULES`, printed when you run this.
+
+When it is ready, rename it to the language's code - `de.json`, `fr.json`, `ja.json` - and put what the
+language calls itself in its "@name" entry ("Deutsch", "Français"): that is the name the Language row offers
+it by, and nothing in the code needs to change.  `template.json` is not committed: it belongs to whoever is
+writing it.
 
 Run this again whenever the port gains text.  A file that is already there keeps every phrase translated
 and only the new ones arrive empty; nothing is ever removed.  Pass a language code to do the same for one
@@ -33,7 +41,7 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, HERE)
 
 import verify_localization as verifier                             # noqa: E402  (its collectors are the point)
-from audiodefence import paths                                     # noqa: E402
+from audiodefence import localization, paths                       # noqa: E402
 
 #: what a translator works in until they choose a code for it (GameParameters.TEMPLATE_LANGUAGE)
 TEMPLATE = 'template'
@@ -71,7 +79,8 @@ def every_phrase(besides: str = '') -> list:
                 continue
             if isinstance(known, dict):
                 for text in known:
-                    seen.setdefault(text, None)
+                    if not text.startswith('@'):           # about that file, not a phrase
+                        seen.setdefault(text, None)
     return sorted(seen)
 
 
@@ -98,6 +107,8 @@ def main(argv=None) -> int:
 
     phrases = every_phrase(besides=os.path.basename(path))
     table = dict(had)
+    table.setdefault('@plural', '')                        # the language's counting rule: see above
+    table.setdefault('@name', '')                          # what the language calls itself
     added = 0
     for text in phrases:
         if text not in table:
@@ -110,18 +121,22 @@ def main(argv=None) -> int:
     with io.open(path, 'w', encoding='utf-8', newline='\n') as fh:
         fh.write(json.dumps(table, ensure_ascii=False, indent=1, sort_keys=True) + '\n')
 
-    done = sum(1 for value in table.values() if value)
+    done = sum(1 for key, value in table.items() if value and not key.startswith('@'))
     where = os.path.relpath(path, ROOT)
     if had:
         print('%s: %d phrases the port can show, %d of them new here.' % (where, len(phrases), added))
     else:
         print('%s: written with %d phrases, every one of them empty.' % (where, len(phrases)))
-    print('%d of %d translated. Fill in the empty ones, in the same order or any other.' % (done, len(table)))
-    if done < len(table):
+    phrases_in = sum(1 for key in table if not key.startswith('@'))
+    print('%d of %d translated. Fill in the empty ones, in the same order or any other.' % (done, phrases_in))
+    if not table.get('@plural'):
+        print('Name how your language counts in "@plural": %s.' % ', '.join(localization.PLURAL_RULES))
+    if done < phrases_in:
         print('An empty phrase stays English, so the file can be used before it is finished.')
     if args.language == TEMPLATE:
         print('The game offers it in Settings as a language while it is there, so it can be heard as it is')
-        print('written. When it is ready, rename it to the language code and add that code to LANGUAGES.')
+        print('written. When it is ready, rename it to the language code and put what the language calls')
+        print('itself in "@name".')
     print('Then: py tools/verify_localization.py --language %s' % args.language)
     return 0
 

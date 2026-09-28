@@ -13,8 +13,21 @@ added by writing a file, not by touching code.  Nothing is translated while the 
 is the default: a player who does not choose one sees exactly what the port always showed.
 
 Whole phrases are the keys rather than single words, so a translation does not depend on how the port
-assembled a line.  A phrase with substitutions (`%i`, `%s`) becomes a rule: the number is substituted and,
-in languages that need it, the counted word is inflected - Russian wants "1 монета", "2 монеты", "5 монет".
+assembled a line.  A phrase with substitutions (`%i` a number, `%s` anything else) becomes a rule, and the
+translator writes the sentence their language wants around the same substitutions:
+
+* **Order.**  `%s` and `%i` are filled in the order the English has them.  `%1$s`, `%2$s`... name one by
+  its place in the English instead, so a sentence can put the second first: "%s is now %s" can be
+  "%2$s ... %1$s".
+* **Word forms.**  A word that changes with a number is written with all its forms between braces,
+  wherever the language puts it: "I have %i {apple|apples}".  The braces go with the nearest number
+  before them (or, if there is none, the first after), and the form is chosen by the language's own rule.
+* **The rule** is named once in the file, in the entry "@plural", from `PLURAL_RULES`: how many forms a
+  word has and which number takes which.  An entry starting with "@" is about the file, not a phrase.
+
+No language lives in this module (user request, 2026-09-28): whatever is particular to one - its words,
+its forms, its sentences - is in its own file, so a translator of any language has what the Russian one
+had.
 """
 from __future__ import annotations
 
@@ -30,42 +43,81 @@ log = logging.getLogger('localization')
 #: The language the port is written in, and the one used when nothing is chosen.
 ENGLISH = 'en'
 
-#: What a counted word looks like in the target language, after a number: one, few, many.
-UNITS = {
-    'coin': ('монета', 'монеты', 'монет'),
-    'coins': ('монета', 'монеты', 'монет'),
-    'diamond': ('алмаз', 'алмаза', 'алмазов'),
-    'diamonds': ('алмаз', 'алмаза', 'алмазов'),
-    'kill': ('убийство', 'убийства', 'убийств'),
-    'kills': ('убийство', 'убийства', 'убийств'),
-    'zombie': ('зомби', 'зомби', 'зомби'),
-    'zombies': ('зомби', 'зомби', 'зомби'),
-    'point': ('очко', 'очка', 'очков'),
-    'points': ('очко', 'очка', 'очков'),
-    'bullet': ('патрон', 'патрона', 'патронов'),
-    'bullets': ('патрон', 'патрона', 'патронов'),
-    'second': ('секунда', 'секунды', 'секунд'),
-    'seconds': ('секунда', 'секунды', 'секунд'),
-    'minute': ('минута', 'минуты', 'минут'),
-    'minutes': ('минута', 'минуты', 'минут'),
-    'line': ('строка', 'строки', 'строк'),
-    'lines': ('строка', 'строки', 'строк'),
-    'per cent': ('процент', 'процента', 'процентов'),
-    'challenge': ('испытание', 'испытания', 'испытаний'),
-    'challenges': ('испытание', 'испытания', 'испытаний'),
-    'wave': ('волна', 'волны', 'волн'),
-    'waves': ('волна', 'волны', 'волн'),
-    'brick': ('кирпич', 'кирпича', 'кирпичей'),
-    'bricks': ('кирпич', 'кирпича', 'кирпичей'),
-    'star': ('звезда', 'звезды', 'звёзд'),
-    'stars': ('звезда', 'звезды', 'звёзд'),
-    'level': ('уровень', 'уровня', 'уровней'),
-    'levels': ('уровень', 'уровня', 'уровней'),
+#: How a language chooses between the forms of a counted word: (how many forms, which one a number takes).
+#: A language file names its rule in "@plural" and writes the forms in this order.  Arithmetic only - the
+#: forms themselves are the language file's - and named after the languages that use them; the order
+#: follows the Unicode plural categories.  A fraction takes the form the language gives 1.5.
+def _one_other(n: float, whole: bool) -> int:            # 1 apple, 2 apples
+    return 0 if whole and n == 1 else 1
+
+
+def _one_below_two(n: float, whole: bool) -> int:        # 0 and 1 take the first form, 1.5 too
+    return 0 if n < 2 else 1
+
+
+def _east_slavic(n: float, whole: bool) -> int:          # 1, 21, 101 | 2-4, 22-24 | 0, 5-20, 25...
+    if not whole:
+        return 1
+    n = int(n)
+    if n % 10 == 1 and n % 100 != 11:
+        return 0
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return 1
+    return 2
+
+
+def _polish(n: float, whole: bool) -> int:               # only 1 | 2-4, 22-24 | the rest
+    if not whole:
+        return 1
+    n = int(n)
+    if n == 1:
+        return 0
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return 1
+    return 2
+
+
+def _czech(n: float, whole: bool) -> int:                # 1 | 2-4 | the rest
+    if not whole:
+        return 1
+    return 0 if n == 1 else 1 if 2 <= n <= 4 else 2
+
+
+def _arabic(n: float, whole: bool) -> int:               # 0 | 1 | 2 | 3-10 | 11-99 | the rest
+    if not whole:
+        return 5
+    n = int(n)
+    if n in (0, 1, 2):
+        return n
+    if 3 <= n % 100 <= 10:
+        return 3
+    if 11 <= n % 100 <= 99:
+        return 4
+    return 5
+
+
+PLURAL_RULES = {
+    'none': (1, lambda n, whole: 0),     # Malay, Indonesian, Chinese, Japanese, Korean, Thai, Vietnamese
+    'one-other': (2, _one_other),        # English, German, Dutch, Spanish, Italian, Swedish, Greek
+    'french': (2, _one_below_two),       # French, Brazilian Portuguese
+    'east-slavic': (3, _east_slavic),    # Russian, Ukrainian, Belarusian
+    'polish': (3, _polish),              # Polish
+    'czech': (3, _czech),                # Czech, Slovak
+    'arabic': (6, _arabic),              # Arabic
 }
+#: the rule a file that names none is read with
+DEFAULT_PLURAL = 'one-other'
 
 #: A substitution in a template.  No space in the flags, so a bare percent sign in the game's own writing
 #: ("10% damage") is not taken for one.
 _SPEC = re.compile(r'%[-+#0]*[0-9]*(?:\.[0-9]+)?[a-zA-Z]')
+#: In a translation, also a substitution named by its place in the English ("%2$s"), and a word's forms
+#: ("{apple|apples}", at least two of them, so a brace the translation means as a brace is left).
+_VALUE_TOKEN = re.compile(r'%(?:(\d+)\$)?[-+#0]*[0-9]*(?:\.[0-9]+)?[a-zA-Z]|\{([^{}|]*(?:\|[^{}|]*)+)\}')
+#: A word's forms on their own, for a template asked for with its gaps still empty.
+_FORMS = re.compile(r'\{([^{}|]*(?:\|[^{}|]*)+)\}')
+#: A substitution that is a number however it was written: "45", "1 000", "45.67", "45,67".
+_NUMBER = re.compile(r'^-?\d[\d\s\u00a0]*(?:[.,]\d+)?$')
 
 #: How the port joins the pieces of one line: "Gyro, Turns slowest", "Aiming. Selected", "A and B".
 _SEGMENT_COMMA = re.compile(r'(, |; |: | -- )')
@@ -81,6 +133,7 @@ _weak_rules: list = []
 _lower: dict = {}
 _scan: list = []
 _language: str | None = None
+_plural = PLURAL_RULES[DEFAULT_PLURAL]
 
 # --- the phrase table --------------------------------------------------------------------------
 
@@ -101,14 +154,28 @@ def available() -> tuple:
     return tuple(codes)
 
 
+def name_of(language: str) -> str:
+    """What a language calls itself, from its file's "@name" entry - the name the Language row offers it
+    by - or its code when the file names none."""
+    if language == ENGLISH:
+        return 'English'
+    try:
+        with open(file_for(language), encoding='utf-8') as fh:
+            raw = json.load(fh)
+    except (OSError, ValueError):
+        return language
+    return str(raw.get('@name') or language) if isinstance(raw, dict) else language
+
+
 def load(language: str, force: bool = False) -> bool:
     """Read that language's file, and build its rules.  English - or a file that is not there - clears
     everything, which leaves `translate` returning what it is given."""
-    global _table, _language, _rules, _weak_rules, _lower, _scan
+    global _table, _language, _rules, _weak_rules, _lower, _scan, _plural
     if not force and language == _language:
         return bool(_table)
     _language = language
     _table, _rules, _weak_rules, _lower, _scan = {}, [], [], {}, []
+    _plural = PLURAL_RULES[DEFAULT_PLURAL]
     if language == ENGLISH:
         return False
     path = file_for(language)
@@ -121,7 +188,12 @@ def load(language: str, force: bool = False) -> bool:
     if not isinstance(phrases, dict):
         log.warning('localization: %s is not a map of phrases', path)
         return False
-    _table = {str(key): str(value) for key, value in phrases.items() if value}
+    _table = {str(key): str(value) for key, value in phrases.items() if value and not str(key).startswith('@')}
+    rule = str(phrases.get('@plural') or DEFAULT_PLURAL)
+    if rule not in PLURAL_RULES:
+        log.warning('localization: %s names a plural rule there is none of: %s', path, rule)
+        rule = DEFAULT_PLURAL
+    _plural = PLURAL_RULES[rule]
     _rules, _weak_rules = _build_rules(_table)
     _lower = {key.lower(): value for key, value in _table.items()}
     _scan = _build_scan(_table)
@@ -153,18 +225,15 @@ def phrases() -> dict:
 
 # --- numbers and plurals -----------------------------------------------------------------------
 
-def _plural(number, one: str, few: str, many: str) -> str:
-    """The form a counted word takes after a number: 1 монета, 2 монеты, 5 монет.  A fractional number
-    takes the middle form, as 12.34 процента does."""
-    value = abs(float(number))
-    if value != int(value):
-        return few
-    n = int(value)
-    if n % 10 == 1 and n % 100 != 11:
-        return one
-    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
-        return few
-    return many
+def form_for(number, forms: list) -> str:
+    """The form of a counted word that goes with `number`, by the loaded language's rule.  Fewer forms
+    than the rule has are not an error a player should hear: the last one written stands in."""
+    try:
+        value = abs(float(re.sub(r'[\s\u00a0]', '', str(number)).replace(',', '.')))
+    except ValueError:
+        return forms[0]
+    index = _plural[1](value, value == int(value))
+    return forms[min(index, len(forms) - 1)]
 
 
 # --- rules built from the table ----------------------------------------------------------------
@@ -181,15 +250,12 @@ def _escape_literal(text: str) -> str:
 def _template_regex(key: str):
     """The rule for a phrase with substitutions.
 
-    Returns the pattern, how many substitutions there are, the counted word after each of them (when the
-    English phrase has one) and whether each substitution is a number.
+    Returns the pattern, how many substitutions there are and whether each substitution is a number.
     """
     key = key.replace('%%', '%')                        # %% prints one percent sign in the source
     parts = []
-    units = {}
     numeric = []
     position = 0
-    index = 0
     for match in _SPEC.finditer(key):
         parts.append(_escape_literal(key[position:match.start()]))
         spec = match.group(0)
@@ -200,67 +266,89 @@ def _template_regex(key: str):
         elif match.start() == 0:
             # A substitution the line opens with does not reach back across ", ": the port glues a row's
             # title in front of its status with one ("Fuse, Grenade Launcher required, press Enter to go
-            # to armory"), and "%s required, ..." swallowed the title with the weapon - "\u043d\u0443\u0436\u043d\u043e Fuse,
-            # \u0413\u0440\u0430\u043d\u0430\u0442\u043e\u043c\u0451\u0442", as though the arena were for sale.  Such a line now reaches
+            # to armory"), and "%s required, ..." swallowed the title with the weapon, so the translation
+            # named the challenge as though it were the thing to buy.  Such a line now reaches
             # `_translate_segments`, which translates the head and the phrase behind it apart.
             parts.append(r'((?:(?!, ).)+?)')
         else:
             parts.append(r'(.+?)')
-        # The counted word is the word straight after the number, or the two ("per cent").  This took the
-        # whole run of words to the end of the line until 2026-09-28, so a count in the middle of a sentence
-        # was never recognised - "You need %i stars to play this level" looked for a unit called "stars to
-        # play this level" - and the translated word after it kept whatever form the translation happened
-        # to be written in, whatever the number.  Measured over all 151 templates in the one language file
-        # there is, five numbers gain a counted word by this and none loses one.
-        word = re.match(r'\s+([A-Za-z]+)(?: ([A-Za-z]+))?', key[match.end():])
-        if word:
-            for unit in ([word.group(1) + ' ' + word.group(2)] if word.group(2) else []) + [word.group(1)]:
-                if unit in UNITS:
-                    units[index] = UNITS[unit]
-                    break
-        index += 1
         position = match.end()
     parts.append(_escape_literal(key[position:]))
-    return re.compile('^' + ''.join(parts) + '$'), index, units, numeric
+    return re.compile('^' + ''.join(parts) + '$'), len(numeric), numeric
 
 
-def _make_rule(value: str, count: int, units: dict, numeric: list):
-    """The rule itself: substitute the numbers, inflect the counted words, and translate whatever the port
-    put into the template, since that is text too - a key name, a weapon, a card."""
+def _foreign(text: str) -> bool:
+    """Whether text already holds letters of a script other than the Latin the port is written in, which
+    is the sign it has been translated already and must not be again."""
+    return any(ch.isalpha() and ord(ch) > 0x24F for ch in text)
+
+
+def _substitution(text: str) -> str:
+    """Translate what the port put into a template - a key's name, a weapon, a card - and the words it
+    joins them with ("Z or X"), which the language file carries as " or " and " and ".  A short name ("Z",
+    "F") is not looked up on its own, but the word between two of them still is."""
+    if _foreign(text):
+        return text
+    if re.search(r'[A-Za-z]{3,}', text):
+        text = translate(text)
+    for joint in (' or ', ' and '):
+        target = _table.get(joint)
+        if target and joint in text:
+            text = target.join(translate(part) for part in text.split(joint))
+    return text
+
+
+def _make_rule(value: str, count: int, numeric: list):
+    """The rule itself: put the substitutions where the translation has them, in its order or by their
+    place in the English (`%2$s`), choose each word's form by the number it goes with, and translate
+    whatever the port put in, since that is text too."""
     value = value.replace('%%', '%')
+    tokens = []                                     # (kind, text or index or forms)
+    position = 0
+    sequential = 0
+    for token in _VALUE_TOKEN.finditer(value):
+        tokens.append(('text', value[position:token.start()]))
+        if token.group(0).startswith('{'):
+            tokens.append(('forms', token.group(2).split('|')))
+        else:
+            if token.group(1):
+                index = int(token.group(1)) - 1
+            else:
+                index = sequential
+                sequential += 1
+            tokens.append(('sub', index))
+        position = token.end()
+    tokens.append(('text', value[position:]))
+    first_number = next((item for kind, item in tokens if kind == 'sub'), None)
 
     def rule(match):
+        filled = {}
         numbers = {}
         for index in range(count):
             raw = match.group(index + 1)
             if not raw:
+                filled[index] = raw or ''
                 continue
             digits = re.sub(r'[^\d]', '', raw)
             if digits and (numeric[index] or digits == raw.strip()):
-                numbers[index] = digits
-        out = ''
-        position = 0
-        index = 0
-        for spec in _SPEC.finditer(value):
-            out += value[position:spec.start()]
-            if index in numbers:
-                out += numbers[index]
+                filled[index] = numbers[index] = digits
             else:
-                group = match.group(index + 1)
-                if group and re.search(r'[A-Za-z]{3,}', group) and not re.search(r'[А-Яа-яЁё]', group):
-                    group = translate(group)
-                out += group
-            position = spec.end()
-            forms = units.get(index)
-            if forms and index in numbers:
-                word = re.match(r'(\s*)([А-Яа-яЁё]+)', value[position:])
-                if word:
-                    out += word.group(1)
-                    out += _plural(numbers[index], *forms)
-                    position += word.end()
-            index += 1
-        out += value[position:]
-        return out
+                raw = _substitution(raw)
+                filled[index] = raw
+                if _NUMBER.match(raw.strip()):
+                    numbers[index] = raw.strip()
+        out = []
+        last = first_number
+        for kind, item in tokens:
+            if kind == 'text':
+                out.append(item)
+            elif kind == 'sub':
+                out.append(filled.get(item, ''))
+                last = item
+            else:
+                # with no number to go by, the last form - the one a language uses for "however many"
+                out.append(form_for(numbers[last], item) if last in numbers else item[-1])
+        return ''.join(out)
     return rule
 
 
@@ -274,10 +362,10 @@ def _build_rules(table: dict):
     for key, value in table.items():
         if not value or '%' not in key:
             continue
-        regex, count, units, numeric = _template_regex(key)
+        regex, count, numeric = _template_regex(key)
         literal = len(_SPEC.sub('', key))
         specs = len(_SPEC.findall(key))
-        rules.append((specs, -literal, regex, _make_rule(value, count, units, numeric)))
+        rules.append((specs, -literal, regex, _make_rule(value, count, numeric)))
     rules.sort(key=lambda item: (item[0], item[1]))
     strong, weak = [], []
     for specs, neg_literal, regex, rule in rules:
@@ -301,68 +389,6 @@ def _build_scan(table: dict):
     return [(pattern, value) for _length, pattern, value in items]
 
 
-# --- phrases the port assembles -----------------------------------------------------------------
-
-#: Lines the port builds by substitution rather than taking whole from the table.  These are Russian
-#: rules; a third language would put its own beside them, which is why they are here and not in the data.
-def _ru(text: str) -> str:
-    """Translate what the port substituted into a template: a key's name, a weapon, the word "or"."""
-    text = translate(text)
-    for english, target in ((' or ', ' или '), (' and ', ' и ')):
-        if english in text:
-            text = target.join(translate(part) for part in text.split(english))
-    return text
-
-
-_MANUAL = (
-    # "the R2 button or the L2 button": an action with two buttons, which the port glues with a
-    # conjunction.  The general "the %s button" rule would take too much ("L2 button or the R2").
-    (re.compile(r'^the (.+?) button or the (.+?) button$'),
-     lambda m: 'кнопка %s или кнопка %s' % (_ru(m.group(1)), _ru(m.group(2)))),
-    (re.compile(r'^(\d+)\s+stars?\s+unlocked$'), lambda m: 'Открыто звёзд: %d' % int(m.group(1))),
-    (re.compile(r'^(\d+)\s+of\s+(\d+)$'), lambda m: '%s из %s' % (m.group(1), m.group(2))),
-    (re.compile(r'^Kills (\d+)$'), lambda m: 'Убийств: %d' % int(m.group(1))),
-    (re.compile(r'^kills$'), lambda m: 'убийств'),
-    (re.compile(r'^Accuracy ([\d.,]+)\s*%$'),
-     lambda m: 'Точность: %s %s' % (m.group(1), _plural(m.group(1).replace(',', '.'), 'процент',
-                                                        'процента', 'процентов'))),
-    (re.compile(r'^accuracy$'), lambda m: 'точность'),
-    (re.compile(r'^Survival time (.+)$'), lambda m: 'Время выживания: %s' % m.group(1)),
-    (re.compile(r'^owned\s*:\s*level\s+(\d+)$'), lambda m: 'куплено, уровень %d' % int(m.group(1))),
-    (re.compile(r'^owned$'), lambda m: 'куплено'),
-    (re.compile(r'^level\s+(\d+)$'), lambda m: 'уровень %d' % int(m.group(1))),
-    # The tutorial's own lines: the port substitutes the name of a key or a button.
-    (re.compile(r'^Use your (.+?) or (.+?) key to aim\.$'),
-     lambda m: 'Поворачивайся клавишами %s или %s, чтобы целиться.' % (_ru(m.group(1)), _ru(m.group(2)))),
-    (re.compile(r'^Listen carefully and turn until you feel the zombie is right in front of you, '
-                r'then use the (.+?) key to fire your weapon\.$'),
-     lambda m: 'Слушай внимательно и поворачивайся, пока не почувствуешь, что зомби прямо перед тобой, '
-               'затем нажми %s, чтобы выстрелить.' % _ru(m.group(1))),
-    (re.compile(r'^Use the (.+?) key to reload your weapon\.$'),
-     lambda m: 'Нажми %s, чтобы перезарядить оружие.' % _ru(m.group(1))),
-    (re.compile(r'^You can change your aim control at any time in the pause menu, '
-                r'which can be accessed using the (.+?) key\.$'),
-     lambda m: 'Сменить способ прицеливания можно в любой момент в меню паузы, '
-               'оно открывается клавишей %s.' % _ru(m.group(1))),
-    (re.compile(r'^Use the (.+?) key to switch between weapons\.$'),
-     lambda m: 'Нажми %s, чтобы сменить оружие.' % _ru(m.group(1))),
-    (re.compile(r'^You can use the (.+?) key to skip dialogs\.$'),
-     lambda m: 'Пропустить диалог можно клавишей %s.' % _ru(m.group(1))),
-    (re.compile(r'^To use the melee weapon, turn to face the zombies first\. '
-                r'Then, press the (.+?) key\.$'),
-     lambda m: 'Чтобы ударить в ближнем бою, сначала повернись к зомби. Затем нажми %s.' % _ru(m.group(1))),
-    # The aiming hint appears in three spellings in the game's data (hear the Zombie, feel a Zombie,
-    # feel a zombie); one rule covers them.
-    (re.compile(r'^Aim with your ears\.\s*Shoot when you (?:hear|feel) (?:the |a )?'
-                r'[Zz]ombies? right in front of you\.$'),
-     lambda m: 'Целься на слух. Стреляй, когда чувствуешь, что зомби прямо перед тобой.'),
-    (re.compile(r'^Revive for (\d+) diamonds?$'),
-     lambda m: 'Возродиться за %s %s' % (m.group(1), _plural(int(m.group(1)), 'алмаз', 'алмаза', 'алмазов'))),
-    (re.compile(r'^Respawn for (\d+) diamonds?$'),
-     lambda m: 'Возродиться за %s %s' % (m.group(1), _plural(int(m.group(1)), 'алмаз', 'алмаза', 'алмазов'))),
-)
-
-
 def _apply_rules(text: str, rules):
     for regex, rule in rules:
         match = regex.match(text)
@@ -373,7 +399,7 @@ def _apply_rules(text: str, rules):
 
 #: the conjunctions `_SEGMENT_JOIN` splits on.  They are phrases in their own right - " and " is in the
 #: table - so a line that can be split by one and translated no further would come back with only its
-#: conjunction in the new language ("the text is shown и spoken in"), which reads worse than leaving the
+#: conjunction in the new language, every other word still English, which reads worse than leaving the
 #: line alone.  A conjunction is substituted, but it does not by itself make a line translated.
 _JOINS = (' and ', ' or ')
 
@@ -398,7 +424,7 @@ def _parts(text: str, splitter):
             changed = True
             out.append(found)
             continue
-        replaced = _apply_rules(stripped, _MANUAL) or _apply_rules(stripped, _rules) \
+        replaced = _apply_rules(stripped, _rules) \
             or _apply_rules(stripped, _weak_rules)
         if replaced is not None:
             changed = True
@@ -430,7 +456,7 @@ def _translate_segments(text: str):
         head = text[:match.start()].strip()
         if not head:
             continue
-        translated = (_table.get(head) or _apply_rules(head, _MANUAL) or _apply_rules(head, _rules))
+        translated = (_table.get(head) or _apply_rules(head, _rules))
         if translated:
             return translated + match.group(0) + translate(text[match.end():])
     # Then a tail that is a phrase with a separator of its own, which splitting at every separator would cut
@@ -439,7 +465,7 @@ def _translate_segments(text: str):
         tail = text[match.end():].strip()
         if not _SEGMENT_COMMA.search(tail):
             continue
-        translated = (_table.get(tail) or _apply_rules(tail, _MANUAL) or _apply_rules(tail, _rules))
+        translated = (_table.get(tail) or _apply_rules(tail, _rules))
         if translated:
             return translate(text[:match.start()]) + match.group(0) + translated
     by_comma = _parts(text, _SEGMENT_COMMA)
@@ -461,6 +487,11 @@ def translate(text):
         return text                                      # English, or no language file
     exact = _table.get(text)
     if exact:
+        if '{' in exact and _SPEC.search(text):
+            # A template asked for with its gaps still empty, to be filled in by whoever asked: there is no
+            # number yet to choose a form by, so each word takes its "however many" form, and no brace is
+            # ever read out.
+            return _FORMS.sub(lambda m: m.group(1).split('|')[-1], exact)
         return exact
     if '\n' in text:
         # Multi-line text: the whole thing first (the port glues paragraphs and captions), then line by
@@ -478,10 +509,9 @@ def translate(text):
         found = _table.get(flat)
         if found:
             return found
-    for rules in (_MANUAL, _rules):
-        replaced = _apply_rules(flat, rules)
-        if replaced is not None:
-            return replaced
+    replaced = _apply_rules(flat, _rules)
+    if replaced is not None:
+        return replaced
     by_parts = _translate_segments(flat)
     if by_parts is not None:
         return by_parts

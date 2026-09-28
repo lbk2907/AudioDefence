@@ -91,8 +91,9 @@ is written — the phrases are data.
   game offers it in the Language row as *Template, being translated* — no code
   chosen, nothing renamed
 - when it is ready, rename it to the language's code — `de.json`, `fr.json`,
-  `ja.json` — and add that code and the language's own name to `LANGUAGES` in
-  `audiodefence/game/parameters.py`, which is what the Language row offers
+  `ja.json` — and put what the language calls itself in its `"@name"` entry
+  ("Deutsch", "Français"). That is the name the Language row offers it by; no
+  code needs changing
 - run `py tools/verify_localization.py`, which fails if a phrase a player can
   reach is still English, so a language cannot quietly fall behind as the port
   grows. It skips `template.json`, unfinished by definition; ask for it by name
@@ -107,10 +108,27 @@ nothing is ever removed.
 A language arrives with a release, because the phrase files are built into the
 game. Adding one to a copy you already have means waiting for the next build.
 
-The layer handles what a flat list cannot: `%i` and `%s` are substituted and
-the counted word is inflected, which Russian needs (1 монета, 2 монеты,
-5 монет), and a line the port assembles from pieces is translated piece by
-piece.
+**Lines with a gap in them.** Some lines have something filled in by the game:
+`%i` is a number, `%s` is a name or a word. They arrive as they are — "You need
+%i stars to play this level" — and you write your sentence around the same
+gaps, in whatever order your language wants:
+
+- the gaps are filled in the order the English has them. To put them in another
+  order, number them by their place in the English: `%2$s ... %1$s`
+- a word that changes with a number is written with all its forms between
+  braces, wherever it goes: `"I have %i {apple|apples}"`. The braces take the
+  number nearest before them (or the first after, if there is none before)
+- how your language counts goes once in the file, as `"@plural"`: `none`
+  (Malay, Indonesian, Chinese, Japanese…), `one-other` (English, German,
+  Spanish…), `french`, `east-slavic` (Russian, Ukrainian), `polish`, `czech` or
+  `arabic`. That says how many forms to write and which number takes which; the
+  Russian file is an example of three, `{звезда|звезды|звёзд}`
+
+`verify_localization.py` tells you when a line has more or fewer forms than
+your `"@plural"` says. Nothing of any one language is in the game's code: what
+is particular to a language is all in its own file.
+
+A line the port assembles from pieces is translated piece by piece.
 
 ## How this was made
 

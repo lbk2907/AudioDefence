@@ -19,6 +19,7 @@ import argparse
 import ast
 import copy
 import io
+import json
 import os
 import plistlib
 import re
@@ -79,13 +80,23 @@ PLUMBING = (
     re.compile(r'^[a-z][a-z0-9_]*$'),                           # sound_name, level_3
     re.compile(r'^\d'),
     re.compile(r'\\|\^|\{|\}|\[|\]|\|'),                        # a regular expression or a format
-    re.compile(r'%[-+ #0-9.*]*[a-zA-Z]'),                       # a template, not a phrase of its own
-    re.compile(r'[А-Яа-яЁё]'),                                  # already in the target language
 )
+
+#: A substitution the port fills in: `%s`, `%i`, `%.1f`.  A line with one is offered to a translator as it
+#: is, substitutions and all - "You need %i stars to play this level" - and the translator writes their
+#: sentence round them (`localization`: order, `%2$s`, and a word's forms in braces).  Until 2026-09-28
+#: every such line was taken for plumbing and never offered, so a language started without any of them.
+TEMPLATE_SPEC = re.compile(r'%[-+ #0-9.*]*[a-zA-Z]')
 
 
 def is_plumbing(text: str) -> bool:
-    return any(pattern.search(text) for pattern in PLUMBING)
+    if any(pattern.search(text) for pattern in PLUMBING):
+        return True
+    # A template with no words of its own is glue ("%s, %s", "%s: %s", "%d%%"): nothing to translate.
+    if TEMPLATE_SPEC.search(text) and not re.search(r'[A-Za-z]{2,}', TEMPLATE_SPEC.sub('', text)):
+        return True
+    # Text already in another script is a translation, not a phrase to be translated.
+    return any(ch.isalpha() and ord(ch) > 0x24F for ch in text)
 
 
 def _called_name(node) -> str:
@@ -276,6 +287,28 @@ def _strings_file(path: str):
                 yield match.group(2)
 
 
+def forms_problems(language: str) -> list:
+    """Lines whose word forms do not fit the language's rule: "{apple|apples}" in a file whose "@plural"
+    has three forms, say, or a rule there is none of."""
+    try:
+        with io.open(localization.file_for(language), encoding='utf-8') as fh:
+            raw = json.load(fh)
+    except (OSError, ValueError) as exc:
+        return ['localization/%s.json cannot be read: %s' % (language, exc)]
+    rule = raw.get('@plural') or localization.DEFAULT_PLURAL
+    if rule not in localization.PLURAL_RULES:
+        return ['"@plural" is %r, and the rules there are are %s' % (rule, ', '.join(localization.PLURAL_RULES))]
+    wanted = localization.PLURAL_RULES[rule][0]
+    out = []
+    for key, value in raw.items():
+        if key.startswith('@') or not isinstance(value, str):
+            continue
+        for forms in re.findall(r'\{([^{}|]*(?:\|[^{}|]*)+)\}', value):
+            if len(forms.split('|')) != wanted:
+                out.append('%s   (%d forms where "%s" has %d)' % (key[:90], len(forms.split('|')), rule, wanted))
+    return out
+
+
 def check(language: str) -> list:
     if not localization.load(language, force=True):
         return ['localization/%s.json cannot be read' % language]
@@ -323,6 +356,12 @@ def main() -> int:
     failed = False
     for language in languages:
         print('checking %s' % language)
+        wrong = forms_problems(language)
+        if wrong:
+            failed = True
+            print('  %d lines have word forms that do not fit the language\'s "@plural":' % len(wrong))
+            for line in wrong[:40]:
+                print('    ' + line)
         problems = check(language)
         if problems:
             failed = True

@@ -284,7 +284,11 @@ class GameParameters:
     #: PORT ADDITION: Settings -> Miscellaneous -> Language: the language the port's own text is shown and
     #: spoken in (audiodefence/localization.py, localization/<code>.json).  English by default, so a player
     #: who does not choose one sees exactly what the port always showed.
-    LANGUAGES = (('en', 'English'), ('ru', 'Русский'))
+    #:
+    #: Only the port's own language is written here.  Every other is a file under `localization/`, which
+    #: says what the language calls itself in its "@name" entry, so a language is added by adding its file
+    #: and nothing in the code names one (user request, 2026-09-28).
+    LANGUAGES = (('en', 'English'),)
     DEFAULT_LANGUAGE = 'en'
     #: what `tools/make_language.py` writes, and what a translator works in before choosing a code for it.
     #: Offered only while the file is there, and never committed, so nobody but its author ever sees it.
@@ -296,11 +300,15 @@ class GameParameters:
         PORT ADDITION: a translator fills in `localization/template.json` and can hear it in the game before
         renaming it to a language code, which is the point at which it becomes a language like any other.
         """
-        from ..localization import file_for
+        from ..localization import available, file_for, name_of
         import os
+        offered = list(self.LANGUAGES)
+        for code in available():
+            if code not in dict(offered) and code != self.TEMPLATE_LANGUAGE[0]:
+                offered.append((code, name_of(code)))
         if os.path.isfile(file_for(self.TEMPLATE_LANGUAGE[0])):
-            return self.LANGUAGES + (self.TEMPLATE_LANGUAGE,)
-        return self.LANGUAGES
+            offered.append(self.TEMPLATE_LANGUAGE)
+        return tuple(offered)
 
     def language(self) -> str:
         value = self.defaults.object('language')

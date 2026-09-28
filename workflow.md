@@ -134,11 +134,18 @@ put in the wrong places on those numbers.  The simulation is not a better measur
 on how well its bot plays), which is why it was not kept; it is a way of finding out what the measure is
 missing.
 
-A line with a substitution in it - "Tarot card number %i : %s" - is never offered to a translator: it is a
-template, and the tool drops it whole (`PLUMBING`).  So a phrase written inside one is invisible, and stays
-English without anything saying so.  Hand that phrase to `localization.translate()` on its own and build the
-line around the result, which the tool does collect.  The third tarot card's note was found this way on
-2026-09-26, after the verifier passed while the phrase it had just gained was nowhere in it.
+**A line with a gap in it goes to a translator whole.**  Write it as one `%` template - "Tarot card number
+%i : %s" - and the tools offer it as it is, for the translator to write their sentence round, in their own
+order (`%2$s`) and with their own word forms (`{apple|apples}`).  Until 2026-09-28 the tools dropped every
+such line, and the advice here was to translate the phrase inside it on its own and glue the line round the
+result - which still works, but ties every language to the English order, so a new line is one template.
+An f-string or a `str.format` brace is not seen as one: use `%` for anything a player reads.
+
+**Nothing of one language goes into the code** (user request, 2026-09-28).  Its words, its word forms, how
+it counts, whole sentences of it: all of that is its own file under `localization/`, so a translator of any
+language has everything the first one had.  The code knows how counting rules work (`PLURAL_RULES`, which is
+arithmetic) and no language's words.  About sixty lines of Russian moved out of `localization.py` into
+`ru.json` that day, checked to read exactly as before over 5,824 lines.
 
 The same goes for the game's own writing when the port corrects it (`data.TYPOS`, `data.REWORDED`): what
 the player is told is the corrected sentence, so that is the sentence a language file needs.  The verifier

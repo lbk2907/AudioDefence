@@ -1133,8 +1133,8 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   `AccessibleScreen.page_title`, `data.localized()`, and `Speech.speak` as the last resort, so nothing the
   player hears escapes it.  The port's own small vocabulary - Selected, dimmed, button, heading - goes
   through the same table, so a translated screen cannot be left with one English word in the middle of a
-  sentence.  A line is matched whole first, then as a template (`%i`, `%s`) with the counted word inflected,
-  which Russian needs, then by the pieces the port assembles itself, and last by looking for phrases it
+  sentence.  A line is matched whole first, then as a template (`%i`, `%s`) with its word forms chosen by
+  number, then by the pieces the port assembles itself, and last by looking for phrases it
   knows inside a longer line.  Nothing is translated while the language is English, which is the default.
   A conjunction does not by itself make a line translated (`_JOINS`): " and " is a phrase in the table, so
   a line the layer could split but not otherwise translate came back with only its conjunction changed -
@@ -1145,16 +1145,34 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   English.  The recorded audio - the announcer and the game's spoken lines - stays English: it is sound, not
   text.
 
-  The counted word is the word straight after the number (`_template_regex`), or the two for "per cent".
-  Until 2026-09-28 it was the whole run of words to the end of the line, so a count in the middle of a
-  sentence was never recognised and the word after it kept whatever form the translation was written in:
-  "нужно 73 звёзд", "уложились в 22 секунд", "заработал 21 монет".  Compared over every numbered line in the
-  Russian file at six numbers each, 906 lines: twenty read differently, all of them put right.
+  Nothing of one language is in the code (user request, 2026-09-28).  The layer as it came had Russian
+  written into it: a table of Russian word forms keyed by the English word after a number (`UNITS`), the
+  Russian way of choosing between them, the Russian "or" and "and", and some twenty whole Russian sentences
+  for lines the port builds (`_MANUAL`).  A second language could have none of that without code.  It is all
+  in `ru.json` now, and the layer is the same for every language:
 
-  Nothing of one language goes into the code for this (user request): a line that wants other forms than
-  a count standing on its own - Russian's "уложились в 21 секунду", say - is the translator's to word in
-  their own file.  Three rules that did it in `_MANUAL` for Russian were written and taken out again the
-  same day for that reason, so every language is handed the same general layer and edits its own lines.
+  * a line with a gap - `%i` a number, `%s` anything else - is offered to a translator whole, and the
+    translation writes its sentence round the same gaps, filled in the English order or by their place in
+    the English (`%2$s`), so a language can put them the other way round;
+  * a word that changes with a number carries its forms in the translation itself, in braces where the
+    language puts it - "нужно %i {звезда|звезды|звёзд}" - and takes the number nearest before it;
+  * how a language chooses between them is named once, in the file's "@plural" entry, from
+    `PLURAL_RULES`: seven rules of arithmetic (none, one-other, french, east-slavic, polish, czech, arabic),
+    no words.  With no number to go by, the last form - the "however many" one - is used.
+
+  Russian reads exactly as it did: old layer and old file against new layer and new file, over 5,824 lines -
+  every line of the file filled in at thirteen numbers and several names, every phrase the verifier
+  collects, every challenge row, and every line the old hand-written sentences took - not one differs.
+  Along the way two things were put right that the old detection had got wrong: the counted word was found
+  only when it ended the line ("You need %i stars to play this level" was never inflected, so "нужно 73 звёзд"), and three
+  Russian rules added for it the same morning were the kind of thing this is meant to keep out.  The tools
+  changed with it: `make_language.py` gives a new language every line with a gap and an empty "@plural", and
+  `verify_localization.py` says when a line has more or fewer forms than its "@plural" allows.  Six tarot card
+  descriptions with a percent sign in them ("10% more damage") had also been taken for templates and never
+  offered; they are now.  And the Language row reads what each file calls its language from its "@name"
+  entry rather than from a list in `GameParameters.LANGUAGES`, which named Russian: a language is added by
+  adding its file.  A template asked for with its gaps still empty - to be filled in by whoever asked - gets
+  each word's last form, so no brace is ever read out.
 
   A substitution a template opens with no longer reaches back across ", " (`_template_regex`).  A table row
   is spoken as its title, a comma and its status, and "%s required, press Enter to go to armory" swallowed
