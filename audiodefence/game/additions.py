@@ -1256,29 +1256,52 @@ PLISTS['port_fuse'] = {
 # ------------------------------------------------------------------------------------------- Collateral
 #: What a blast does not do.  `hit_by_explosion` 0x100061284 takes the life off and nothing else: it does not
 #: send a Dodge sideways and it does not wake a Berserk, both of which are `hit_by_weapon`'s doing (0x100060b30),
-#: and it never asks whether a Riot Gear Zombie's shield is up.  So every pack here is escorting one of those,
-#: in the middle of it where a revolver aimed at the pack's sound will find it first - a Berserk woken that
-#: close is 225 life charging, a Dodge is a pack that scatters, a shield is a wall - and the grenades are the
-#: way through, if they last.
+#: and it never asks whether a Riot Gear Zombie's shield is up.  A Berserk woken is 225 life charging, a Dodge
+#: shot steps aside, a shield raised is a wall - so the grenades are the way through.
+#:
+#: Rebuilt so that each of the three is somewhere it can really be (user request, 2026-09-29: "too many, and
+#: does it make sense").  The first draft had every one of them escorted in the middle of a crowd, and two of
+#: the three cannot stay there: a Berserk left alone walks *away* (state 2 of `update:` heads along
+#: -orientation) and leaves after 15 seconds, and a Dodge at 0.9 outruns a crowd at 0.5 - and some of the
+#: crowds were Runners, the fastest thing in the arena, round a Berserk walking the other way.  Now:
+#:
+#: * a Berserk rests seven units out on a crowd's way in (`_resting`), and the crowd walks past it, crossing
+#:   about eight units out.  A revolver aimed at the crowd's sound can find the Berserk; a grenade cannot
+#:   wake it, and one landing on it still takes the crowd, four units behind, with its flat thirty.  It never
+#:   has to be killed: left alone, it goes.
+#: * a Shield walks in the middle of its crowd, at its pace, half a unit ahead (`_escort`): the first
+#:   grenade takes the crowd and two more the Shield, whichever of them the first one lands on.
+#: * a Dodge comes on its own, or two together: grenaded, it does not step aside.
+#:
+#: The crowds are weak ones (20 of life), so one blast of thirty takes a crowd, as in Fuse.  Runners come in
+#: a small pack of their own, with nothing in it to disturb.  The last wave went from seven crowds and 38
+#: enemies to five groups and 27.
+_WEAK4 = ('WeakZombie', 'WeakZombieB', 'WeakZombieC', 'WeakZombie')
+
+
+def _resting(kinds, bearing: float, distance: float, at: float) -> list:
+    """A crowd walking in past a Berserk resting on its way, seven units out, there a second before it."""
+    return [('Berserk', bearing, 7.0, max(0.0, at - 1.0))] + _pack(kinds, bearing, distance, at, spread=8.0)
+
+
 PLISTS['port_collateral_1'] = _wave(
-    _escort(_Z4, 'Berserk', 30, 9.0, 0.0)
-    + _escort(('ZombieB', 'Zombie', 'ZombieC', 'WeakZombie'), 'Berserk', 170, 9.0, 7.0)
-    + _escort(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 'Berserk', 290, 9.0, 14.0), no_blast=True)
+    _resting(_WEAK4, 30, 10.0, 1.0)
+    + _resting(('WeakZombieB', 'WeakZombieC', 'WeakZombie', 'WeakZombieB'), 170, 10.0, 8.0)
+    + _resting(('WeakZombieC', 'WeakZombie', 'WeakZombieB', 'WeakZombieC'), 290, 10.0, 15.0), no_blast=True)
 PLISTS['port_collateral_2'] = _wave(
-    _escort(_Z4, 'Dodge', 60, 10.0, 0.0)
-    + _escort(_Z4B, 'Berserk', 200, 9.0, 4.0)
-    + _escort(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 'DodgeB', 320, 10.0, 8.0)
-    + [('Zombie', 130, 10.0, 6.0), ('ZombieB', 250, 10.0, 11.0)]
-    + _escort(_R4, 'Berserk', 100, 10.0, 12.0), no_blast=True)
+    _escort(('WeakZombie', 'WeakZombieB', 'WeakZombieC'), 'Shield', 60, 10.0, 0.0)
+    + _resting(('WeakZombieB', 'WeakZombie', 'WeakZombieC', 'WeakZombie'), 200, 10.0, 4.0)
+    + [('Zombie', 130, 10.0, 6.0), ('Dodge', 320, 11.0, 7.0)]
+    + _pack(_R3, 100, 11.0, 11.0, spread=5.0)
+    + [('ZombieB', 250, 10.0, 12.0)], no_blast=True)
 PLISTS['port_collateral_3'] = _wave(
-    _escort(_Z4, 'Dodge', 0, 10.0, 0.0)
-    + _escort(_Z4B, 'Berserk', 120, 9.0, 2.0)
-    + _escort(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 'Shield', 240, 10.0, 4.0)
-    + _escort(_R4, 'Berserk', 60, 10.0, 7.0)
-    + _escort(('ZombieB', 'Zombie', 'ZombieC', 'Zombie'), 'DodgeB', 180, 10.0, 9.0)
-    + [('Zombie', 300, 10.0, 6.0), ('ZombieC', 90, 10.0, 11.0), ('Zombie', 210, 10.0, 17.0)]
-    + _escort(_Z4, 'Berserk', 300, 9.0, 15.0)
-    + _escort(_R4, 'Dodge', 150, 11.0, 19.0), no_blast=True)
+    _escort(_WEAK4, 'Shield', 0, 10.0, 0.0)
+    + _resting(('WeakZombieB', 'WeakZombieC', 'WeakZombie', 'WeakZombieB'), 120, 10.0, 2.0)
+    + [('Dodge', 235, 11.0, 5.0), ('DodgeB', 245, 11.0, 5.3), ('Zombie', 330, 10.0, 6.0)]
+    + _escort(('WeakZombieC', 'WeakZombie', 'WeakZombieB'), 'Shield', 180, 10.0, 10.0)
+    + _pack(_R3, 60, 11.0, 12.0, spread=5.0)
+    + [('ZombieC', 90, 10.0, 13.0)]
+    + _resting(('WeakZombie', 'WeakZombieC', 'WeakZombieB', 'WeakZombie'), 270, 10.0, 16.0), no_blast=True)
 PLISTS['port_collateral'] = {
     'challenge_id': 'port_collateral',
     'title': 'Collateral',
