@@ -1893,6 +1893,18 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   Chainsaw a second apart the player gets through.  The tool's line for it does not move, since it never saw
   the pile-up (the third correction to it, below).
 
+  Fuse's single walkers are ordinary Zombies (user request, the same day).  Each crowd there comes in behind
+  one enemy seven units out, a little to one side, which the grenade goes to instead of the crowd, since
+  `targetEnemiForExplosiveWeapon:` 0x1000c57b8 takes the nearest thing in its cone - and the Grenade Launcher
+  has no `criticalSpread`, so no aim picks the crowd over it.  The answer is to hear the near one and use
+  the revolver on it first.  They were Quiet Zombies, and a Quiet Zombie's walking recordings measure
+  25 dB under a Zombie's (-46 against -21 RMS), a whisper beside a crowd: the thing taking the grenade could
+  not be heard, which the player found in play.  Five of them are ZombieB and ZombieC now, the voices the
+  crowds already have; the Quiet Zombies inside crowds stay, since they die with the crowd.  The tool reads
+  the arena as harder afterwards (level 1, 30.4 seconds short to 36.6), which it is not: it hears every
+  enemy perfectly, so it never priced the whisper, and the later arrival of a Zombie's longer spawn sound
+  shifts where its grenades land against its judgement of deafness.  Fuse keeps its place.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at

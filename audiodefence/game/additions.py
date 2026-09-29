@@ -1204,25 +1204,30 @@ PLISTS['port_oneswing'] = {
 #: player, not the one they meant, and a blast inside five units rings the ears like any other.  So every
 #: pack here walks in behind something that got there first, a little to one side of it - close enough to be
 #: in front when the pack is, and near enough that a grenade meant for the pack lands at the player's feet.
+#:
+#: The one that gets there first is an ordinary Zombie (user request, 2026-09-29).  They were Quiet Zombies,
+#: whose walking recordings are 25 dB under a Zombie's (-46 against -21), a whisper beside a crowd - so the
+#: thing stealing the grenade could not be heard, and the arena could not be played by listening for it.
+#: The Quiet Zombies inside the crowds are kept: they die with the crowd.
 PLISTS['port_fuse_1'] = _wave(
     _pack(('WeakZombie', 'Zombie', 'WeakZombieB', 'ZombieB'), 20, 11.0, 0.0)
     + _pack(('Zombie', 'WeakZombieC', 'ZombieC', 'WeakZombie'), 150, 11.0, 5.0)
     + _pack(('ZombieB', 'Zombie', 'WeakZombieB', 'ZombieC'), 270, 11.0, 10.0)
     + [('Zombie', 90, 9.0, 14.0)], no_blast=True)
 PLISTS['port_fuse_2'] = _wave(
-    [('QuietZombie', 60, 7.0, 0.0)] + _pack(_Z4, 40, 11.0, 1.0)
-    + [('QuietZombie', 220, 7.0, 3.0)] + _pack(('ZombieB', 'Zombie', 'ZombieC', 'WeakZombie'), 200, 11.0, 4.0)
+    [('ZombieB', 60, 7.0, 0.0)] + _pack(_Z4, 40, 11.0, 1.0)
+    + [('ZombieC', 220, 7.0, 3.0)] + _pack(('ZombieB', 'Zombie', 'ZombieC', 'WeakZombie'), 200, 11.0, 4.0)
     + _pack(_R3, 320, 11.0, 7.0, spread=5.0)
     + [('Zombie', 110, 7.0, 8.0)] + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 130, 11.0, 9.0)
     + _pack(('Zombie', 'ZombieB', 'QuietZombie', 'ZombieC'), 280, 11.0, 12.0), no_blast=True)
 PLISTS['port_fuse_3'] = _wave(
-    [('QuietZombie', 30, 7.0, 0.0)] + _pack(_Z4 + ('ZombieB',), 10, 11.0, 1.0)
-    + [('QuietZombie', 250, 6.5, 2.0)] + _pack(('Hulk', 'HulkB'), 230, 11.0, 3.0)
+    [('ZombieC', 30, 7.0, 0.0)] + _pack(_Z4 + ('ZombieB',), 10, 11.0, 1.0)
+    + [('ZombieB', 250, 6.5, 2.0)] + _pack(('Hulk', 'HulkB'), 230, 11.0, 3.0)
     + _pack(_R3, 120, 11.0, 5.0, spread=5.0)
     + [('Zombie', 160, 7.0, 6.0)] + _pack(_Z4B, 180, 11.0, 7.0)
     + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 300, 11.0, 9.0)
     + [('Runner', 330, 9.0, 10.0)] + _pack(_R3, 60, 11.0, 11.0, spread=5.0)
-    + _pack(('Hulk', 'HulkB'), 90, 11.0, 13.0) + [('QuietZombie', 270, 7.0, 13.0)]
+    + _pack(('Hulk', 'HulkB'), 90, 11.0, 13.0) + [('ZombieC', 270, 7.0, 13.0)]
     + _pack(('Zombie', 'ZombieB', 'ZombieC', 'Zombie', 'ZombieC'), 210, 11.0, 15.0), no_blast=True)
 PLISTS['port_fuse'] = {
     'challenge_id': 'port_fuse',
