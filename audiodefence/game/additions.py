@@ -1173,6 +1173,16 @@ PLISTS['port_oneswing_2'] = _crowd(('Zombie', 'Runner', 'ZombieB', 'QuietZombie'
                                    bearings=_turned(3))
 PLISTS['port_oneswing_3'] = _crowd(('Zombie', 'Runner', 'Hulk', 'Chainsaw', 'ZombieB', 'RunnerB', 'Clown',
                                     'QuietZombie'), 19, 9.0, 2.4, bearings=_turned(7))
+#: The second Runner of each group walks in three and a half seconds after its place in the crowd (user
+#: request, 2026-09-29).  A Hulk's arrival roar is one of two recordings, 3.7 or 5.7 seconds, and it does not
+#: walk until the roar ends, so it came into reach anywhere in the two seconds the Runner behind it was
+#: arriving in, with the Chainsaw a second and a half after: three inside one swing of the Claymore, won or
+#: lost on which roar was played.  Later by 3.5, the Runner comes after the Chainsaw rather than with it
+#: (2 seconds later puts it on the Chainsaw instead).  Played out a thousand times with the game's own
+#: movement, a player a second slow on every enemy never lost wave 3 for it, and had under a second to spare.
+for _key, _one in PLISTS['port_oneswing_3']['Enemies'].items():
+    if _key.startswith('RunnerB'):
+        _one['spawn_time'] = round(_one['spawn_time'] + 3.5, 2)
 PLISTS['port_oneswing'] = {
     'challenge_id': 'port_oneswing',
     'title': 'One Swing',

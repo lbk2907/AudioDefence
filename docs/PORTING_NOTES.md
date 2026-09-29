@@ -1880,6 +1880,19 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   original game's, and otherwise says as little as it can - none of them tells you how it is won, one opens
   the next, and stars open another chapter - since what an arena wants is the arena's to be found out.
 
+  One Swing was given a little room after it was played (user request, 2026-09-29): "sometimes passable,
+  usually not".  Its last wave sends a Runner, a Hulk, a Chainsaw and a second Runner in turn, and a Hulk
+  does not walk until its arrival roar ends, which is one of two recordings, 3.7 or 5.7 seconds long.  So
+  it came into reach anywhere in the two seconds the second Runner was arriving in, with the Chainsaw a
+  second and a half behind: three inside one swing of the Claymore, won or lost on which roar was played.
+  The second Runner of each group now walks in three and a half seconds after its place in the crowd, which
+  puts it after the Chainsaw; two seconds would have put it on the Chainsaw instead.  Played out a few
+  thousand times with the game's own movement and both lengths of every recording, a player a second slow
+  on each enemy lost wave 3 in four runs of ten before and in none after, with under a second to spare at
+  its worst moment.  Nothing else in the arena changed - not its bullets, and not wave 2, whose Runner and
+  Chainsaw a second apart the player gets through.  The tool's line for it does not move, since it never saw
+  the pile-up (the third correction to it, below).
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at
