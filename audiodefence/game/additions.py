@@ -1331,6 +1331,9 @@ PLISTS['port_collateral'] = {
 _Z3 = ('Zombie', 'ZombieB', 'ZombieC')
 _Z3B = ('ZombieB', 'ZombieC', 'Zombie')
 _Z3C = ('ZombieC', 'Zombie', 'ZombieB')
+#: with a Quiet Zombie in it (the player asked for them back): it is heard less than the two beside it and
+#: walks a little ahead of them, its arrival sound being the shortest there is
+_Z3Q = ('ZombieB', 'QuietZombie', 'Zombie')
 
 
 def _runners_and_walkers(bearing: float, at: float) -> list:
@@ -1344,15 +1347,15 @@ PLISTS['port_crossfire_1'] = _wave(
     + _pair(_Z3B, _Z3, 90, 13.0)
     + [('ZombieB', 225, 11.0, 20.0)], no_blast=True)
 PLISTS['port_crossfire_2'] = _wave(
-    _pair(_Z3, _Z3B, 30, 0.0)
+    _pair(_Z3, _Z3Q, 30, 0.0)
     + [('Hulk', 120, 11.0, 8.0)]
     + _runners_and_walkers(300, 20.0)
     + [('Zombie', 255, 11.0, 28.0)], no_blast=True)
 PLISTS['port_crossfire_3'] = _wave(
-    _pair(_Z3C, _Z3, 10, 0.0)
+    _pair(_Z3C, _Z3Q, 10, 0.0)
     + _runners_and_walkers(100, 17.0)
     + [('Hulk', 55, 11.0, 22.0)]
-    + _pair(_Z3B, _Z3C, 150, 30.5)
+    + _pair(_Z3Q, _Z3C, 150, 30.5)
     + [('Zombie', 200, 11.0, 34.5)]
     + _pack(_R3, 20, 11.0, 44.0, spread=5.0)
     + _runners_and_walkers(70, 52.0), no_blast=True)

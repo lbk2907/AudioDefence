@@ -1968,7 +1968,8 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   further out."), and the time star is 240 seconds, from 220, since the spacing makes the waves longer.
   The tool swings from 35.8 seconds short to 1.1 to spare at level 1: it never counts finding a crowd by
   ear, the half-turn between the sides or the Sawn-off's reloads, which are the arena; the play-test says
-  whether it wants tightening.
+  whether it wants tightening.  Three of its crowds carry a Quiet Zombie again (the player asked for them
+  back: fine inside a crowd, as long as no Runner pack comes with another), which leaves every gap as it was.
 
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
