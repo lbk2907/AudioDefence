@@ -95,7 +95,12 @@ class KeyboardMotion:
         return value
 
     def tilt_angle(self) -> float:
-        return self.direction * self.tilt
+        # DIVERGENCE (user request, 2026-09-29): the device leans the way that turns it *left* when the angle
+        # is positive.  `getTiltAngle` 0x100005dec reads the attitude's pitch, whose sign in landscape follows
+        # which way round the phone is held (statusBarOrientation), and `tiltDidMoveFromAngle:` 0x10009cfe8
+        # scales it by -15 and the sensitivity; this stood in for it with the sign the other way, so under
+        # Tilt the right key and a stick pushed right turned left, against Gyro and Swipe.
+        return -self.direction * self.tilt
 
 
 # ======================================================================================= scroll view

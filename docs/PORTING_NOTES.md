@@ -2275,7 +2275,6 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
 * The post-game statistics show the combo they measured.  `buildMiscPostGameData` 0x1000bacfc labels entry 4
   "Highest combo" and fills it from `numberOfEnemyKills` (the load at 0x1000bb1fc), so the screen reported
   the kill count twice and never showed `highestCombo`, which is maintained right beside it.
-
 * The sound follows the default output (user request, 2026-09-29).  `s3d/device.py` opened the default
   playback device once, at start-up, and a player who chose other headphones or speakers in Windows while
   the game ran kept hearing it through the old ones - the speech moved, since SAPI 5 follows the default
@@ -2289,6 +2288,13 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   was opened with, HRTF and all.  Nothing that is playing stops.  Tested silently: four reports from another
   thread made one move, and a forced reopen kept a playing source playing with the game's HRTF still on;
   the change of output itself was left to a player, since a test has no business changing the system's.
+* Tilt turns the way its key says (user request, 2026-09-29).  `KeyboardMotion.tilt_angle` stands in for
+  `-[ADMotionManager getTiltAngle]` 0x100005dec, which reads the attitude's pitch - whose sign in landscape
+  follows which way round the phone is held, `statusBarOrientation` - and `tiltDidMoveFromAngle:`
+  0x10009cfe8 turns by it times -15 and the sensitivity.  The stand-in gave the right key a positive angle,
+  which turned the listener left, so under Tilt the right key and a stick pushed right turned left, against
+  Gyro and Swipe.  It gives the right key the negative angle now.  Checked a step at a time: the right key
+  lowers the heading under all three schemes (Swipe through `touchesMoveDetected:`, which flips the drag).
 
 
 ## Original quirks kept on purpose
