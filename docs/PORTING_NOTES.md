@@ -1914,6 +1914,18 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   answer to the near one is theirs to find.  The tip hints at it now - "The near one is not worth a
   grenade." - without saying what is.
 
+  Still too many, the player said, and the weapons not strong enough for them - and no gun there kills a
+  Zombie at seven units in one: the revolver takes three, the Hunting Rifle two, the Sawn-off two.  So the
+  crowds of waves 2 and 3 are weak ones round an ordinary Zombie that walks in the middle half a unit ahead
+  (`_escort`).  A blast is 30 to everything within five units and a WeakZombie has 20; the Zombie is always
+  the nearest thing in the crowd, so it is where the grenade goes and it takes the whole blast, up to 60.
+  One grenade on target is a crowd.  Checked against every arrival recording's length: at the worst, a weak
+  one still walks 0.18 units behind its Zombie, and every one of them stands within about 2.6 units of it -
+  inside the blast even with the aim ten degrees out.  The Quiet Zombies left in crowds went with it.  The
+  Runners, the Hulk pair and the near ones are as they were.  The tool barely moves (level 4: 13.3 and 15.7
+  seconds short to 2.1 and 16.7), because it prices an explosive as though it never lands on the toughest
+  thing in a pack - which here it always does.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at

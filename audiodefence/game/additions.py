@@ -1214,21 +1214,27 @@ PLISTS['port_fuse_1'] = _wave(
     + _pack(('Zombie', 'WeakZombieC', 'ZombieC', 'WeakZombie'), 150, 11.0, 5.0)
     + _pack(('ZombieB', 'Zombie', 'WeakZombieB', 'ZombieC'), 270, 11.0, 10.0)
     + [('Zombie', 90, 9.0, 14.0)], no_blast=True)
+#: The crowds are weak ones round an ordinary Zombie (user request, 2026-09-29: "too many, and the weapon is
+#: not strong enough for that").  A blast puts 30 into everything within five units and a WeakZombie has
+#: 20, and the Zombie walks in the middle half a unit ahead, so it is always the nearest - where the grenade
+#: goes - and takes the whole of the blast, up to 60.  One grenade on target is a crowd; the one that gets
+#: there first is still the arena.
+_W4 = ('WeakZombie', 'WeakZombieB', 'WeakZombieC', 'WeakZombie')
 PLISTS['port_fuse_2'] = _wave(
-    [('ZombieB', 60, 7.0, 0.0)] + _pack(_Z4, 40, 11.0, 1.0)
-    + [('ZombieC', 220, 7.0, 3.0)] + _pack(('ZombieB', 'Zombie', 'ZombieC', 'WeakZombie'), 200, 11.0, 4.0)
+    [('ZombieB', 60, 7.0, 0.0)] + _escort(('WeakZombie', 'WeakZombieB', 'WeakZombieC'), 'Zombie', 40, 11.0, 1.0)
+    + [('ZombieC', 220, 7.0, 3.0)] + _escort(('WeakZombieB', 'WeakZombie', 'WeakZombieC'), 'ZombieB', 200, 11.0, 4.0)
     + _pack(_R3, 320, 11.0, 7.0, spread=5.0)
-    + [('Zombie', 110, 7.0, 8.0)] + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 130, 11.0, 9.0)
-    + _pack(('Zombie', 'ZombieB', 'QuietZombie', 'ZombieC'), 280, 11.0, 12.0), no_blast=True)
+    + [('Zombie', 110, 7.0, 8.0)] + _escort(('WeakZombieC', 'WeakZombie', 'WeakZombieB'), 'ZombieC', 130, 11.0, 9.0)
+    + _escort(('WeakZombie', 'WeakZombieC', 'WeakZombieB'), 'Zombie', 280, 11.0, 12.0), no_blast=True)
 PLISTS['port_fuse_3'] = _wave(
-    [('ZombieC', 30, 7.0, 0.0)] + _pack(_Z4 + ('ZombieB',), 10, 11.0, 1.0)
+    [('ZombieC', 30, 7.0, 0.0)] + _escort(_W4, 'Zombie', 10, 11.0, 1.0)
     + [('ZombieB', 250, 6.5, 2.0)] + _pack(('Hulk', 'HulkB'), 230, 11.0, 3.0)
     + _pack(_R3, 120, 11.0, 5.0, spread=5.0)
-    + [('Zombie', 160, 7.0, 6.0)] + _pack(_Z4B, 180, 11.0, 7.0)
-    + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 300, 11.0, 9.0)
+    + [('Zombie', 160, 7.0, 6.0)] + _escort(('WeakZombieB', 'WeakZombieC', 'WeakZombie'), 'ZombieB', 180, 11.0, 7.0)
+    + _escort(('WeakZombieC', 'WeakZombie', 'WeakZombieB'), 'Zombie', 300, 11.0, 9.0)
     + [('Runner', 330, 9.0, 10.0)] + _pack(_R3, 60, 11.0, 11.0, spread=5.0)
     + [('ZombieC', 270, 7.0, 13.0)]
-    + _pack(('Zombie', 'ZombieB', 'ZombieC', 'Zombie', 'ZombieC'), 210, 11.0, 15.0), no_blast=True)
+    + _escort(('WeakZombieB', 'WeakZombie', 'WeakZombieC', 'WeakZombieB'), 'ZombieC', 210, 11.0, 15.0), no_blast=True)
 PLISTS['port_fuse'] = {
     'challenge_id': 'port_fuse',
     'title': 'Fuse',
