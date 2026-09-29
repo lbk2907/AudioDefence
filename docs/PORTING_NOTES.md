@@ -1184,9 +1184,12 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   its file, and the Russian one is offered as "ru" until somebody renames it.  A language chosen whose file
   is no longer there - renamed, or left out of a build - falls back to English, and English is saved, so the
   game does not go on looking for it.  "@plural" is typed by hand, so it is read forgivingly (capitals,
-  spaces, underscores and hyphens do not count, and a name a letter or two out is taken for the nearest), a
-  new file carries the choices beside it in "@plural guide", and `verify_localization.py` names a rule it
-  cannot read and says which one was probably meant.
+  spaces, underscores and hyphens do not count, and a name a letter or two out is taken for the nearest), and
+  `verify_localization.py` names a rule it cannot read and says which one was probably meant.  The choices,
+  and how to find a word's forms for each, are written for translators in the README, under "Words that
+  change with a number" (user request, 2026-09-29).  They were written into every language file as
+  "@plural guide" for a day; `make_language.py` takes that entry back out of a file that has it, since it
+  was never a phrase.
 
   A substitution a template opens with no longer reaches back across ", " (`_template_regex`).  A table row
   is spoken as its title, a comma and its status, and "%s required, press Enter to go to armory" swallowed

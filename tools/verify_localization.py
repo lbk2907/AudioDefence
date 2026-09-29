@@ -311,7 +311,7 @@ def forms_problems(language: str) -> list:
         if not lines:
             return out
         out.append('this file writes forms in braces but does not say how the language counts: '
-                   'fill in "@plural" (the choices are in "@plural guide")')
+                   'fill in "@plural" (README.md lists the choices, under "Words that change with a number")')
         rule = localization.DEFAULT_PLURAL
     wanted = localization.PLURAL_RULES[rule][0]
     for key, value in lines:

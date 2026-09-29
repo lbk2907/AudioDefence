@@ -84,6 +84,9 @@ is written — the phrases are data.
 - run `py tools/make_language.py`, with nothing after it. It writes
   `localization/template.json`, holding every phrase the port can put in front
   of a player, each one empty, so you have the list rather than having to find it
+- at the top of the file, fill in `"@plural"`: it says how your language
+  counts. [Words that change with a number](#words-that-change-with-a-number)
+  shows what to write
 - fill in the empty phrases, in any order. An empty one stays English, so the
   file works from the first line: what is translated is translated, and the rest
   is not
@@ -111,29 +114,103 @@ or to start a language under the name the Language row should give it —
 A language arrives with a release, because the phrase files are built into the
 game. Adding one to a copy you already have means waiting for the next build.
 
-**Lines with a gap in them.** Some lines have something filled in by the game:
-`%i` is a number, `%s` is a name or a word. They arrive as they are — "You need
-%i stars to play this level" — and you write your sentence around the same
-gaps, in whatever order your language wants:
+Nothing of any one language is in the game's code: what is particular to a
+language is all in its own file. A line the port assembles from pieces is
+translated piece by piece.
 
-- the gaps are filled in the order the English has them. To put them in another
-  order, number them by their place in the English: `%2$s ... %1$s`
-- a word that changes with a number is written with all its forms between
-  braces, wherever it goes: `"I have %i {apple|apples}"`. The braces take the
-  number nearest before them (or the first after, if there is none before)
-- how your language counts goes once in the file, as `"@plural"`: `none`
-  (Malay, Indonesian, Chinese, Japanese…), `one-other` (English, German,
-  Spanish…), `french`, `east-slavic` (Russian, Ukrainian), `polish`, `czech` or
-  `arabic`. That says how many forms to write and which number takes which; the
-  Russian file is an example of three, `{звезда|звезды|звёзд}`. The choices are
-  written out in the file too, in `"@plural guide"`, and a slip in the spelling
-  (`East Slavic`, `east_slavic`) is still understood
+### Lines with a gap in them
 
-`verify_localization.py` tells you when a line has more or fewer forms than
-your `"@plural"` says. Nothing of any one language is in the game's code: what
-is particular to a language is all in its own file.
+Some lines have a gap the game fills in while you play: `%i` is a number, and
+`%s` is a name or a word. The line comes to you whole, gap and all, with its
+translation empty:
 
-A line the port assembles from pieces is translated piece by piece.
+```json
+"You need %i stars to play this level": ""
+```
+
+Write the whole sentence the way your language says it, and put the same gap
+where the number belongs. The game fills it in:
+
+```json
+"You need %i stars to play this level": "Anda perlukan %i bintang untuk bermain tahap ini"
+```
+
+In the game: *Anda perlukan 19 bintang untuk bermain tahap ini.*
+
+**Two gaps the other way round.** The gaps are filled in the order the English
+has them. If your sentence needs them in another order, number each one by its
+place in the English — `%1$s` is the first gap of the English line, `%2$s` the
+second — and put them wherever your sentence wants them:
+
+```json
+"Version %s is available. You have %s.": "Anda ada versi %2$s. Versi %1$s sudah tersedia."
+```
+
+In the game: *Anda ada versi 1.1. Versi 1.2 sudah tersedia.*
+
+### Words that change with a number
+
+In English it is *1 star* but *2 stars*: the word changes with the number.
+Languages do this in different ways — Russian has three forms of a word, Arabic
+six, Malay none — so the game does not guess. You write every form of the word
+between braces, with `|` between them, and the game picks the right one for each
+number:
+
+```json
+"%i coins": "%i {монета|монеты|монет}"
+```
+
+In the game: *1 монета, 2 монеты, 5 монет, 21 монета.*
+
+It takes three steps.
+
+**1. Say how your language counts.** At the top of your file is `"@plural"`.
+Find your language in this table and write the name from the first column there
+— for Russian, `"@plural": "east-slavic"`.
+
+| Write | For | Forms | Which numbers take which form, in order |
+|---|---|---|---|
+| `none` | Malay, Indonesian, Chinese, Japanese, Korean, Thai, Vietnamese | 1 | The word never changes, so you need no braces at all |
+| `one-other` | English, German, Dutch, Spanish, Italian, Swedish, Greek | 2 | 1 · every other number (0, 2, 3…) |
+| `french` | French, Brazilian Portuguese | 2 | 0 and 1 · 2 and up |
+| `east-slavic` | Russian, Ukrainian, Belarusian | 3 | 1, 21, 31, 101… · 2–4, 22–24, 32–34… · 0, 5–20, 25–30… |
+| `polish` | Polish | 3 | 1 only · 2–4, 22–24, 32–34… · 0, 5–21, 25–31… |
+| `czech` | Czech, Slovak | 3 | 1 · 2–4 · 0, and 5 and up |
+| `arabic` | Arabic | 6 | 0 · 1 · 2 · 3–10 · 11–99 · 100–102; past that, by the last two digits (103 as 3, 111 as 11) |
+
+Capitals, spaces and small slips are forgiven: `East Slavic`, `east_slavic` and
+even `east-slavik` are all read as `east-slavic`. Left empty, the file counts
+the way English does. If your language is not in the table, choose the row that
+counts the way it does; if none of them does, open an issue, and a row can be
+added.
+
+**2. Find the forms.** Say the word after a few numbers in your language — one
+number from each group in the table, in order — and write down what you say:
+
+- **Malay** (`none`): 1 bintang, 5 bintang. The word does not change, so write
+  just `bintang`, with no braces
+- **Spanish** (`one-other`): 1 estrella, 2 estrellas → `{estrella|estrellas}`
+- **French** (`french`): 1 étoile, 2 étoiles → `{étoile|étoiles}`
+- **Russian** (`east-slavic`): 1 звезда, 2 звезды, 5 звёзд →
+  `{звезда|звезды|звёзд}`
+- **Polish** (`polish`): 1 gwiazda, 2 gwiazdy, 5 gwiazd →
+  `{gwiazda|gwiazdy|gwiazd}`
+
+**3. Put the braces where the word goes in your sentence.** They can go
+anywhere: they take the nearest number before them, or, if there is none
+before, the first one after.
+
+```json
+"You need %i stars to play this level": "Necesitas %i {estrella|estrellas} para jugar este nivel"
+```
+
+In the game: *Necesitas 1 estrella para jugar este nivel*, *Necesitas 19
+estrellas para jugar este nivel.*
+
+**If something is wrong**, `py tools/verify_localization.py` tells you: a
+`"@plural"` it does not know (and what you probably meant), or a line with more
+or fewer forms than your language has. Nothing breaks in the game while you are
+still writing — a line that is short of forms uses the last one it has.
 
 ## How this was made
 

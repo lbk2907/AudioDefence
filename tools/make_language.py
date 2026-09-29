@@ -15,8 +15,8 @@ Some phrases have a gap the game fills in: `%i` a number, `%s` a name or a word 
 this level").  Write your sentence round the same gaps.  They are filled in the English order; to change the
 order, number them by their place in the English (`%2$s ... %1$s`).  A word that changes with a number is
 written with all its forms in braces, where your language puts it: "I have %i {apple|apples}".  How your
-language counts goes once in the file, in the entry "@plural", which this writes empty, with the choices
-written out beside it in "@plural guide" (`localization.PLURAL_GUIDE`).
+language counts goes once in the file, in the entry "@plural", which this writes empty.  The choices, and how
+to write the forms for each, are in README.md under "Words that change with a number".
 
 When it is ready, rename it to whatever the Language row should say - `Deutsch.json`, `de.json`: the row
 offers a language by its file's name, whatever that is, and nothing in the code needs to change.
@@ -85,8 +85,8 @@ def every_phrase(besides: str = '') -> list:
 
 
 def dump(table: dict) -> str:
-    """The file as it is written: the entries about the file ("@plural" and its guide) first, where a
-    translator opening it sees them, then every phrase in order.  Sorted whole, they would come after the
+    """The file as it is written: the entries about the file ("@plural") first, where a translator
+    opening it sees them, then every phrase in order.  Sorted whole, they would come after the
     phrases that start with a space or a percent sign, a hundred and eighty lines down."""
     about = sorted(key for key in table if key.startswith('@'))
     ordered = {key: table[key] for key in about}
@@ -108,7 +108,9 @@ def update(path: str, phrases: list) -> tuple:
             return None, '%s is not a map of phrases' % path
     table = dict(had)
     table.setdefault('@plural', '')                        # the language's counting rule: see above
-    table['@plural guide'] = localization.PLURAL_GUIDE    # the choices, where the translator is looking
+    # The choices used to be written into every file as "@plural guide"; they are in the README now (user
+    # request, 2026-09-29), so a file that got that entry loses it.  It was never a phrase.
+    table.pop('@plural guide', None)
     added = 0
     for text in phrases:
         if text not in table:
@@ -161,7 +163,8 @@ def main(argv=None) -> int:
         else:
             print('%s: written with %d phrases, every one of them empty.' % (where, count))
         if not counted:
-            print('    Say how the language counts in "@plural" at the top: the choices are in "@plural guide".')
+            print('    Say how the language counts in "@plural" at the top: README.md lists the choices,')
+            print('    under "Words that change with a number".')
     print('An empty phrase stays English, so a file can be used before it is finished.')
     if not args.language and not args.into:
         print('%s.json is for starting a new language: the game offers it in Settings while it is there, and a'

@@ -97,6 +97,8 @@ def _arabic(n: float, whole: bool) -> int:               # 0 | 1 | 2 | 3-10 | 11
     return 5
 
 
+#: The ways of counting a file can name in "@plural".  README.md, "Words that change with a number", explains
+#: them to translators, number by number: a rule added here is added there.
 PLURAL_RULES = {
     'none': (1, lambda n, whole: 0),     # Malay, Indonesian, Chinese, Japanese, Korean, Thai, Vietnamese
     'one-other': (2, _one_other),        # English, German, Dutch, Spanish, Italian, Swedish, Greek
@@ -177,21 +179,6 @@ def plural_rule_named(text) -> tuple:
     if len(near) == 1:
         return squashed[near[0]], squashed[near[0]]
     return None, (squashed[near[0]] if near else None)
-
-
-#: What a language file is given to say which rule it counts by, and what each one is for: written into a
-#: new file by `tools/make_language.py`, beside "@plural", so a translator has the choices in front of them.
-PLURAL_GUIDE = ('Write one of these in "@plural": '
-                'none - words never change with a number (Malay, Indonesian, Chinese, Japanese, Korean, Thai, '
-                'Vietnamese): no braces needed. '
-                'one-other - two forms, {apple|apples}, the first for 1 (English, German, Dutch, Spanish, '
-                'Italian, Swedish, Greek). '
-                'french - two forms, the first for 0 and 1 (French, Brazilian Portuguese). '
-                'east-slavic - three forms, for 1, 21, 31... then 2-4, 22-24... then the rest (Russian, '
-                'Ukrainian, Belarusian). '
-                'polish - three forms, for 1 only, then 2-4, 22-24..., then the rest (Polish). '
-                'czech - three forms, for 1, then 2-4, then the rest (Czech, Slovak). '
-                'arabic - six forms, for 0, 1, 2, 3-10, 11-99, then the rest (Arabic).')
 
 
 def load(language: str, force: bool = False) -> bool:
