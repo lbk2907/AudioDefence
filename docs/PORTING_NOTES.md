@@ -2001,6 +2001,16 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   from 34.2 to 32.4 seconds short at level 1, a shade inside Crossfire before it (35.8) - one more thing
   for chapter 4's order once the player has been through it.
 
+  Still too many, played; and the advice to meet its Chainsaws and Clowns with the Claymore was wrong while
+  anything else was near - a swing locks the guns for a second and a half.  The Sawn-off takes a circling
+  thing as well (its cone is sixty degrees each way; two shells for seventy of life inside three units).
+  So every crowd is a three, wave 2 has no single Hulk and wave 3 one Hulk pair, a crowd went from the end
+  of each, and - what the counting showed mattered most - everything was spaced: each group now comes within
+  five units about five seconds after the one before, with the Runners, the Dodge, the Chainsaw and the
+  Clown each arriving on their own, the spawn times worked back from where each should be.  The busiest
+  eight seconds bring six, eight and seven enemies in its three waves, from fifteen, fourteen and
+  twenty-three.  The tool gives 5.6 seconds short at level 1 and 1.2 to spare at level 4.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at
