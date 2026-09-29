@@ -1971,6 +1971,14 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   whether it wants tightening.  Three of its crowds carry a Quiet Zombie again (the player asked for them
   back: fine inside a crowd, as long as no Runner pack comes with another), which leaves every gap as it was.
 
+  Played, it was easy, and the player asked for two Runner packs at once after all - "but give some gaps,
+  so that I have time to reload, turn and shoot" (`_runner_pair`).  A pack of three dies to a shell or two
+  inside five units; the two shells a load holds, the 2.3 second reload and the half-turn, turned during the
+  reload, come to about three and a half seconds.  So wave 2 sends the second pack from the opposite side
+  5.5 seconds behind the first, and wave 3 sends one 4.5 behind: a second to spare, and none for waiting.
+  Nothing else comes within five units within six seconds of either pair.  The tool goes from 1.1 seconds
+  to spare to 0.8 short at level 1.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at

@@ -1336,6 +1336,14 @@ _Z3C = ('ZombieC', 'Zombie', 'ZombieB')
 _Z3Q = ('ZombieB', 'QuietZombie', 'Zombie')
 
 
+def _runner_pair(bearing: float, at: float, gap: float = 4.5) -> list:
+    """Runners from both sides, the second pack `gap` seconds behind the first (user request, 2026-09-29:
+    "two packs at the same time, but give some gaps").  A pack of three dies to a shell or two inside five
+    units; the two a load holds, the 2.3 second reload and the half-turn come to about three and a half
+    seconds, so 4.5 leaves a second to spare - and nothing to spare for waiting."""
+    return _pack(_R3, bearing, 11.0, at, spread=5.0) + _pack(_R3, bearing + 180.0, 11.0, at + gap, spread=5.0)
+
+
 def _runners_and_walkers(bearing: float, at: float) -> list:
     """Runners from one side and a crowd that walks from the other: the Runners first, then turn."""
     return _pack(_R3, bearing, 11.0, at, spread=5.0) + _pack(_Z3B, bearing + 180.0, 10.0, at + 0.3)
@@ -1349,16 +1357,16 @@ PLISTS['port_crossfire_1'] = _wave(
 PLISTS['port_crossfire_2'] = _wave(
     _pair(_Z3, _Z3Q, 30, 0.0)
     + [('Hulk', 120, 11.0, 8.0)]
-    + _runners_and_walkers(300, 20.0)
-    + [('Zombie', 255, 11.0, 28.0)], no_blast=True)
+    + _runner_pair(300, 20.0, gap=5.5) + _pack(_Z3B, 210, 10.0, 25.0)
+    + [('Zombie', 255, 11.0, 30.0)], no_blast=True)
 PLISTS['port_crossfire_3'] = _wave(
     _pair(_Z3C, _Z3Q, 10, 0.0)
     + _runners_and_walkers(100, 17.0)
     + [('Hulk', 55, 11.0, 22.0)]
     + _pair(_Z3Q, _Z3C, 150, 30.5)
-    + [('Zombie', 200, 11.0, 34.5)]
-    + _pack(_R3, 20, 11.0, 44.0, spread=5.0)
-    + _runners_and_walkers(70, 52.0), no_blast=True)
+    + [('Zombie', 300, 11.0, 34.5)]
+    + _runner_pair(20, 44.0)
+    + _runners_and_walkers(70, 56.0), no_blast=True)
 PLISTS['port_crossfire'] = {
     'challenge_id': 'port_crossfire',
     'title': 'Crossfire',
