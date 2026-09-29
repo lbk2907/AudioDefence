@@ -1947,6 +1947,25 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   that says so where it is defined, because the Sawn-off's damage is almost all distance.  And since a round
   of a crowd weapon is not worth its damage once, the tool counts the rounds each gun spends and prints them
   against what the arena hands out.
+* CORRECTION to `tools/arena_pressure.py`, the third: an enemy's arrival sound.  `-[ADEnemy spawn]`
+  0x10005fbc0 plays one of its `_spawn` recordings and `update:` 0x10005eb94 keeps it in state 1, standing
+  where it spawned, until the recording ends, and the tool had taken that for a second for everything.  The
+  recordings were measured on 2026-09-29, when One Swing was found to be won or lost on luck: a Zombie's
+  last 1.3 to 1.7 seconds and a Runner's 1.4 to 1.9, close enough, but a QuietZombie's 0.6, a Clown's 2.4
+  to 2.6, a Chainsaw's 4.6 and a Hulk's **3.7 to 5.7** - so every Hulk and Chainsaw had been measured
+  seconds early, and in the wrong order against the Runners around them.  `spawn_sound` reads each enemy's
+  recordings out of `game/sounds/enemies/` and takes the shortest, since a player cannot count on the longer
+  one; a flat second is left only for when they cannot be read.  An enemy can be shot while it arrives
+  (`canBeShotAt` 0x100061f68 refuses only states 0 and 999), so a crowd weapon's first round still waits a
+  second for it to be heard and no longer.  Re-measured across all twenty-five arenas the chapters still
+  climb, with two near-ties at the ends of chapters 3 and 4 (Carousel and The Last Word level at 22.0 short;
+  Crossfire, at 35.8, now a shade harder than The Armory after it, at 34.2), left for the chapter 4 tuning.
+
+  What the tool still cannot see is two enemies' arrivals lining up by chance.  It walks a wave in the order
+  the clocks run out and never asks what happens when a random roar puts two of them into the same swing,
+  which is what One Swing was lost on; that was found by playing the arena out a few thousand times in a
+  scratch file with the game's own movement, both lengths of every recording and a player given a fixed
+  time to find, turn to and strike each enemy.  Not kept, as the bot before it was not.
 * FIX to a PORT ADDITION: a chapter's list of arenas answered a press in the wrong order, and a locked
   arena could be played.  A row reads the status the accessible selector gives (`statusForChallengeWithDict:`
   0x100054960), which asks about guns before it asks about locks - so an arena that wants a gun reads "Hunting

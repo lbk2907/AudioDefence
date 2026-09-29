@@ -29,10 +29,10 @@ from audiodefence.game import additions                              # noqa: E40
 
 BUNDLE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'game')
 
-#: -[ADEnemy init]: the walk ends three units out, the attack lands at 0.3, and a spawn sound is a second
-#: before anything moves at all (`spawn_sound_duration`, replaced by the real sound's length in play).
+#: -[ADEnemy init]: the walk ends three units out, and the attack lands at 0.3.
 AGGRESSIVE_AT = 3.0
 ATTACK_AT = 0.3
+#: What an arrival sound is taken to last when its recordings cannot be read (`spawn_sound`).
 SPAWN_SOUND = 1.0
 #: solve_explosion_with_dictionary: a blast within five units rings the ears, for `intensity * 10 + 3`
 #: seconds where intensity is `1 - d^2/25`, and the rings add up to at most TINNITUS_MAX
@@ -117,6 +117,37 @@ def aim_cost(weapon: str, level: str, flags=()) -> float:
     return base / now
 
 
+_SPAWN_SOUNDS: dict = {}
+
+
+def spawn_sound(kind: str) -> float:
+    """How long an enemy stands still, making its arrival sound, before it walks.
+
+    `-[ADEnemy spawn]` 0x10005fbc0 plays one of its `_spawn` recordings and `update:` 0x10005eb94 keeps it in
+    state 1 until that has finished, so the enemy starts walking the length of the sound after its spawn
+    time.  The recordings are read here, and the shortest is the one taken: a player cannot count on the
+    longer one.  Until 2026-09-29 this was a flat second for everything, which is close for a Zombie
+    (1.3 to 1.7 s) and not for a Hulk (3.7 to 5.7) or a Chainsaw (4.6): One Swing was measured with its
+    Hulks and Chainsaws seconds early, and in the wrong order against the Runners around them.  It can be
+    shot while it arrives (`canBeShotAt` 0x100061f68 refuses only states 0 and 999), so this delays its walk
+    and not the first shot.
+    """
+    if kind not in _SPAWN_SOUNDS:
+        folder = os.path.join(BUNDLE, 'sounds', 'enemies', kind)
+        lengths = []
+        try:
+            import av
+            for name in os.listdir(folder):
+                if '_spawn' in name.lower():
+                    with av.open(os.path.join(folder, name)) as c:
+                        if c.duration:
+                            lengths.append(c.duration / 1e6)
+        except (ImportError, OSError):
+            pass
+        _SPAWN_SOUNDS[kind] = min(lengths) if lengths else SPAWN_SOUND
+    return _SPAWN_SOUNDS[kind]
+
+
 def walks_away(kind: str) -> bool:
     return BERSERK_IS_FREE and isinstance(ENEMIES[kind].get('berserk'), dict)
 
@@ -142,7 +173,7 @@ def deadline(kind: str, distance: float, spawn_time: float) -> float:
     f = _f(e.get('circling'), 'circlingFactor')
     walk = max(0.0, distance - AGGRESSIVE_AT) / (speed * max(0.05, 1.0 - f))
     close = (min(distance, AGGRESSIVE_AT) - ATTACK_AT) / aggressive
-    return spawn_time + SPAWN_SOUND + walk + close
+    return spawn_time + spawn_sound(kind) + walk + close
 
 
 def _f(d, key: str, default: float = 0.0) -> float:
@@ -272,12 +303,12 @@ def reach_time(kind: str, distance: float, spawn_time: float, at: float) -> floa
     if not speed or walks_away(kind):
         return float('inf')
     if distance <= at:
-        return spawn_time + SPAWN_SOUND
+        return spawn_time + spawn_sound(kind)
     aggressive = float(e.get('agressiveSpeed') or e.get('speed') or 0) * MULT['speed']
     f = _f(e.get('circling'), 'circlingFactor')
     walk = max(0.0, distance - max(at, AGGRESSIVE_AT)) / (speed * max(0.05, 1.0 - f))
     close = max(0.0, min(distance, AGGRESSIVE_AT) - at) / aggressive if at < AGGRESSIVE_AT else 0.0
-    return spawn_time + SPAWN_SOUND + walk + close
+    return spawn_time + spawn_sound(kind) + walk + close
 
 
 def wave_pressure(wave: dict, dps: float, overhead: float, per_shot: float = 0.0, swing=None):
@@ -445,10 +476,10 @@ def distance_at(kind: str, distance: float, spawn_time: float, t: float) -> floa
     """How far out an enemy walking straight in is at time `t`."""
     e = ENEMIES[kind]
     walk = pace(kind) * MULT['speed']
-    if not walk or t <= spawn_time + SPAWN_SOUND:
+    if not walk or t <= spawn_time + spawn_sound(kind):
         return distance
     aggressive = float(e.get('agressiveSpeed') or e.get('speed') or 0) * MULT['speed']
-    t -= spawn_time + SPAWN_SOUND
+    t -= spawn_time + spawn_sound(kind)
     to_three = max(0.0, distance - AGGRESSIVE_AT) / walk
     if t <= to_three:
         return distance - walk * t
@@ -531,7 +562,7 @@ def area_pressure(wave: dict, areas: list, single, swing, overhead: float, left:
                         rounds += whole((rest[-1] - rounds * flat) / full)
                 if left.get(area['name'], 1e9) < rounds:
                     continue
-                start = max(spent, lt + SPAWN_SOUND) + find + bring(area['name'])
+                start = max(spent, lt + min(SPAWN_SOUND, spawn_sound(lk))) + find + bring(area['name'])
                 fired = start + (rounds - 1) * area['cycle']
                 out = distance_at(lk, ld, lt, fired)
                 killed = fired + area['fuse'] + (out / area['flight'] if area['flight'] else 0.0)
@@ -552,7 +583,7 @@ def area_pressure(wave: dict, areas: list, single, swing, overhead: float, left:
             name, dps, per_shot = single
             rounds = sum(whole(lives[k] / per_shot) for k in fighting)
             if left.get(name, 1e9) >= rounds:
-                t = max(spent, lt + SPAWN_SOUND) + bring(name)
+                t = max(spent, lt + min(SPAWN_SOUND, spawn_sound(lk))) + bring(name)
                 for k in fighting:
                     t += lives[k] / dps + find + extra_overhead(kind(k), overhead, per_shot)
                 options.append((t, t, t, 0.0, name, rounds))
