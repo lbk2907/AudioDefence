@@ -772,7 +772,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **161 divergences** and **15 original quirks kept on purpose** in the notes, of which 77 are
+There are **162 divergences** and **15 original quirks kept on purpose** in the notes, of which 78 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -913,6 +913,9 @@ Faults in the game's own logic, not in how it describes itself. Each was read ag
 - **Two zombies dying together are both heard to the end.** The first to fall silent could unload the
   other's sounds and cut its death off half way; a zombie's sounds now wait until it is quiet.
 - 3D positioning is correct from the first frame; the original relies on the gyroscope firing to correct it.
+- **The sound follows your output.** Choose other headphones or speakers while the game is running and its
+  sound moves to them, 3D and all, the way the speech already did; it used to stay on whatever was the
+  default when the game started.
 
 ### 5. Engine and presentation
 

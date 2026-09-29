@@ -53,7 +53,16 @@ ALC_FREQUENCY = 0x1007
 ALC_MONO_SOURCES = 0x1010
 ALC_STEREO_SOURCES = 0x1011
 ALC_DEVICE_SPECIFIER = 0x1005
+ALC_DEFAULT_ALL_DEVICES_SPECIFIER = 0x1012
 ALC_ALL_DEVICES_SPECIFIER = 0x1013
+
+# ALC_SOFT_system_events: what the system says about its devices (OpenAL Soft 1.23)
+ALC_PLAYBACK_DEVICE_SOFT = 0x19D4
+ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT = 0x19D6
+ALC_EVENT_SUPPORTED_SOFT = 0x19D9
+#: void callback(ALCenum eventType, ALCenum deviceType, ALCdevice *device, ALCsizei length,
+#: const ALCchar *message, void *userParam) - called on a thread of OpenAL's own
+ALC_EVENT_PROC = ctypes.CFUNCTYPE(None, c_int, c_int, c_void_p, c_int, c_char_p, c_void_p)
 
 # ALC_SOFT_HRTF
 ALC_HRTF_SOFT = 0x1992
@@ -243,6 +252,29 @@ class AL:
         fn = self.ext('alcResetDeviceSOFT', c_int, [c_void_p, POINTER(c_int)])
         arr = (c_int * (len(attrs) + 1))(*attrs, 0)
         return bool(fn(device, arr))
+
+    # --- following the system's devices (ALC_SOFT_system_events, ALC_SOFT_reopen_device) -----------
+    def reopen_device(self, device, name, attrs: list[int]) -> bool:
+        """Move an open device to another output - `name`, or the default for None - keeping its contexts,
+        sources and buffers."""
+        fn = self.ext('alcReopenDeviceSOFT', c_int, [c_void_p, c_char_p, POINTER(c_int)])
+        arr = (c_int * (len(attrs) + 1))(*attrs, 0)
+        return bool(fn(device, name, arr))
+
+    def event_supported(self, event: int, device_type: int) -> bool:
+        fn = self.ext('alcEventIsSupportedSOFT', c_int, [c_int, c_int])
+        return fn(event, device_type) == ALC_EVENT_SUPPORTED_SOFT
+
+    def event_control(self, events: list[int], enable: bool) -> bool:
+        fn = self.ext('alcEventControlSOFT', c_int, [c_int, POINTER(c_int), c_int])
+        arr = (c_int * len(events))(*events)
+        return bool(fn(len(events), arr, ALC_TRUE if enable else ALC_FALSE))
+
+    def event_callback(self, callback) -> None:
+        """Set the function the system events go to, or None for none.  The caller keeps the callback
+        alive for as long as it is set."""
+        fn = self.ext('alcEventCallbackSOFT', None, [c_void_p, c_void_p])
+        fn(ctypes.cast(callback, c_void_p) if callback is not None else None, None)
 
     # --- loopback (used by tools/build_hrtf.py and the tests) --------------
     def loopback_open(self):

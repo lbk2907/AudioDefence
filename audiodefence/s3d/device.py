@@ -12,6 +12,8 @@ import os
 from .. import paths
 from . import openal as oal
 
+log = logging.getLogger('s3d')
+
 HRTF_NAME = 'audiodefence_ircam1050'
 SAMPLE_RATE = 44100
 
@@ -34,8 +36,14 @@ def write_alsoft_config() -> str:
     return path
 
 
+#: how long after the system says the default output changed before the game moves to it.  Windows says it
+#: several times over for one change - once for each role a device can play - and the game moves once.
+FOLLOW_AFTER = 0.5
+
+
 class Device:
-    """Opens the default playback device with the game's HRTF enabled."""
+    """Opens the default playback device with the game's HRTF enabled, and keeps to the default device when
+    the system changes it."""
 
     def __init__(self):
         os.environ['ALSOFT_CONF'] = write_alsoft_config()
@@ -51,18 +59,93 @@ class Device:
         self.al.make_current(self.context)
         names = self.al.hrtf_names(self.device)
         self.hrtf_found = HRTF_NAME in names
+        #: what the device is opened with, and so what it is opened with again on another output
+        self.attrs = []
+        for k, v in {**attrs, **({oal.ALC_HRTF_ID_SOFT: names.index(HRTF_NAME)} if self.hrtf_found
+                                 else {})}.items():
+            self.attrs += [k, v]
         if self.hrtf_found:
-            flat = []
-            for k, v in {**attrs, oal.ALC_HRTF_ID_SOFT: names.index(HRTF_NAME)}.items():
-                flat += [k, v]
-            self.al.reset_device(self.device, flat)
+            self.al.reset_device(self.device, self.attrs)
         self.hrtf_status = self.al.get_int(self.device, oal.ALC_HRTF_STATUS_SOFT)
         if not self.hrtf_found or self.hrtf_status != 1:              # ALC_HRTF_ENABLED_SOFT
             # the built-in HRTF (or none) would sound plausible but not like the original
-            logging.getLogger('s3d').error('game HRTF %s not in use (found=%s, status=%s, offered=%s)',
-                                           HRTF_NAME, self.hrtf_found, self.hrtf_status, names)
+            log.error('game HRTF %s not in use (found=%s, status=%s, offered=%s)',
+                      HRTF_NAME, self.hrtf_found, self.hrtf_status, names)
+        log.info('sound goes to %s', self.output_name())
+        self._events = None
+        self._follow_pending = False
+        self.follow_default_device()
+
+    def output_name(self) -> str:
+        name = self.al.alcGetString(self.device, oal.ALC_ALL_DEVICES_SPECIFIER) if self.device else None
+        return name.decode('utf-8', 'replace') if name else ''
+
+    # --- keeping to the default output ---------------------------------------------------------
+    # PORT ADDITION (user request, 2026-09-29): the device was opened once, on whatever was the default
+    # output when the game started, and stayed there.  Choosing another output in Windows - headphones for
+    # speakers - left the game playing into the old one while the speech moved (SAPI 5 follows the default
+    # of its own accord).  OpenAL Soft says when the default changes (ALC_SOFT_system_events) and can move
+    # an open device to another output with its contexts, sources and buffers intact
+    # (ALC_SOFT_reopen_device), so nothing that is playing stops.  A library without either keeps to the
+    # device it opened, as before.
+
+    def follow_default_device(self) -> None:
+        """Ask to be told when the default output changes."""
+        al = self.al
+        try:
+            if not (al.alcIsExtensionPresent(self.device, b'ALC_SOFT_system_events')
+                    and al.alcIsExtensionPresent(self.device, b'ALC_SOFT_reopen_device')
+                    and al.event_supported(oal.ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT,
+                                           oal.ALC_PLAYBACK_DEVICE_SOFT)):
+                log.info('the sound stays on this output: the system does not say when the default changes')
+                return
+            self._events = oal.ALC_EVENT_PROC(self._event)     # kept: OpenAL holds only its address
+            al.event_callback(self._events)
+            al.event_control([oal.ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT], True)
+        except (oal.OpenALError, OSError, AttributeError) as exc:
+            log.info('the sound stays on this output: %s', exc)
+            self._events = None
+
+    def _event(self, event_type, device_type, _device, _length, _message, _user) -> None:
+        """On a thread of OpenAL's own: hand the change to the main thread, where the device is used."""
+        if event_type != oal.ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT or device_type != oal.ALC_PLAYBACK_DEVICE_SOFT:
+            return
+        from ..platform.runloop import RunLoop
+        RunLoop.main().call_soon_threadsafe(self._default_changed)
+
+    def _default_changed(self) -> None:
+        if self._follow_pending or not self.device:
+            return
+        self._follow_pending = True
+        from ..platform.runloop import RunLoop
+        RunLoop.main().call_later(FOLLOW_AFTER, self.move_to_default)
+
+    def move_to_default(self, force: bool = False) -> bool:
+        """Move the sound to the default output, if it is not there already.  True if it moved."""
+        self._follow_pending = False
+        if not self.device:
+            return False
+        default = self.al.alcGetString(None, oal.ALC_DEFAULT_ALL_DEVICES_SPECIFIER)
+        default = default.decode('utf-8', 'replace') if default else ''
+        here = self.output_name()
+        if default == here and not force:
+            return False
+        if not self.al.reopen_device(self.device, None, self.attrs):
+            log.warning('the default output is now %s, but the sound could not move there from %s', default, here)
+            return False
+        self.hrtf_status = self.al.get_int(self.device, oal.ALC_HRTF_STATUS_SOFT)
+        log.info('the default output changed: sound moved from %s to %s (HRTF status %s)',
+                 here, self.output_name(), self.hrtf_status)
+        return True
 
     def close(self) -> None:
+        if self._events is not None:
+            try:
+                self.al.event_control([oal.ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT], False)
+                self.al.event_callback(None)
+            except (oal.OpenALError, OSError):
+                pass
+            self._events = None
         self.al.make_current(None)
         if self.context:
             self.al.alcDestroyContext(self.context)

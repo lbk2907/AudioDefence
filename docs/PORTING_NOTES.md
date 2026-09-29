@@ -2276,6 +2276,20 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   "Highest combo" and fills it from `numberOfEnemyKills` (the load at 0x1000bb1fc), so the screen reported
   the kill count twice and never showed `highestCombo`, which is maintained right beside it.
 
+* The sound follows the default output (user request, 2026-09-29).  `s3d/device.py` opened the default
+  playback device once, at start-up, and a player who chose other headphones or speakers in Windows while
+  the game ran kept hearing it through the old ones - the speech moved, since SAPI 5 follows the default
+  of its own accord, and the game did not.  A phone has one output that the system switches for it; this is
+  the port's own problem and has no method in the binary to depart from.  OpenAL Soft 1.25 says when the
+  default output changes (ALC_SOFT_system_events, asked for only when `alcEventIsSupportedSOFT` answers
+  yes, which it does once a device is open) and can move an open device to another output keeping its
+  contexts, sources and buffers (ALC_SOFT_reopen_device), so `Device` listens for the one event, hands it
+  from OpenAL's thread to the run loop, waits half a second (`FOLLOW_AFTER`: Windows reports one change
+  several times, once for each role a device plays), and reopens on the new default with the attributes it
+  was opened with, HRTF and all.  Nothing that is playing stops.  Tested silently: four reports from another
+  thread made one move, and a forced reopen kept a playing source playing with the game's HRTF still on;
+  the change of output itself was left to a player, since a test has no business changing the system's.
+
 
 ## Original quirks kept on purpose
 
