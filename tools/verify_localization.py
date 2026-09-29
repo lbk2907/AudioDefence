@@ -32,7 +32,7 @@ from audiodefence import localization, paths                       # noqa: E402
 from audiodefence.game import additions, data                    # noqa: E402  (corrected(), and the port's own content)
 
 #: the file a translator works in until they rename it (tools/make_language.py)
-TEMPLATE = 'template'
+TEMPLATE = localization.TEMPLATE
 
 #: Phrase fields of the original game's data that the player reads or hears.  Compared without case: the
 #: same field is spelt differently from file to file (Tips and tip, Description and description, Bio).

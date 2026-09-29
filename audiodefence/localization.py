@@ -145,10 +145,10 @@ def file_for(language: str) -> str:
 
 
 def available() -> tuple:
-    """The languages a build carries, the port's own first: a language is a file, and its name is the
-    file's own name without ".json" - the name the Language row offers it by, so a translator names the
-    file what the language calls itself.  Taken in the composed form, so a name spelt with a letter a Mac
-    keeps as two characters (the Russian short i) is the same name everywhere."""
+    """The languages there are, the port's own first: a language is a file, and its name is the file's own
+    name without ".json" - the name the Language row offers it by, so a translator names the file what the
+    language calls itself.  Taken in the composed form, so a name spelt with a letter a Mac keeps as two
+    characters (the Russian short i) is the same name everywhere."""
     names = [ENGLISH]
     folder = paths.LOCALIZATION
     if os.path.isdir(folder):
@@ -158,6 +158,132 @@ def available() -> tuple:
                 if name != ENGLISH and name not in names:
                     names.append(name)
     return tuple(names)
+
+
+# --- the language files themselves ----------------------------------------------------------------
+# Written here rather than in the tools because the game writes them too: in a build, a player's own file
+# is given the lines the game has gained each time it starts (`bring_up_to_date`), and it has to come out
+# in the order `tools/make_language.py` and `tools/merge_language.py` write every other file in, so that a
+# line is on the same line of every language file.
+
+#: the empty list of every line, which a new language is started from: `tools/make_language.py` writes it
+#: in a checkout, and a build carries one of its own, which the updater keeps as it was released
+TEMPLATE = 'template'
+
+_translated: dict = {}
+
+
+def dump(table: dict) -> str:
+    """A language file as it is written: the entries about the file ("@plural") first, where a translator
+    opening it sees them, then every phrase in order.  Sorted whole, they would come after the phrases that
+    start with a space or a percent sign, a hundred and eighty lines down.  A phrase's place depends on its
+    English alone, so a translation changed moves nothing, and a new phrase goes where its English sorts,
+    the same line in every file."""
+    about = sorted(key for key in table if key.startswith('@'))
+    ordered = {key: table[key] for key in about}
+    ordered.update((key, table[key]) for key in sorted(table) if not key.startswith('@'))
+    return json.dumps(ordered, ensure_ascii=False, indent=1) + '\n'
+
+
+def read_file(path: str) -> tuple:
+    """(the file's table, None), or (None, why it cannot be used).  Read as UTF-8 with or without the mark
+    some editors put at the start, since the files are there to be edited by hand."""
+    try:
+        with open(path, encoding='utf-8-sig') as fh:
+            table = json.load(fh)
+    except ValueError as exc:
+        return None, '%s is there but is not readable as JSON: %s' % (path, exc)
+    except OSError as exc:
+        return None, 'cannot read %s: %s' % (path, exc)
+    if not isinstance(table, dict):
+        return None, '%s is not a map of phrases' % path
+    return table, None
+
+
+def fill_in(path: str, phrases) -> tuple:
+    """Bring one language file up to date: every phrase it lacks arrives empty, nothing it has is touched,
+    and nothing is taken out.  The file is written only when that changes it, and made when it is not there.
+    Returns ((added, translated, phrases in it, whether it says how it counts, whether it was there), None),
+    or (None, the reason) for a file that cannot be read, which is left exactly as it is."""
+    had = {}
+    before = None
+    if os.path.isfile(path):
+        had, problem = read_file(path)
+        if problem:
+            return None, problem
+        with open(path, encoding='utf-8-sig') as fh:
+            before = fh.read()
+    table = dict(had)
+    table.setdefault('@plural', '')                        # how the language counts: see PLURAL_RULES
+    # The choices were once written into every file as "@plural guide"; they are in the README now (user
+    # request, 2026-09-29), so a file that got that entry loses it.  It was never a phrase.
+    table.pop('@plural guide', None)
+    added = 0
+    for text in phrases:
+        if text not in table:
+            table[text] = ''
+            added += 1
+    after = dump(table)
+    if after != before:
+        folder = os.path.dirname(os.path.abspath(path))
+        os.makedirs(folder, exist_ok=True)
+        with open(path, 'w', encoding='utf-8', newline='\n') as fh:
+            fh.write(after)
+    done = sum(1 for key, value in table.items() if value and not key.startswith('@'))
+    count = sum(1 for key in table if not key.startswith('@'))
+    return (added, done, count, bool(table.get('@plural')), bool(had)), None
+
+
+def bring_up_to_date() -> None:
+    """In a build, when the game starts: give each language file beside the game the lines of the word list
+    it lacks.
+
+    A build's language files are the player's to open and change (user request, 2026-09-29).  The ones the
+    game ships are the updater's, which puts one back as it was released whenever it differs, and those
+    already have every line.  Anything else in the folder - a copy saved under a name of the player's own,
+    a language being written - the updater never touches, so it is here that it gets the lines the game has
+    gained since it was made: added empty, where their English sorts, with nothing taken out and no
+    translation changed.  A file that cannot be read as a language is left exactly as it is, and so is the
+    word list itself, which is where the lines come from."""
+    words, problem = read_file(file_for(TEMPLATE))
+    if problem:
+        log.info('localization: no word list to bring the language files up to date with: %s', problem)
+        return
+    phrases = [key for key in words if not key.startswith('@')]
+    folder = paths.LOCALIZATION
+    for entry in sorted(os.listdir(folder)):
+        name = entry[:-len('.json')]
+        path = os.path.join(folder, entry)
+        if not entry.endswith('.json') or name in (TEMPLATE, ENGLISH) or not os.path.isfile(path):
+            continue
+        try:
+            result, problem = fill_in(path, phrases)
+        except OSError as exc:                            # a folder the player cannot write to: as it is
+            log.warning('localization: cannot bring %s up to date: %s', entry, exc)
+            continue
+        if problem:
+            log.warning('localization: %s', problem)
+        elif result[0]:
+            log.info('localization: %s had %d lines added, empty', entry, result[0])
+
+
+def has_translation(language: str) -> bool:
+    """Whether a language file has anything translated in it.  The word list is offered in the Language row
+    only once it has, since until then it is English under another name.  Remembered by the file's size and
+    time, because the row is asked for often."""
+    path = file_for(language)
+    try:
+        stat = os.stat(path)
+    except OSError:
+        return False
+    stamp = (stat.st_mtime_ns, stat.st_size)
+    known = _translated.get(path)
+    if known and known[0] == stamp:
+        return known[1]
+    table, _problem = read_file(path)
+    answer = bool(table) and any(value for key, value in table.items() if not str(key).startswith('@'))
+    _translated[path] = (stamp, answer)
+    return answer
 
 
 # --- how a language counts ------------------------------------------------------------------------
@@ -194,7 +320,7 @@ def load(language: str, force: bool = False) -> bool:
         return False
     path = file_for(language)
     try:
-        with open(path, encoding='utf-8') as fh:
+        with open(path, encoding='utf-8-sig') as fh:        # a file saved with the mark some editors add
             phrases = json.load(fh)
     except (OSError, ValueError) as exc:
         log.warning('localization: cannot read %s: %s', path, exc)

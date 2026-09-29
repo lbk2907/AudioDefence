@@ -69,6 +69,9 @@ def main(argv=None) -> int:
     if not paths.FROZEN:
         from .platform import version
         version.current()                               # a checkout with no VERSION file gets one now
+    else:
+        from . import localization
+        localization.bring_up_to_date()                 # a player's own language files get the new lines
 
     import pygame
     from .app import App

@@ -27,7 +27,9 @@ keyboard (from a script), it is the release build straight away, without the men
 
 The port, the HRTF, the vendored DLLs and the version - read from VERSION in the repository - go inside
 the build; the game's own files do not - they are copied next to the executable, where
-audiodefence/paths.py looks for them when frozen.  See the README.
+audiodefence/paths.py looks for them when frozen.  Nor do the language files, which go beside it in a
+localization folder a player can open, with an empty word list to start a new language from.  See the
+README.
 """
 from __future__ import annotations
 
@@ -50,28 +52,7 @@ ENTRY = 'AudioDefence.py'
 
 PLAY_PACKAGES = (('pygame', 'pygame-ce'), ('numpy', 'numpy'), ('av', 'av'), ('comtypes', 'comtypes'),
                  ('prism', 'prismatoid'))
-DATA = (('assets/hrtf', 'assets/hrtf'),                        # the game's own HRTF
-        ('localization', 'localization'))                     # PORT ADDITION: phrase files
-#: files of a DATA folder a build leaves behind: the language a translator is still writing
-#: (tools/make_language.py), which the game would otherwise offer every player as "Template, being
-#: translated" if it happened to be in the folder the build was made from
-DATA_LEAVE_OUT = {'localization': ('template.json',)}
-
-
-def data_to_bundle() -> list:
-    """(source, destination) for PyInstaller's --add-data: each DATA folder whole, or file by file where
-    something in it is left out."""
-    out = []
-    for src, dest in DATA:
-        leave = DATA_LEAVE_OUT.get(src)
-        folder = os.path.join(HERE, src.replace('/', os.sep))
-        if not leave or not os.path.isdir(folder):
-            out.append((src, dest))
-            continue
-        for name in sorted(os.listdir(folder)):
-            if name not in leave and os.path.isfile(os.path.join(folder, name)):
-                out.append((src + '/' + name, dest))
-    return out
+DATA = (('assets/hrtf', 'assets/hrtf'),)                       # the game's own HRTF
 BINARIES = (('vendor/openal/soft_oal.dll', 'vendor/openal'),    # the audio engine itself
             ('vendor/nvda/nvdaControllerClient64.dll', 'vendor/nvda'))
 if host.MAC:
@@ -353,7 +334,7 @@ def prism_native_modules() -> list[str]:
 
 def command(args, baked_folder: str) -> list[str]:
     cmd = [sys.executable, '-m', 'PyInstaller', '--noconfirm', '--noupx', '--name', NAME]
-    for src, dest in data_to_bundle():
+    for src, dest in DATA:
         cmd += ['--add-data', src + os.pathsep + dest]
     for src, dest in BINARIES:
         cmd += ['--add-binary', src + os.pathsep + dest]
@@ -474,6 +455,50 @@ def copy_side_files(dest_root: str) -> None:
         write_page(md_name, os.path.join(dest_root, page))
 
 
+def copy_languages(dest_root: str) -> None:
+    """The language files, in a folder of their own beside the executable where a player can open and change
+    them (user request, 2026-09-29), and the empty word list a new language is started from.
+
+    Each goes out with every line the port has - `tools/make_language.py`'s list - so the game, which gives
+    a player's own file the lines of the word list when it starts, never has cause to write to a file the
+    updater keeps.  A language in the repository that lacks some has them added in the build's copy, and is
+    named: run make_language and commit, so the repository and the release say the same.  The translator's
+    own template.json in the repository is not shipped; the build writes its own, empty."""
+    from audiodefence import localization, paths
+    dest = os.path.join(dest_root, 'localization')
+    say('writing the language files into %s ...' % dest)
+    shutil.rmtree(dest, ignore_errors=True)
+    os.makedirs(dest)
+    phrases = every_phrase()
+    template = localization.TEMPLATE + '.json'
+    behind = []
+    source = paths.LOCALIZATION
+    for name in sorted(os.listdir(source)) if os.path.isdir(source) else ():
+        if not name.endswith('.json') or name == template:
+            continue
+        shutil.copy2(os.path.join(source, name), os.path.join(dest, name))
+        result, problem = localization.fill_in(os.path.join(dest, name), phrases)
+        if problem:
+            say('  %s was left as it is: %s' % (name, problem))
+        elif result[0]:
+            behind.append('%s (%d)' % (name, result[0]))
+    localization.fill_in(os.path.join(dest, template), phrases)
+    say('  %d lines, and %s, empty.' % (len(phrases), template))
+    if behind:
+        say('  lines the repository does not have yet were added to the copies of %s:' % ', '.join(behind))
+        say('  run py tools/make_language.py and commit, so the repository has them too.')
+
+
+def every_phrase() -> list:
+    """Every line a translator is given, as `tools/make_language.py` finds them."""
+    sys.path.insert(0, os.path.join(HERE, 'tools'))
+    try:
+        import make_language
+        return make_language.every_phrase(besides='template.json')
+    finally:
+        sys.path.pop(0)
+
+
 def write_page(md_name: str, dest: str) -> None:
     """README.md -> readme.html beside the executable."""
     import importlib.util
@@ -583,6 +608,7 @@ def main(argv=None) -> int:
                    '' if os.path.isfile(os.path.join(HERE, name)) else ' - but it is not here'))
         for md_name, page in GENERATED_PAGES:
             say('%s would be built there from %s' % (page, md_name))
+        say('the language files would be copied into localization there, with an empty template.json')
         if flagged:
             say('the changelog would be copied as it is, because a build with a flag leaves it alone.')
         else:                                           # what the same command without --dry-run would do
@@ -627,6 +653,7 @@ def main(argv=None) -> int:
     # only once PyInstaller has succeeded: a failed build must not leave the repository changed
     changed = prepare_release_files(baked) if plain else []
     copy_side_files(dest_root)
+    copy_languages(dest_root)
     if plain:
         strip_shipped_changelog(dest_root)
     if app and not finish_mac_app(dest_root, baked):

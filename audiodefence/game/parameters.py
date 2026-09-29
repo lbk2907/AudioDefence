@@ -290,23 +290,24 @@ class GameParameters:
     #: and nothing in the code names one (user request, 2026-09-28).
     LANGUAGES = (('en', 'English'),)
     DEFAULT_LANGUAGE = 'en'
-    #: what `tools/make_language.py` writes, and what a translator works in before choosing a code for it.
-    #: Offered only while the file is there, and never committed, so nobody but its author ever sees it.
+    #: the word list, `localization.TEMPLATE`: what a new language is started from.  Offered once something
+    #: in it is translated, so the empty one a build carries is not in every player's Language row.
     TEMPLATE_LANGUAGE = ('template', 'Template, being translated')
 
     def languages(self) -> tuple:
-        """The languages to offer: the ones this build carries, and the template file while one exists.
+        """The languages to offer: every language file, and the word list once something in it is written.
 
-        PORT ADDITION: a translator fills in `localization/template.json` and can hear it in the game before
-        renaming it to a language code, which is the point at which it becomes a language like any other.
+        PORT ADDITION: a translator who fills in `localization/template.json` can hear it in the game before
+        renaming it, which is the point at which it becomes a language like any other.  Until something in
+        it is translated it is English under another name, and a build carries one for every player, so it
+        is not offered before then.
         """
-        from ..localization import available, file_for
-        import os
+        from ..localization import available, has_translation
         offered = list(self.LANGUAGES)
         for name in available():
             if name not in dict(offered) and name != self.TEMPLATE_LANGUAGE[0]:
                 offered.append((name, name))
-        if os.path.isfile(file_for(self.TEMPLATE_LANGUAGE[0])):
+        if has_translation(self.TEMPLATE_LANGUAGE[0]):
             offered.append(self.TEMPLATE_LANGUAGE)
         return tuple(offered)
 

@@ -7,9 +7,9 @@ Those phrases are everything the port can put in front of a player - the text-ca
 code, and the phrases of the game's own data - so a translator has the list rather than having to find it.
 
 Fill the empty ones in, in any order.  An empty phrase is left alone by the game, so the file works from
-the first line: what is translated is translated, and the rest stays English.  While it is there the game
-offers it in Settings as a language of its own, so it can be heard while it is being written, without a
-code being chosen or anything being renamed.
+the first line: what is translated is translated, and the rest stays English.  Once something in it is
+translated the game offers it in Settings as a language of its own, so it can be heard while it is being
+written, without anything being renamed.
 
 Some phrases have a gap the game fills in: `%i` a number, `%s` a name or a word ("You need %i stars to play
 this level").  Write your sentence round the same gaps.  They are filled in the English order; to change the
@@ -20,7 +20,9 @@ to write the forms for each, are in README.md under "Words that change with a nu
 
 When it is ready, rename it to whatever the Language row should say - `Deutsch.json`, `de.json`: the row
 offers a language by its file's name, whatever that is, and nothing in the code needs to change.
-`template.json` is not committed: it belongs to whoever is writing it.
+`template.json` is not committed: it belongs to whoever is writing it.  A build carries an empty one of its
+own, for a player to start a language from, and the game gives a player's own language files the lines it
+gains (`localization.bring_up_to_date`), so a translator without the source is not left behind.
 
 Run this again whenever the port gains text: it brings **every** language file under `localization/` up to
 date at once, and the template with them.  A file keeps every phrase translated and only the new ones arrive
@@ -43,8 +45,8 @@ sys.path.insert(0, HERE)
 import verify_localization as verifier                             # noqa: E402  (its collectors are the point)
 from audiodefence import localization, paths                       # noqa: E402
 
-#: what a translator works in until they choose a code for it (GameParameters.TEMPLATE_LANGUAGE)
-TEMPLATE = 'template'
+#: what a translator works in until they name it after their language (GameParameters.TEMPLATE_LANGUAGE)
+TEMPLATE = localization.TEMPLATE
 
 
 def every_phrase(besides: str = '') -> list:
@@ -73,7 +75,7 @@ def every_phrase(besides: str = '') -> list:
             if not name.endswith('.json') or name == besides:
                 continue
             try:
-                with io.open(os.path.join(folder, name), encoding='utf-8') as fh:
+                with io.open(os.path.join(folder, name), encoding='utf-8-sig') as fh:
                     known = json.load(fh)
             except (OSError, ValueError):
                 continue
@@ -82,48 +84,6 @@ def every_phrase(besides: str = '') -> list:
                     if not text.startswith('@'):           # about that file, not a phrase
                         seen.setdefault(text, None)
     return sorted(seen)
-
-
-def dump(table: dict) -> str:
-    """The file as it is written: the entries about the file ("@plural") first, where a translator
-    opening it sees them, then every phrase in order.  Sorted whole, they would come after the
-    phrases that start with a space or a percent sign, a hundred and eighty lines down."""
-    about = sorted(key for key in table if key.startswith('@'))
-    ordered = {key: table[key] for key in about}
-    ordered.update((key, table[key]) for key in sorted(table) if not key.startswith('@'))
-    return json.dumps(ordered, ensure_ascii=False, indent=1) + '\n'
-
-
-def update(path: str, phrases: list) -> tuple:
-    """Bring one language file up to date: every phrase it lacks arrives empty, nothing it has is touched.
-    Returns (added, translated, phrases in it), or None with the reason when the file cannot be read."""
-    had = {}
-    if os.path.isfile(path):
-        try:
-            with io.open(path, encoding='utf-8') as fh:
-                had = json.load(fh)
-        except ValueError as exc:
-            return None, '%s is there but is not readable as JSON: %s' % (path, exc)
-        if not isinstance(had, dict):
-            return None, '%s is not a map of phrases' % path
-    table = dict(had)
-    table.setdefault('@plural', '')                        # the language's counting rule: see above
-    # The choices used to be written into every file as "@plural guide"; they are in the README now (user
-    # request, 2026-09-29), so a file that got that entry loses it.  It was never a phrase.
-    table.pop('@plural guide', None)
-    added = 0
-    for text in phrases:
-        if text not in table:
-            table[text] = ''
-            added += 1
-    folder = os.path.dirname(os.path.abspath(path))
-    if folder:
-        os.makedirs(folder, exist_ok=True)
-    with io.open(path, 'w', encoding='utf-8', newline='\n') as fh:
-        fh.write(dump(table))
-    done = sum(1 for key, value in table.items() if value and not key.startswith('@'))
-    count = sum(1 for key in table if not key.startswith('@'))
-    return (added, done, count, bool(table.get('@plural')), bool(had)), None
 
 
 def main(argv=None) -> int:
@@ -151,7 +111,7 @@ def main(argv=None) -> int:
     failed = False
     for path in paths_:
         phrases = every_phrase(besides=os.path.basename(path))
-        result, problem = update(path, phrases)
+        result, problem = localization.fill_in(path, phrases)
         where = os.path.relpath(path, ROOT)
         if result is None:
             print(problem)
@@ -167,9 +127,9 @@ def main(argv=None) -> int:
             print('    under "Words that change with a number".')
     print('An empty phrase stays English, so a file can be used before it is finished.')
     if not args.language and not args.into:
-        print('%s.json is for starting a new language: the game offers it in Settings while it is there, and a'
+        print('%s.json is for starting a new language: the game offers it in Settings once something in it is'
               % TEMPLATE)
-        print('build leaves it out.  When it is ready, rename it to what the Language row should call it.')
+        print('translated.  When it is ready, rename it to what the Language row should call it.')
     print('Then: py tools/verify_localization.py')
     return 1 if failed else 0
 

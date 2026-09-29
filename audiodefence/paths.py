@@ -34,13 +34,14 @@ else:
 ASSETS = os.path.join(ROOT, 'assets')
 HRTF_DIR = os.path.join(ASSETS, 'hrtf')
 VENDOR = os.path.join(ROOT, 'vendor')
-#: PORT ADDITION: the phrase files the optional localization reads (audiodefence/localization.py).
-#: Bundled like assets/, so a language file lives inside the build.
-LOCALIZATION = os.path.join(ROOT, 'localization')
+#: PORT ADDITION: the language files (audiodefence/localization.py).  In a build they are beside the
+#: executable - beside the app, on the Mac - in a folder of their own that a player can open and change
+#: (user request, 2026-09-29): the updater puts back the files the game ships and leaves any other alone.
+LOCALIZATION = os.path.join(EXE_DIR, 'localization')
 if not FROZEN:
     # Run from source, the folder is the repository's own and a language file is put here by hand, so make
     # it when it is not there - a checkout with it deleted, or one taken before the languages existed.
-    # A build's is inside the bundle, where nothing can be added after it is made, so it is left alone.
+    # A build's comes with it, and without it the game is in English until its files are put back.
     try:
         os.makedirs(LOCALIZATION, exist_ok=True)
     except OSError as exc:                                # a read-only checkout: English, and no complaint

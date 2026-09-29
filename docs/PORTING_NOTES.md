@@ -1175,9 +1175,9 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   `make_language.py` run with nothing after it brings every language file under `localization/` up to date,
   and the template with them (user request, 2026-09-29).  It used to write the template and nothing else,
   so a phrase the port gained reached a new translator and never a language already written, unless each
-  file was named in turn.  And a build leaves `template.json` out (`compiler.DATA_LEAVE_OUT`): it was
-  bundled with the rest of the folder, so a template lying in the folder a build was made from would have
-  been offered to every player as "Template, being translated".
+  file was named in turn.  And a build leaves the translator's `template.json` out: it was bundled with the
+  rest of the folder, so a template lying in the folder a build was made from would have been offered to
+  every player as "Template, being translated" (a build now writes an empty one of its own: see below).
 
   The Language row offers each language by its file's name, whatever the file is called (user request),
   rather than from a list in `GameParameters.LANGUAGES`, which named Russian: a language is added by adding
@@ -1190,6 +1190,27 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   change with a number" (user request, 2026-09-29).  They were written into every language file as
   "@plural guide" for a day; `make_language.py` takes that entry back out of a file that has it, since it
   was never a phrase.
+
+  In a build the language files are a folder a player can open, `localization/` beside the executable
+  (beside the app on the Mac), rather than data inside `_internal` (user request, 2026-09-29).  The updater
+  already did the rest: it puts back any file of the release that is missing or differs, and deletes only
+  inside the folders it owns, which this is not.  So the files the game ships are kept as released - a
+  change a player makes to `ru.json` is undone by the next update, as a translator's fix is delivered - and
+  a copy saved under another name is never touched.  What such a copy cannot get from the updater is the
+  lines the game gains, so the game gives it them when it starts (`localization.bring_up_to_date`, a build
+  only): each line of the word list the file lacks, empty, where its English sorts, nothing taken out and no
+  translation changed, and a file that is not valid JSON left exactly as it was.  The word list is a
+  `template.json` the build writes beside the languages, empty, which the updater keeps current like any
+  file of the release; it is offered in the Language row only once something in it is translated, since
+  until then it is English under another name.  The build fills in the lines a shipped language lacks, in
+  its copy, and says so, so the game never has cause to write to a file the updater keeps, and a file
+  written by hand is read with or without the byte-order mark Notepad can put first.  Writing a language
+  file moved out of `make_language.py` into `localization` (`dump`, `fill_in`), since the game writes them
+  too and every file has to come out in one order.  `tools/merge_language.py` puts a file someone sent into
+  the game's own: each line they translated, in the place it already has, every change printed, a line
+  the game no longer has named rather than added.  Considered and not done: carrying the languages inside
+  the executable (nobody could add or fix one), and a player's file of the same name laid over the official
+  one (a stale copy would hide every later fix).
 
   A substitution a template opens with no longer reaches back across ", " (`_template_regex`).  A table row
   is spoken as its title, a comma and its status, and "%s required, press Enter to go to armory" swallowed
