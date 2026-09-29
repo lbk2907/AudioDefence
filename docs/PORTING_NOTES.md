@@ -1941,6 +1941,20 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   which is inside the end of chapter 3 (The Last Word, 22.0 short): it goes back in order with the rest of
   chapter 4 when that is tuned, and not under a player half way through it.
 
+  Collateral was rebuilt the same day (user request: too many, "and does it make sense").  It did not: its
+  first draft escorted a Berserk, a Dodge or a Shield in the middle of every crowd, and only the Shield can
+  stay there.  A Berserk left alone walks away from the player (state 2 of `update:` heads along
+  -orientation) and leaves after `disappearAfter`, 15 seconds; a Dodge at 0.9 outruns a crowd at 0.5; and
+  some of the crowds were Runners round a Berserk walking the other way.  Now a Berserk rests seven units
+  out on a crowd's way in and the crowd walks past it (`_resting`) - a revolver at the crowd can find it, a
+  grenade cannot wake it, and a grenade on it still takes the crowd four units behind; a Shield walks in its
+  crowd at the crowd's pace; a Dodge comes alone or two together; Runners come in a pack of their own with
+  nothing in it to disturb; and the crowds are weak ones, one blast each, as in Fuse.  The last wave went
+  from 38 enemies in seven crowds to 26 in five groups, and every fast thing in it is heard about twelve
+  seconds before it arrives.  The tool puts it at 12.7 seconds short at level 1, from 32.1 - easier than
+  Fuse and than the end of chapter 3 by its reckoning, which counts ringing ears heavily and a grenade as
+  never landing on the toughest; the play-test settles it, and chapter 4's order is settled after.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at
