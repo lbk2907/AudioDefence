@@ -1221,19 +1221,19 @@ PLISTS['port_fuse_1'] = _wave(
 #: there first is still the arena.
 _W4 = ('WeakZombie', 'WeakZombieB', 'WeakZombieC', 'WeakZombie')
 PLISTS['port_fuse_2'] = _wave(
-    [('ZombieB', 60, 7.0, 0.0)] + _escort(('WeakZombie', 'WeakZombieB', 'WeakZombieC'), 'Zombie', 40, 11.0, 1.0)
-    + [('ZombieC', 220, 7.0, 3.0)] + _escort(('WeakZombieB', 'WeakZombie', 'WeakZombieC'), 'ZombieB', 200, 11.0, 4.0)
+    [('WeakZombieB', 60, 7.0, 0.0)] + _escort(('WeakZombie', 'WeakZombieB', 'WeakZombieC'), 'Zombie', 40, 11.0, 1.0)
+    + [('WeakZombieC', 220, 7.0, 3.0)] + _escort(('WeakZombieB', 'WeakZombie', 'WeakZombieC'), 'ZombieB', 200, 11.0, 4.0)
     + _pack(_R3, 320, 11.0, 7.0, spread=5.0)
-    + [('Zombie', 110, 7.0, 8.0)] + _escort(('WeakZombieC', 'WeakZombie', 'WeakZombieB'), 'ZombieC', 130, 11.0, 9.0)
+    + [('WeakZombieB', 110, 7.0, 8.0)] + _escort(('WeakZombieC', 'WeakZombie', 'WeakZombieB'), 'ZombieC', 130, 11.0, 9.0)
     + _escort(('WeakZombie', 'WeakZombieC', 'WeakZombieB'), 'Zombie', 280, 11.0, 12.0), no_blast=True)
 PLISTS['port_fuse_3'] = _wave(
-    [('ZombieC', 30, 7.0, 0.0)] + _escort(_W4, 'Zombie', 10, 11.0, 1.0)
-    + [('ZombieB', 250, 6.5, 2.0)] + _pack(('Hulk', 'HulkB'), 230, 11.0, 3.0)
+    [('WeakZombieB', 30, 7.0, 0.0)] + _escort(_W4, 'Zombie', 10, 11.0, 1.0)
+    + _pack(('Hulk', 'HulkB'), 230, 11.0, 3.0)
     + _pack(_R3, 120, 11.0, 5.0, spread=5.0)
-    + [('Zombie', 160, 7.0, 6.0)] + _escort(('WeakZombieB', 'WeakZombieC', 'WeakZombie'), 'ZombieB', 180, 11.0, 7.0)
+    + [('WeakZombieC', 160, 7.0, 6.0)] + _escort(('WeakZombieB', 'WeakZombieC', 'WeakZombie'), 'ZombieB', 180, 11.0, 7.0)
     + _escort(('WeakZombieC', 'WeakZombie', 'WeakZombieB'), 'Zombie', 300, 11.0, 9.0)
     + [('Runner', 330, 9.0, 10.0)] + _pack(_R3, 60, 11.0, 11.0, spread=5.0)
-    + [('ZombieC', 270, 7.0, 13.0)]
+    + [('WeakZombieB', 270, 7.0, 13.0)]
     + _escort(('WeakZombieB', 'WeakZombie', 'WeakZombieC', 'WeakZombieB'), 'ZombieC', 210, 11.0, 15.0), no_blast=True)
 PLISTS['port_fuse'] = {
     'challenge_id': 'port_fuse',

@@ -1926,6 +1926,12 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   seconds short to 2.1 and 16.7), because it prices an explosive as though it never lands on the toughest
   thing in a pack - which here it always does.
 
+  And the Hulk pair walked in behind a near one of its own, so it could not be grenaded until that one was
+  dead - while the Runners were coming (user, the same day).  The pair has no near one now, so it can be
+  grenaded as it roars, eleven units out, and the near ones left are WeakZombieB and WeakZombieC: twenty
+  of life, two revolver shots or one swing of the wok instead of three shots, and the loudest of the weak
+  voices (-27 to -32 dB against a Zombie's -21, and seven units out against a crowd's eleven).
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at
