@@ -1368,10 +1368,11 @@ PLISTS['port_crossfire'] = {
 #: weapons is for, and an arena about choosing the right tool should not have a target that has none.
 #:
 #: Thinned where it was too crowded or made no sense (user request, 2026-09-29), as Collateral and Crossfire
-#: were: a Berserk rested on a crowd's way in rather than being escorted by it (it walks away) - and then went,
-#: below - a Dodge comes on its own (it outruns a crowd, and a pack of Runners outruns it), wave 2's Runner packs from opposite sides
-#: come 2.3 seconds apart rather than half a second, wave 2 has one Hulk pair and a single Hulk rather than
-#: two pairs, and wave 3 two pairs rather than three, and its opening crowds are fours.
+#: were: a Berserk rested on a crowd's way in rather than being escorted by it (it walks away) - and then
+#: went, below - a Dodge comes on its own (it outruns a crowd, and a pack of Runners outruns it), wave 2's
+#: Runner packs from opposite sides come 2.3 seconds apart rather than half a second, wave 2 has one Hulk pair
+#: and a single Hulk rather than two pairs, and wave 3 two pairs rather than three, and its opening crowds
+#: are fours.
 #: And again, still too many (the same day): every crowd a three, no single Hulk in wave 2, one Hulk pair
 #: in wave 3, and a crowd fewer at the end of waves 2 and 3.  Measured so that no eight seconds bring more than
 #: about ten enemies within five units.
