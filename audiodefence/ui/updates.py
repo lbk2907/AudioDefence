@@ -291,10 +291,9 @@ def offer_restore(host, missing, newest: bool = False) -> None:
     def yes():
         host.push_overlay(RestoreScreen(host, missing))
 
-    # No is remembered for these files, so they are not asked about at every start; a file that goes
-    # missing afterwards is.  Check for updates still offers them, which is how to change your mind.
+    # "No" is not now, as it is for an update: the next start asks again (user request, 2026-09-29).
     def no():
-        GameParameters.shared().set_declined_restore(missing)
+        pass
 
     host.push_overlay(AlertScreen(host, 'Missing files', ' '.join(part for part in (
         'You have the newest version, %s.' % version.text() if newest else '',
@@ -305,8 +304,7 @@ def offer_restore(host, missing, newest: bool = False) -> None:
         'Would you like to download it again?' if count == 1 else 'Would you like to download them again?',
     ) if part), [('OK', None)] if not allowed else [
         ('Yes', yes),
-        ('No', no, 'Not asked again for these files when the game starts. Check for updates on the main '
-                   'menu still offers them.'),
+        ('No', no, 'Asks again the next time the game starts.'),
     ]))
 
 
@@ -343,7 +341,6 @@ class RestoreScreen(MenuScreen):
             return
         if put_back is None:                              # stopped
             return
-        GameParameters.shared().set_declined_restore([])
         one = len(put_back) == 1
         # A language file, or the readme, is read when it is wanted.  Anything else - a sound, a part of
         # the program - may have been looked for already, when the game started.
@@ -433,6 +430,8 @@ def check_on_start(host, screen) -> None:
                            'Restart now?' % version.text(tag))
             return
     params = GameParameters.shared()
+    if not params.check_updates():
+        return
     service = UpdateService.shared()
     if service.checked:                                   # once a session is enough
         return
@@ -442,28 +441,13 @@ def check_on_start(host, screen) -> None:
         service.checked = True
         return
 
-    # Missing files are looked for first, without the network.  Whether or not the quiet check is on, a
-    # file gone is asked about - unless the player has already said no to putting that one back - but a
-    # newer version is offered in its place when there is one, since installing it puts them back too.
+    # Missing files are looked for first, without the network, and asked about as the update is (user
+    # request, 2026-09-29): at every start until they are back, and not at all with the startup check
+    # switched off.  A newer version is offered in their place when there is one, since installing it puts
+    # them back too.
     def missing_found(missing):
-        declined = set(params.declined_restore())
-        ask = any(name not in declined for name in missing)
         if missing:
-            log.info('%d files of this build are missing, %s', len(missing),
-                     'asking' if ask else 'already declined')
-
-        def restore_if_asked():
-            if not ask:
-                return
-            if host.top() is not screen:
-                log.info('files are missing, but the player has moved on; not interrupting')
-                return
-            offer_restore(host, missing)
-
-        if not params.check_updates():
-            service.checked = True
-            restore_if_asked()
-            return
+            log.info('%d files of this build are missing', len(missing))
 
         def result(release, problem):
             if problem:
@@ -476,7 +460,12 @@ def check_on_start(host, screen) -> None:
                     return
                 offer(host, release)
                 return
-            restore_if_asked()
+            if not missing:
+                return
+            if host.top() is not screen:
+                log.info('files are missing, but the player has moved on; not interrupting')
+                return
+            offer_restore(host, missing)
 
         service.check(result)
 

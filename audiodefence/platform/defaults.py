@@ -31,7 +31,7 @@ SETTINGS_KEYS = frozenset({'buttonMode', 'controlScheme', 'sensivity', 'menuAxis
                           'keyNamesController', 'speechOutput', 'fineHaptics', 'sapiVoice', 'sapiRate',
                           'sapiRateBoost',
                           'sapiPitch', 'sapiVolume', 'sapiModernAudio', 'announcer', 'masterGain',
-                          'language', 'declinedRestore'})
+                          'language'})
 INPUT_KEYS = frozenset({'keymap', 'padmap', 'padmaps'})
 
 

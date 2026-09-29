@@ -718,16 +718,17 @@ released with. If one of them is no longer there — a language file deleted, a
 sound taken out — it asks when it starts whether to download it again, and
 puts it back from the release of the version you already have. Nothing that is
 there is touched, and there is no restart unless the file is one the game only
-reads as it starts, in which case it says so. **No** is remembered for those
-files, so you are not asked about them at every start; **Check for updates**
-still offers them when there is no newer version, and when there is one,
-installing it puts them back too. A file you have changed is not missing, and
+reads as it starts, in which case it says so. **No** means not now, as it does
+for an update: the next time the game starts, it asks again. **Check for
+updates** offers them too when there is no newer version, and when there is
+one, installing it puts them back as well. A file you have changed is not
+missing, and
 is left as it is until the next update puts the game's own files back as they
 were released (see [The language files](#the-language-files)).
 
 If you would rather it did not look, **Settings → Miscellaneous → Check for
-updates when the game starts** switches it off. Missing files are still asked
-about, since finding them needs nothing from the network until you say yes. The main menu's Check for
+updates when the game starts** switches it off, and the question about missing
+files with it. The main menu's Check for
 updates button asks whenever you like, and its hint is the version you are on.
 Run from source, that button is a line saying updating is not available — a
 checkout is updated with git, not from a release. Answering "Not yet" to a

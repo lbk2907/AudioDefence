@@ -1222,11 +1222,13 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   of the zip, or takes them out of the whole zip when the server will not serve ranges, and writes each
   straight into place: a file that is not there holds no lock, so there is no hand-off and no restart, and
   a file that is there is never written, changed or not.  The player is told to restart only when something
-  outside `localization/` and the side files came back.  No is remembered for that set of files
-  (`declinedRestore`, a setting), so a start does not ask about them again but does about one that goes
-  missing later, and Check for updates, finding nothing newer, offers them either way.  A one-file build has
-  nowhere to keep the list and goes without.  Tested against a local server: two files deleted and one
-  changed, No remembered, Check for updates offering them, Yes putting back exactly the two, byte for byte,
+  outside `localization/` and the side files came back.  The question is asked as the update is (user
+  request, the same day): No is not now and the next start asks again, and with Check for updates when the
+  game starts switched off the start asks nothing, while Check for updates, finding nothing newer, offers
+  them.  At first No was remembered for that set of files and the start asked with the check off too.  A
+  one-file build has nowhere to keep the list and goes without.  Tested against a local server: two files
+  deleted and one changed, No asked again next start, Check for updates offering them, Yes putting back
+  exactly the two, byte for byte,
   with the changed one and a player's own file untouched, a restart asked for only when a sound came back,
   the whole-zip fallback, and a version missing from GitHub said plainly; `verify_updater.py` still passes.
 
