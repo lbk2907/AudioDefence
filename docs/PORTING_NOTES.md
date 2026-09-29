@@ -1905,6 +1905,15 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   enemy perfectly, so it never priced the whisper, and the later arrival of a Zombie's longer spawn sound
   shifts where its grenades land against its judgement of deafness.  Fuse keeps its place.
 
+  And then, still too many at once (user request, the same day), Fuse's last wave lost its second Hulk pair.
+  Of the six crowds in that wave, taking out each in turn, that pair gave the most back at level 4 (a Hulk
+  is a hundred of life, three or four grenades), and the wave went from 36.6 seconds short to 27.6 at
+  level 1, level with Point Blank and a shade inside One Swing - close enough, on a tool that cannot hear
+  what the player is listening for, to leave the chapter's order alone.  Taking the revolver out, so the
+  arena was grenades and the wok alone, was put to the player and turned down: they want the gun, and the
+  answer to the near one is theirs to find.  The tip hints at it now - "The near one is not worth a
+  grenade." - without saying what is.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at

@@ -1227,14 +1227,14 @@ PLISTS['port_fuse_3'] = _wave(
     + [('Zombie', 160, 7.0, 6.0)] + _pack(_Z4B, 180, 11.0, 7.0)
     + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 300, 11.0, 9.0)
     + [('Runner', 330, 9.0, 10.0)] + _pack(_R3, 60, 11.0, 11.0, spread=5.0)
-    + _pack(('Hulk', 'HulkB'), 90, 11.0, 13.0) + [('ZombieC', 270, 7.0, 13.0)]
+    + [('ZombieC', 270, 7.0, 13.0)]
     + _pack(('Zombie', 'ZombieB', 'ZombieC', 'Zombie', 'ZombieC'), 210, 11.0, 15.0), no_blast=True)
 PLISTS['port_fuse'] = {
     'challenge_id': 'port_fuse',
     'title': 'Fuse',
     'objective': 'Forty-five grenades, and a crowd for every few of them. Something always gets there first.',
     'tip': 'A grenade goes to whatever is nearest in front of you, not to what you meant, and it is loud '
-           'wherever it lands.',
+           'wherever it lands. The near one is not worth a grenade.',
     'icon': 'Challenge_icon_02', 'icon_title': 'FU',
     'weapons': [{'name': 'grenade', 'ammo': '45'}, {'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_fuse_1', 'port_fuse_2', 'port_fuse_3'],
