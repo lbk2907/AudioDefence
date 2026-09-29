@@ -1368,8 +1368,8 @@ PLISTS['port_crossfire'] = {
 #: weapons is for, and an arena about choosing the right tool should not have a target that has none.
 #:
 #: Thinned where it was too crowded or made no sense (user request, 2026-09-29), as Collateral and Crossfire
-#: were: a Berserk rests on a crowd's way in rather than being escorted by it (it walks away), a Dodge comes on
-#: its own (it outruns a crowd, and a pack of Runners outruns it), wave 2's Runner packs from opposite sides
+#: were: a Berserk rested on a crowd's way in rather than being escorted by it (it walks away) - and then went,
+#: below - a Dodge comes on its own (it outruns a crowd, and a pack of Runners outruns it), wave 2's Runner packs from opposite sides
 #: come 2.3 seconds apart rather than half a second, wave 2 has one Hulk pair and a single Hulk rather than
 #: two pairs, and wave 3 two pairs rather than three, and its opening crowds are fours.
 #: And again, still too many (the same day): every crowd a three, no single Hulk in wave 2, one Hulk pair
@@ -1377,6 +1377,9 @@ PLISTS['port_crossfire'] = {
 #: about ten enemies within five units.
 _ARMORY3 = (('Zombie', 'ZombieB', 'ZombieC'), ('ZombieB', 'ZombieC', 'Zombie'), ('ZombieC', 'Zombie', 'ZombieB'),
             ('ZombieB', 'QuietZombie', 'Zombie'))
+#: No Berserk (the same day): the Sawn-off hits everything sixty degrees either side of where it is aimed, and
+#: in every wave something the player would shotgun - a crowd, the Hulk pair, the Dodge - came in within that
+#: of a resting Berserk while it was there, and woke it.  They stay in Collateral, which has no shotgun.
 #: Spaced (the same day): each group comes within five units about five seconds after the one before, and
 #: the Runners, the Dodge, the Chainsaw and the Clown each come on their own, so nothing fast arrives while the
 #: rest of the arena is on top of the player.  The spawn times are worked back from where each should be.
@@ -1385,14 +1388,14 @@ PLISTS['port_armory_1'] = _wave(
     + [('Hulk', 110, 10.0, 4.3)]
     + _pack(_R3, 290, 11.0, 15.0, spread=5.0)
     + _pack(_ARMORY3[1], 200, 10.0, 14.5)
-    + _resting(_ARMORY3[2], 150, 10.0, 19.5)
+    + _pack(_ARMORY3[2], 150, 10.0, 19.5)
     + [('Chainsaw', 330, 10.0, 24.5)]
     + _pack(_ARMORY3[3], 70, 11.0, 29.5), no_blast=True)
 PLISTS['port_armory_2'] = _wave(
     _pack(_R3, 90, 11.0, 4.0, spread=5.0) + _pack(_R3, 270, 11.0, 6.3, spread=5.0)
     + _pack(_ARMORY3[0], 0, 10.0, 5.5)
     + _pack(('Hulk', 'HulkB'), 180, 10.0, 10.3)
-    + _resting(_ARMORY3[3], 225, 10.0, 16.5)
+    + _pack(_ARMORY3[3], 225, 10.0, 16.5)
     + [('Dodge', 20, 11.0, 22.0), ('Clown', 315, 10.0, 20.0), ('Chainsaw', 135, 10.0, 25.5)]
     + _pack(_ARMORY3[1], 160, 10.0, 30.5), no_blast=True)
 PLISTS['port_armory_3'] = _wave(
@@ -1400,7 +1403,7 @@ PLISTS['port_armory_3'] = _wave(
     + _pack(_ARMORY3[0], 10, 11.0, 0.0)
     + _pack(_ARMORY3[2], 190, 11.0, 5.5)
     + _pack(('Hulk', 'HulkB'), 100, 11.0, 12.3)
-    + _resting(_ARMORY3[1], 235, 10.0, 17.5)
+    + _pack(_ARMORY3[1], 235, 10.0, 17.5)
     + [('Dodge', 200, 11.0, 23.0)]
     + _escort(_ARMORY3[3], 'Shield', 325, 10.0, 26.5)
     + [('Chainsaw', 80, 10.0, 32.5), ('Clown', 260, 10.0, 26.0)]

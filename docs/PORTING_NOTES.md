@@ -2011,6 +2011,13 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   eight seconds bring six, eight and seven enemies in its three waves, from fifteen, fourteen and
   twenty-three.  The tool gives 5.6 seconds short at level 1 and 1.2 to spare at level 4.
 
+  And no Berserk, which the player caught: the Sawn-off hits everything sixty degrees either side of where it
+  is aimed, and in each wave something the player would naturally shotgun - a crowd, the Hulk pair, the
+  Dodge - came within five units inside that of a resting Berserk while it was there, and woke it.  Checked
+  for every Berserk in every arena with a shotgun: the three in The Armory were the only ones, and their
+  crowds are plain crowds now.  Collateral keeps its Berserks, having no shotgun - its grenades never wake
+  one and its revolver hits one thing at a time.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at
