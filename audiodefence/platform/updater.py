@@ -222,7 +222,7 @@ def can_update() -> tuple:
 
 
 # ============================================================================================ the check
-def _api(url: str) -> dict:
+def _api(url: str, not_found: str = 'there are no releases to update to yet') -> dict:
     request = urllib.request.Request(url, headers={'Accept': 'application/vnd.github+json',
                                                    'User-Agent': USER_AGENT})
     try:
@@ -230,7 +230,7 @@ def _api(url: str) -> dict:
             return json.load(response)
     except urllib.error.HTTPError as exc:
         if exc.code == 404:
-            raise UpdateError('there are no releases to update to yet') from exc
+            raise UpdateError(not_found) from exc
         if exc.code in (403, 429):
             raise UpdateError('GitHub is asking us to wait before checking again. Try later') from exc
         raise UpdateError('GitHub answered with an error, number %d' % exc.code) from exc
@@ -256,6 +256,122 @@ def check() -> Release | None:
         raise UpdateError('release %s has no zip to download for %s' % (release.tag, 'the Mac' if host.MAC
                                                                              else 'Windows'))
     return release
+
+
+# ================================================================================ files that went missing
+# PORT ADDITION (user request, 2026-09-29): a file of the build that is no longer there - a language file
+# deleted, a sound taken out - is put back from the release of the version the player already has,
+# without waiting for a newer one.  The build carries a list of its own files (compiler.write_file_list),
+# so the game can tell one is missing when it starts without asking GitHub anything; only putting it back
+# needs the network.  A file that is missing holds no lock, so it goes straight into place, with no
+# hand-off and no restart, and nothing that is there is ever touched: a file changed is left changed.
+
+#: the list's name.  Inside the build - `_internal`, or the app's Resources - so an update replaces it
+RELEASE_LIST = 'release-files.txt'
+RELEASE_BY_TAG = 'https://api.github.com/repos/%s/releases/tags/%%s' % REPOSITORY
+
+
+def release_list_path() -> str:
+    if getattr(paths, 'APP_BUNDLE', None):
+        return os.path.join(paths.APP_BUNDLE, 'Contents', 'Resources', RELEASE_LIST)
+    return os.path.join(paths.ROOT, RELEASE_LIST)
+
+
+def release_files() -> list:
+    """The files this build was released with, relative to the install folder with '/' between folders;
+    empty for a checkout, or a build made without the list (a one-file build, or one from before it)."""
+    try:
+        with open(release_list_path(), encoding='utf-8') as fh:
+            return [line.strip() for line in fh if line.strip()]
+    except OSError:
+        return []
+
+
+def missing_files() -> list:
+    """The files of this build that are not there any more.  One look at each, no reading: quick enough
+    for the start of the game, though it is still asked for off the main thread."""
+    root = install_dir()
+    return [relative for relative in release_files()
+            if not os.path.lexists(os.path.join(root, relative.replace('/', os.sep)))]
+
+
+def current_release() -> Release:
+    """The release of the version this build is, which the missing files are taken from."""
+    here = version.current()
+    if not here:
+        raise UpdateError('this build has no version, so there is no release to take its files from')
+    import urllib.parse
+    release = Release(_api(RELEASE_BY_TAG % urllib.parse.quote(here, safe=''),
+                           not_found='version %s is no longer on GitHub. Check for updates, and install '
+                                     'a newer version instead' % version.text(here)))
+    if not release.asset_url:
+        raise UpdateError('version %s has no zip to take the files from' % version.text(here))
+    return release
+
+
+def restore(release: Release, missing: list, progress=None, cancelled=None) -> tuple:
+    """Put back the files of `missing` from `release`, straight into place.  Worker thread.
+
+    Returns (what was put back, what the release does not have).  Read out of the archive a file at a
+    time, as an update is; when the server will not serve ranges, the whole archive is fetched and only
+    those files taken out of it."""
+    root = install_dir()
+    wanted = set(missing)
+    put_back = []
+    try:
+        archive = RemoteZip(release.asset_url, release.asset_size or None)
+    except (RemoteZipError, urllib.error.URLError, OSError, TimeoutError) as exc:
+        log.info('reading the release index a piece at a time did not work (%s); '
+                 'the whole archive will be downloaded', exc)
+        archive = None
+    if archive is not None:
+        prefix = _strip_prefix(list(archive.entries))
+        found = {}
+        for name, entry in archive.files().items():
+            relative = name[len(prefix):] if prefix and name.startswith(prefix) else name
+            if relative in wanted:
+                found[relative] = entry
+        total = sum(entry.compressed_size for entry in found.values())
+        done = 0
+        for relative, entry in sorted(found.items()):
+            _stop(cancelled)
+            try:
+                data = archive.read(entry)                # CRC checked inside
+            except (RemoteZipError, urllib.error.URLError, OSError, TimeoutError) as exc:
+                raise UpdateError('the download stopped before it finished') from exc
+            _put_in_place(root, relative, data, entry.mode)
+            put_back.append(relative)
+            done += entry.compressed_size
+            _report(progress, done, total, relative)
+    else:
+        archive_path = os.path.join(updates_dir(), 'restore-' + (release.asset_name or 'release.zip'))
+        try:
+            _fetch_whole(release, archive_path, progress, cancelled)
+            with zipfile.ZipFile(archive_path) as zf:
+                prefix = _strip_prefix(zf.namelist())
+                for info in zf.infolist():
+                    _stop(cancelled)
+                    relative = info.filename[len(prefix):] if prefix and info.filename.startswith(prefix) \
+                        else info.filename
+                    if info.is_dir() or relative not in wanted:
+                        continue
+                    _put_in_place(root, relative, zf.read(info), _info_mode(info))
+                    put_back.append(relative)
+        finally:
+            if os.path.isfile(archive_path):
+                os.remove(archive_path)
+    return sorted(put_back), sorted(wanted - set(put_back))
+
+
+def _put_in_place(root: str, relative: str, data: bytes, mode: int) -> None:
+    """One file of the release, back where it belongs - and nowhere outside the game's folder, whatever
+    the name inside the archive says."""
+    destination = os.path.abspath(os.path.join(root, relative.replace('/', os.sep)))
+    if os.path.commonpath([destination, os.path.abspath(root)]) != os.path.abspath(root):
+        raise UpdateError('the release has a file that would go outside the game folder: %s' % relative)
+    if os.path.lexists(destination):                      # there after all: never overwritten here
+        return
+    _write_member(destination, data, mode)
 
 
 # ============================================================================================= the plan
@@ -409,22 +525,7 @@ def _download_whole_archive(plan: Plan, payload: str, progress, cancelled) -> No
     """The fallback: fetch the release asset and unpack the files that differ out of it."""
     release = plan.release
     archive_path = os.path.join(os.path.dirname(payload), release.asset_name or 'update.zip')
-    total = release.asset_size
-    request = urllib.request.Request(release.asset_url, headers={'User-Agent': USER_AGENT})
-    try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT) as response, \
-                open(archive_path, 'wb') as fh:
-            done = 0
-            while True:
-                _stop(cancelled)
-                block = response.read(CHUNK)
-                if not block:
-                    break
-                fh.write(block)
-                done += len(block)
-                _report(progress, done, total or done, release.asset_name)
-    except (urllib.error.URLError, OSError, TimeoutError) as exc:
-        raise UpdateError('the download stopped before it finished') from exc
+    _fetch_whole(release, archive_path, progress, cancelled)
 
     root = install_dir()
     with zipfile.ZipFile(archive_path) as zf:
@@ -456,6 +557,26 @@ def _download_whole_archive(plan: Plan, payload: str, progress, cancelled) -> No
         plan.remove = _stale_files(root, wanted)
     os.remove(archive_path)
     plan.fetch = []                                       # the payload is built; nothing left to fetch
+
+
+def _fetch_whole(release: Release, archive_path: str, progress, cancelled) -> None:
+    """The release's whole zip, to `archive_path`: for a server that will not serve it a piece at a time."""
+    total = release.asset_size
+    request = urllib.request.Request(release.asset_url, headers={'User-Agent': USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT) as response, \
+                open(archive_path, 'wb') as fh:
+            done = 0
+            while True:
+                _stop(cancelled)
+                block = response.read(CHUNK)
+                if not block:
+                    break
+                fh.write(block)
+                done += len(block)
+                _report(progress, done, total or done, release.asset_name)
+    except (urllib.error.URLError, OSError, TimeoutError) as exc:
+        raise UpdateError('the download stopped before it finished') from exc
 
 
 # ============================================================================== backing up and handing over

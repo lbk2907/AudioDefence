@@ -419,6 +419,16 @@ class GameParameters:
         self.defaults.set_object(str(tag), 'skippedUpdate')
         self.defaults.synchronize()
 
+    #: The missing files the player answered "no" to putting back, so the same ones are not asked about at
+    #: every launch (updater.missing_files).  A file that goes missing afterwards is asked about again.
+    def declined_restore(self) -> list:
+        value = self.defaults.object('declinedRestore')
+        return [str(name) for name in value] if isinstance(value, list) else []
+
+    def set_declined_restore(self, names) -> None:
+        self.defaults.set_object(sorted(str(name) for name in names), 'declinedRestore')
+        self.defaults.synchronize()
+
     # --- roulette free roll ----------------------------------------------------------------------
     def set_last_good_news(self, unix_time: float) -> None:  # 0x1000a3f44
         self.defaults.set_date(unix_time, 'lastGoodNews')

@@ -150,16 +150,12 @@ Some lines have a gap the game fills in while you play: `%i` is a number, and
 `%s` is a name or a word. The line comes to you whole, gap and all, with its
 translation empty:
 
-```json
-"You need %i stars to play this level": ""
-```
+    "You need %i stars to play this level": ""
 
 Write the whole sentence the way your language says it, and put the same gap
 where the number belongs. The game fills it in:
 
-```json
-"You need %i stars to play this level": "Anda perlukan %i bintang untuk bermain tahap ini"
-```
+    "You need %i stars to play this level": "Anda perlukan %i bintang untuk bermain tahap ini"
 
 In the game: *Anda perlukan 19 bintang untuk bermain tahap ini.*
 
@@ -168,9 +164,7 @@ has them. If your sentence needs them in another order, number each one by its
 place in the English — `%1$s` is the first gap of the English line, `%2$s` the
 second — and put them wherever your sentence wants them:
 
-```json
-"Version %s is available. You have %s.": "Anda ada versi %2$s. Versi %1$s sudah tersedia."
-```
+    "Version %s is available. You have %s.": "Anda ada versi %2$s. Versi %1$s sudah tersedia."
 
 In the game: *Anda ada versi 1.1. Versi 1.2 sudah tersedia.*
 
@@ -182,9 +176,7 @@ six, Malay none — so the game does not guess. You write every form of the word
 between braces, with `|` between them, and the game picks the right one for each
 number:
 
-```json
-"%i coins": "%i {монета|монеты|монет}"
-```
+    "%i coins": "%i {монета|монеты|монет}"
 
 In the game: *1 монета, 2 монеты, 5 монет, 21 монета.*
 
@@ -226,9 +218,7 @@ number from each group in the table, in order — and write down what you say:
 anywhere: they take the nearest number before them, or, if there is none
 before, the first one after.
 
-```json
-"You need %i stars to play this level": "Necesitas %i {estrella|estrellas} para jugar este nivel"
-```
+    "You need %i stars to play this level": "Necesitas %i {estrella|estrellas} para jugar este nivel"
 
 In the game: *Necesitas 1 estrella para jugar este nivel*, *Necesitas 19
 estrellas para jugar este nivel.*
@@ -723,8 +713,21 @@ updater reads the archive's index over the network and compares it with what
 you already have, file by file, so a build that only fixes code is a download
 of a few megabytes rather than the whole game again.
 
+**A file that goes missing is put back.** The game knows which files it was
+released with. If one of them is no longer there — a language file deleted, a
+sound taken out — it asks when it starts whether to download it again, and
+puts it back from the release of the version you already have. Nothing that is
+there is touched, and there is no restart unless the file is one the game only
+reads as it starts, in which case it says so. **No** is remembered for those
+files, so you are not asked about them at every start; **Check for updates**
+still offers them when there is no newer version, and when there is one,
+installing it puts them back too. A file you have changed is not missing, and
+is left as it is until the next update puts the game's own files back as they
+were released (see [The language files](#the-language-files)).
+
 If you would rather it did not look, **Settings → Miscellaneous → Check for
-updates when the game starts** switches it off. The main menu's Check for
+updates when the game starts** switches it off. Missing files are still asked
+about, since finding them needs nothing from the network until you say yes. The main menu's Check for
 updates button asks whenever you like, and its hint is the version you are on.
 Run from source, that button is a line saying updating is not available — a
 checkout is updated with git, not from a release. Answering "Not yet" to a

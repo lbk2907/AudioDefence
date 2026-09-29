@@ -1212,6 +1212,24 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   the executable (nobody could add or fix one), and a player's file of the same name laid over the official
   one (a stale copy would hide every later fix).
 
+  A file of the build that has gone missing is put back from the release of the version the player already
+  has, without waiting for a newer one (user request, 2026-09-29).  The build writes the list of its files
+  into itself, `release-files.txt` in `_internal` or the app's Resources (`compiler.write_file_list`, the
+  same walk as the zip), so the game finds a missing one when the main menu opens without asking GitHub
+  (`updater.missing_files`, one look at each file on a worker thread).  It asks Yes or No; the quiet
+  update check still runs first when it is on, and a newer version is offered in the missing files' place,
+  since installing it puts them back too.  Yes fetches the release by its tag and reads only those files out
+  of the zip, or takes them out of the whole zip when the server will not serve ranges, and writes each
+  straight into place: a file that is not there holds no lock, so there is no hand-off and no restart, and
+  a file that is there is never written, changed or not.  The player is told to restart only when something
+  outside `localization/` and the side files came back.  No is remembered for that set of files
+  (`declinedRestore`, a setting), so a start does not ask about them again but does about one that goes
+  missing later, and Check for updates, finding nothing newer, offers them either way.  A one-file build has
+  nowhere to keep the list and goes without.  Tested against a local server: two files deleted and one
+  changed, No remembered, Check for updates offering them, Yes putting back exactly the two, byte for byte,
+  with the changed one and a player's own file untouched, a restart asked for only when a sound came back,
+  the whole-zip fallback, and a version missing from GitHub said plainly; `verify_updater.py` still passes.
+
   A substitution a template opens with no longer reaches back across ", " (`_template_regex`).  A table row
   is spoken as its title, a comma and its status, and "%s required, press Enter to go to armory" swallowed
   the title with the weapon, so a locked challenge that wanted a gun was read "нужно The Mixed Bag, Обрез" -

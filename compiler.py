@@ -116,6 +116,42 @@ def package(dest_root: str) -> str:
     return archive
 
 
+def build_files(dest_root: str) -> list:
+    """Every file of the built folder, as the zip holds it and the updater names it: relative, with '/'
+    between folders, and an app's link to a folder as the one entry it is."""
+    out = []
+    for dirpath, dirs, files in os.walk(dest_root):
+        links = sorted(d for d in dirs if os.path.islink(os.path.join(dirpath, d)))
+        dirs[:] = sorted(d for d in dirs if d not in links)
+        for filename in sorted(files) + links:
+            out.append(os.path.relpath(os.path.join(dirpath, filename), dest_root).replace(os.sep, '/'))
+    return out
+
+
+def file_list_path(dest_root: str, app: bool) -> str:
+    """Where the list of the build's files goes: where updater.release_list_path looks for it."""
+    from audiodefence.platform import updater
+    if app:
+        return os.path.join(app_bundle(dest_root), 'Contents', 'Resources', updater.RELEASE_LIST)
+    return os.path.join(dest_root, '_internal', updater.RELEASE_LIST)
+
+
+def write_file_list(dest_root: str, app: bool, onefile: bool) -> None:
+    """The list of the files this build is made of, inside it, so the game can tell when one of them has
+    gone missing without asking GitHub (user request, 2026-09-29; updater.missing_files).  Written last,
+    once everything is in the folder, and before the Mac app is signed.  A one-file build unpacks itself
+    somewhere new at every start, so there is nowhere in it for the list, and it goes without."""
+    if onefile:
+        say('a one-file build has no list of its files, so it cannot tell when one is missing.')
+        return
+    path = file_list_path(dest_root, app)
+    own = os.path.relpath(path, dest_root).replace(os.sep, '/')
+    names = [name for name in build_files(dest_root) if name != own]
+    with open(path, 'w', encoding='utf-8', newline='\n') as fh:
+        fh.write('\n'.join(names) + '\n')
+    say('listed the %d files of the build, so a missing one can be put back.' % len(names))
+
+
 def write_zip(dest_root: str, archive: str, top: str) -> int:
     """Zip `dest_root` into `archive`, under one folder called `top`, and return how many members it has.
 
@@ -609,6 +645,11 @@ def main(argv=None) -> int:
         for md_name, page in GENERATED_PAGES:
             say('%s would be built there from %s' % (page, md_name))
         say('the language files would be copied into localization there, with an empty template.json')
+        if args.onefile:
+            say('a one-file build would have no list of its files, so it could not tell when one is missing')
+        else:
+            say('and a list of every file of the build would go into it, as %s'
+                % os.path.relpath(file_list_path(output_dir(args), host.MAC and not args.console), HERE))
         if flagged:
             say('the changelog would be copied as it is, because a build with a flag leaves it alone.')
         else:                                           # what the same command without --dry-run would do
@@ -656,6 +697,7 @@ def main(argv=None) -> int:
     copy_languages(dest_root)
     if plain:
         strip_shipped_changelog(dest_root)
+    write_file_list(dest_root, app, args.onefile)
     if app and not finish_mac_app(dest_root, baked):
         return 1
 

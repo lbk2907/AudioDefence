@@ -20,6 +20,7 @@ In a translated game, a word counted by a number takes the right form for that n
 In a translated game, a challenge that needs a weapon you have not bought is read with its own name first and then the weapon it needs.
 The Language row lists each language under the name of its file. If the language you chose is no longer there, the game goes back to English.
 The language files are in a localization folder next to the game, where you can open them. An update puts the game's own files back as they were, so keep your changes in a copy with a name of your own: the game lists it too, never removes it, and adds new lines to it as the game gains them.
+If some of the game's files have gone missing, it asks when it starts whether to download them again, and puts them back without waiting for a new version. Check for updates offers them too.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.
