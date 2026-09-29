@@ -1232,7 +1232,7 @@ PLISTS['port_fuse_3'] = _wave(
     + _pack(_R3, 120, 11.0, 5.0, spread=5.0)
     + [('WeakZombieC', 160, 7.0, 6.0)] + _escort(('WeakZombieB', 'WeakZombieC', 'WeakZombie'), 'ZombieB', 180, 11.0, 7.0)
     + _escort(('WeakZombieC', 'WeakZombie', 'WeakZombieB'), 'Zombie', 300, 11.0, 9.0)
-    + [('Runner', 330, 9.0, 10.0)] + _pack(_R3, 60, 11.0, 11.0, spread=5.0)
+    + [('Runner', 330, 9.0, 10.0)]
     + [('WeakZombieB', 270, 7.0, 13.0)]
     + _escort(('WeakZombieB', 'WeakZombie', 'WeakZombieC', 'WeakZombieB'), 'ZombieC', 210, 11.0, 15.0), no_blast=True)
 PLISTS['port_fuse'] = {
@@ -1246,7 +1246,9 @@ PLISTS['port_fuse'] = {
     'bricks': ['port_fuse_1', 'port_fuse_2', 'port_fuse_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
     'time_limit_star': {'reward': 400, 'objective': 200},
-    'accuracy_star': {'reward': 450, 'objective': 80},
+    # 60, not 80 (user request, 2026-09-29): played well, the player reached 62.  A grenade that the near
+    # one takes, or a revolver shot at a Zombie moving across, is a miss, and the arena is built on both.
+    'accuracy_star': {'reward': 450, 'objective': 60},
 }
 
 # ------------------------------------------------------------------------------------------- Collateral

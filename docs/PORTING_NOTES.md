@@ -1932,6 +1932,14 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   of life, two revolver shots or one swing of the wok instead of three shots, and the loudest of the weak
   voices (-27 to -32 dB against a Zombie's -21, and seven units out against a crowd's eleven).
 
+  Then too many Runners in the last wave (user, the same day): the second pack of three, which arrived with
+  the Hulk pair, is gone, leaving one pack early and one Runner on its own later - four where there were
+  seven.  And the accuracy star asks for 60 per cent rather than 80: the player, playing it well, reached
+  62, and the arena is built on misses the player cannot avoid, a grenade the near one takes and a
+  revolver shot at something walking across.  The tool puts Fuse at 18.0 seconds short at level 1 now,
+  which is inside the end of chapter 3 (The Last Word, 22.0 short): it goes back in order with the rest of
+  chapter 4 when that is tuned, and not under a player half way through it.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at
