@@ -1977,7 +1977,10 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   reload, come to about three and a half seconds.  So wave 2 sends the second pack from the opposite side
   5.5 seconds behind the first, and wave 3 sends one 4.5 behind: a second to spare, and none for waiting.
   Nothing else comes within five units within six seconds of either pair.  The tool goes from 1.1 seconds
-  to spare to 0.8 short at level 1.
+  to spare to 0.8 short at level 1.  Then tighter, at the player's asking: the crowds that walk come in
+  four to six seconds after what came before instead of six to eleven, and in fours after the first wave,
+  the Runner pairs keeping their gaps.  Wave 3 has 38 enemies; the tool gives 3.0 seconds short (wave 2)
+  and 1.8 (wave 3) at level 1.
 
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
