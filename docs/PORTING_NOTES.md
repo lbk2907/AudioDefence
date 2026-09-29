@@ -1990,6 +1990,17 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   Runners ("One side can wait a moment, as long as you choose which.  What comes alone can be met further
   out."); the time star is 220 again.
 
+  The Armory, last (user request, the same day: too crowded).  Its busiest eight seconds brought 23 enemies
+  within five units - four Hulks and five fast ones among them - and it had the mistakes Collateral and
+  Crossfire had: Runner packs from opposite sides half a second apart in wave 2, a Berserk and a Dodge
+  escorted inside crowds, and in wave 3 a pack of Runners escorting a Dodge.  Changed as little as that
+  needed, as the player now prefers: Berserks rest on a crowd's way in (`_resting`), Dodges come alone, the
+  Shield stays in its crowd, wave 2's Runner packs are 2.3 seconds apart, wave 2 has a Hulk pair and a
+  single Hulk instead of two pairs, and wave 3 two pairs instead of three and its opening crowds in fours.
+  Wave 3 has 35 enemies from 40, and its busiest eight seconds 15, one fast and two Hulks.  The tool moves
+  from 34.2 to 32.4 seconds short at level 1, a shade inside Crossfire before it (35.8) - one more thing
+  for chapter 4's order once the player has been through it.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at

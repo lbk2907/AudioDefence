@@ -1366,21 +1366,28 @@ PLISTS['port_crossfire'] = {
 #: Chainsaws and Clowns that come round the side for the Claymore.  The Colossus was here in the first draft
 #: and came out: five hundred life is twelve direct grenades or twenty-four shells, which none of these
 #: weapons is for, and an arena about choosing the right tool should not have a target that has none.
+#:
+#: Thinned where it was too crowded or made no sense (user request, 2026-09-29), as Collateral and Crossfire
+#: were: a Berserk rests on a crowd's way in rather than being escorted by it (it walks away), a Dodge comes on
+#: its own (it outruns a crowd, and a pack of Runners outruns it), wave 2's Runner packs from opposite sides
+#: come 2.3 seconds apart rather than half a second, wave 2 has one Hulk pair and a single Hulk rather than
+#: two pairs, and wave 3 two pairs rather than three, and its opening crowds are fours.
 PLISTS['port_armory_1'] = _wave(
     _pack(_Z4, 20, 11.0, 0.0) + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 200, 10.0, 0.5)
     + [('Hulk', 110, 10.0, 3.0)] + _pack(_R3, 290, 11.0, 6.0, spread=5.0)
-    + _escort(_Z4, 'Berserk', 150, 9.0, 9.0)
+    + _resting(_Z4, 150, 10.0, 9.0)
     + [('Chainsaw', 330, 10.0, 12.0)] + _pack(_Z4B, 70, 11.0, 14.0), no_blast=True)
 PLISTS['port_armory_2'] = _wave(
-    _escort(_Z4, 'Dodge', 0, 10.0, 0.0) + _pack(('Hulk', 'HulkB'), 180, 10.0, 1.0)
-    + _pack(_R3, 90, 11.0, 4.0, spread=5.0) + _pack(_R3, 270, 11.0, 4.5, spread=5.0)
-    + _pack(('Hulk', 'HulkB'), 45, 11.0, 6.0) + _escort(_Z4B, 'Berserk', 225, 9.0, 8.0)
-    + [('Chainsaw', 135, 10.0, 10.0), ('Clown', 315, 10.0, 11.0)]
+    _pack(_Z4, 0, 10.0, 0.0) + _pack(('Hulk', 'HulkB'), 180, 10.0, 1.0)
+    + _pack(_R3, 90, 11.0, 4.0, spread=5.0) + _pack(_R3, 270, 11.0, 6.3, spread=5.0)
+    + [('Hulk', 45, 11.0, 6.0)] + _resting(_Z4B, 225, 10.0, 8.0)
+    + [('Dodge', 20, 11.0, 9.0), ('Chainsaw', 135, 10.0, 10.0), ('Clown', 315, 10.0, 11.0)]
     + _pack(_Z4, 160, 10.0, 13.0) + _pack(_Z4, 340, 10.0, 13.5), no_blast=True)
 PLISTS['port_armory_3'] = _wave(
-    _pack(_Z4 + ('ZombieB',), 10, 11.0, 0.0) + _pack(_Z4 + ('ZombieC',), 190, 11.0, 0.3)
-    + _pack(('Hulk', 'HulkB'), 100, 11.0, 2.0) + _pack(('Hulk', 'HulkB'), 280, 11.0, 6.0)
-    + _escort(_R4, 'Dodge', 55, 11.0, 5.0) + _escort(_Z4, 'Berserk', 235, 9.0, 7.0)
+    _pack(_Z4, 10, 11.0, 0.0) + _pack(_Z4, 190, 11.0, 0.3)
+    + _pack(('Hulk', 'HulkB'), 100, 11.0, 2.0)
+    + _pack(_R3, 55, 11.0, 5.0, spread=5.0) + _resting(_Z4, 235, 10.0, 7.0)
+    + [('Dodge', 200, 11.0, 11.0)]
     + _pack(('Hulk', 'HulkB'), 145, 11.0, 10.0) + _escort(_Z4B, 'Shield', 325, 10.0, 16.0)
     + [('Chainsaw', 80, 10.0, 14.0), ('Clown', 260, 10.0, 15.0)]
     + _pack(_R3, 170, 11.0, 18.0, spread=5.0) + _pack(_Z4, 350, 10.0, 19.0), no_blast=True)
