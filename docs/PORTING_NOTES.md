@@ -1982,6 +1982,14 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   the Runner pairs keeping their gaps.  Wave 3 has 38 enemies; the tool gives 3.0 seconds short (wave 2)
   and 1.8 (wave 3) at level 1.
 
+  And then back to the first version, which the player liked best once all of that had been played, with
+  one thing changed: in the last wave the far pack of each Runner pair comes 2.3 seconds behind the near
+  one, where `_pair` puts it three tenths behind - which for Runners is both packs inside five units at
+  once.  A shell into the first, a half-turn, a shell into the second.  The rebuilds above are what that
+  was learnt from, and are gone.  The tip keeps the rewording that stops it pointing at the rifle for
+  Runners ("One side can wait a moment, as long as you choose which.  What comes alone can be met further
+  out."); the time star is 220 again.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at
