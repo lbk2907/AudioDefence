@@ -1318,36 +1318,57 @@ PLISTS['port_collateral'] = {
 
 # -------------------------------------------------------------------------------------------- Crossfire
 #: Point Blank's shotgun, facing both ways at once.  Its cone is sixty degrees either side, which is a third
-#: of the arena and never the half behind, so every pack here comes with another from the opposite side at the
-#: same moment.  The Hunting Rifle is the other half of the answer: it reaches what the shotgun cannot, one at
-#: a time, and forty rounds of it is not much.
+#: of the arena and never the half behind, so the crowds here come two at a time from opposite sides.  The
+#: Sawn-off kills in one shell only inside about five units (`dispersal` 1: 46 at three, 40 at five, 23 at
+#: eight), two shells to a load; the Hunting Rifle is 25 a shot at any distance, one enemy at a time.
+#:
+#: Rebuilt (user request, 2026-09-29: too many, "room to breathe", and Runners from both sides at once while
+#: the tip pointed at the rifle - which needs two shots a Runner and a second to be switched to, where a pack
+#: of three is on you in eight).  So a pair is never two fast packs: it is two crowds that walk, or Runners
+#: with a crowd that walks, and the one that walks is the side that waits.  The rifle is for what comes on
+#: its own - a single Zombie, a Hulk - out of the shotgun's reach.  Every group is dealt with before the
+#: next is within five units, with a few seconds between; the last wave went from 46 enemies to 29.
+_Z3 = ('Zombie', 'ZombieB', 'ZombieC')
+_Z3B = ('ZombieB', 'ZombieC', 'Zombie')
+_Z3C = ('ZombieC', 'Zombie', 'ZombieB')
+
+
+def _runners_and_walkers(bearing: float, at: float) -> list:
+    """Runners from one side and a crowd that walks from the other: the Runners first, then turn."""
+    return _pack(_R3, bearing, 11.0, at, spread=5.0) + _pack(_Z3B, bearing + 180.0, 10.0, at + 0.3)
+
+
 PLISTS['port_crossfire_1'] = _wave(
-    _pack(('Zombie', 'ZombieB', 'ZombieC'), 0, 10.0, 0.0) + _pack(('Zombie', 'ZombieC', 'ZombieB'), 180, 10.0, 0.5)
-    + _pack(('ZombieB', 'Zombie', 'WeakZombie'), 90, 10.0, 10.0)
-    + _pack(('ZombieC', 'Zombie', 'ZombieB'), 270, 10.0, 10.5)
-    + [('Zombie', 45, 11.0, 5.0), ('ZombieB', 225, 11.0, 14.0)], no_blast=True)
+    _pair(_Z3, _Z3C, 0, 0.0)
+    + [('Zombie', 45, 11.0, 6.0)]
+    + _pair(_Z3B, _Z3, 90, 13.0)
+    + [('ZombieB', 225, 11.0, 20.0)], no_blast=True)
 PLISTS['port_crossfire_2'] = _wave(
-    _pack(_Z4, 30, 10.0, 0.0) + _pack(_R3, 210, 11.0, 2.0, spread=5.0)
-    + _pack(_Z4B, 120, 10.0, 8.0) + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 300, 10.0, 8.5)
-    + [('Hulk', 75, 11.0, 4.0), ('Zombie', 255, 11.0, 12.0)]
-    + _pack(_R3, 345, 11.0, 15.0, spread=5.0) + _pack(('Zombie', 'ZombieB', 'ZombieC'), 165, 10.0, 15.5),
-    no_blast=True)
+    _pair(_Z3, _Z3B, 30, 0.0)
+    + [('Hulk', 120, 11.0, 8.0)]
+    + _runners_and_walkers(300, 20.0)
+    + [('Zombie', 255, 11.0, 28.0)], no_blast=True)
 PLISTS['port_crossfire_3'] = _wave(
-    _pair(_Z4, _Z4B, 10, 0.0) + _pair(_R3, _R3, 100, 4.0, runners=True)
-    + _pack(('Hulk', 'HulkB'), 55, 10.0, 7.0) + _pack(_Z4, 235, 10.0, 7.3)
-    + _pair(_Z4B, _Z4, 150, 10.0) + [('Hulk', 330, 11.0, 11.0)]
-    + _pair(_R3, _R3, 20, 14.0, runners=True) + _pair(_Z4, _Z4B, 70, 17.0)
-    + _pack(_R3, 300, 11.0, 20.0, spread=5.0), no_blast=True)
+    _pair(_Z3C, _Z3, 10, 0.0)
+    + _runners_and_walkers(100, 17.0)
+    + [('Hulk', 55, 11.0, 22.0)]
+    + _pair(_Z3B, _Z3C, 150, 30.5)
+    + [('Zombie', 200, 11.0, 34.5)]
+    + _pack(_R3, 20, 11.0, 44.0, spread=5.0)
+    + _runners_and_walkers(70, 52.0), no_blast=True)
 PLISTS['port_crossfire'] = {
     'challenge_id': 'port_crossfire',
     'title': 'Crossfire',
     'objective': 'They come two crowds at a time, from opposite sides, and a shotgun only faces one way.',
-    'tip': 'One side can wait, as long as you choose which, and have something that reaches it.',
+    'tip': 'One side can always wait a little: choose the one that walks. What comes alone can be met '
+           'further out.',
     'icon': 'Challenge_icon_02', 'icon_title': 'CF',
     'weapons': [{'name': 'sawnoff', 'ammo': '70'}, {'name': 'hunting', 'ammo': '40'}, {'name': 'wok'}],
     'bricks': ['port_crossfire_1', 'port_crossfire_2', 'port_crossfire_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
-    'time_limit_star': {'reward': 450, 'objective': 220},
+    # 240, not 220: the groups were spaced out for room to breathe (2026-09-29), and the last wave's last
+    # crowd now spawns at 52 seconds
+    'time_limit_star': {'reward': 450, 'objective': 240},
     'accuracy_star': {'reward': 450, 'objective': 70},
 }
 

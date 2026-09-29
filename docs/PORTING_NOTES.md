@@ -1955,6 +1955,21 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   Fuse and than the end of chapter 3 by its reckoning, which counts ringing ears heavily and a grenade as
   never landing on the toughest; the play-test settles it, and chapter 4's order is settled after.
 
+  Crossfire too (user request, the same day: too many, Runners from both sides at once while the tip
+  pointed at the rifle, and "room to breathe" as the condition of changing it).  The Sawn-off kills in one
+  shell only inside about five units (`dispersal` 1), two to a load; the Hunting Rifle is 25 a shot, one
+  enemy at a time - so a pack of three Runners wants six rifle shots and a second's switch, and is on the
+  player in eight.  Its last wave had sent Runner packs from opposite sides twice over, fifteen Runners in
+  46 enemies.  Now a pair is never two fast packs: two crowds that walk, or Runners with a crowd that walks,
+  and the one that walks is the side that waits; the rifle is for what comes alone, a single Zombie or a
+  Hulk, out of the shotgun's reach.  The groups are spaced so each comes within five units five to eleven
+  seconds after the one before, the crowds are threes, and the last wave has 29.  The tip says so without
+  saying it ("One side can always wait a little: choose the one that walks.  What comes alone can be met
+  further out."), and the time star is 240 seconds, from 220, since the spacing makes the waves longer.
+  The tool swings from 35.8 seconds short to 1.1 to spare at level 1: it never counts finding a crowd by
+  ear, the half-turn between the sides or the Sawn-off's reloads, which are the arena; the play-test says
+  whether it wants tightening.
+
 * CORRECTION to `tools/arena_pressure.py`: it assumed every enemy walks straight at the player, and the ones
   with a `circling` dict do not.  State 2 heads along `(1 - circlingFactor)` toward the player plus
   `circlingFactor` sideways, so only that fraction of the speed closes the distance: a Clown, at
