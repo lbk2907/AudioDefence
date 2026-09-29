@@ -1246,9 +1246,11 @@ PLISTS['port_fuse'] = {
     'bricks': ['port_fuse_1', 'port_fuse_2', 'port_fuse_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
     'time_limit_star': {'reward': 400, 'objective': 200},
-    # 60, not 80 (user request, 2026-09-29): played well, the player reached 62.  A grenade that the near
-    # one takes, or a revolver shot at a Zombie moving across, is a miss, and the arena is built on both.
-    'accuracy_star': {'reward': 450, 'objective': 60},
+    # 70, not 80 (user request, 2026-09-29): played well, the player reached 62, so this is a reach and not
+    # a wall.  A wok swing and a grenade count as shots as a revolver's does (`update_melee_weapons`, and
+    # the explosion's UPDATE_WEAPON_DATA), and they seldom miss, so it is won by taking the near ones with
+    # the wok and keeping the revolver for when there is no time.
+    'accuracy_star': {'reward': 450, 'objective': 70},
 }
 
 # ------------------------------------------------------------------------------------------- Collateral

@@ -1934,9 +1934,10 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
 
   Then too many Runners in the last wave (user, the same day): the second pack of three, which arrived with
   the Hulk pair, is gone, leaving one pack early and one Runner on its own later - four where there were
-  seven.  And the accuracy star asks for 60 per cent rather than 80: the player, playing it well, reached
-  62, and the arena is built on misses the player cannot avoid, a grenade the near one takes and a
-  revolver shot at something walking across.  The tool puts Fuse at 18.0 seconds short at level 1 now,
+  seven.  And the accuracy star asks for 70 per cent rather than 80: the player, playing it well, reached
+  62 (60 was tried first, and the player asked for something to reach for).  A wok swing and a grenade
+  count as shots as a revolver's does, and seldom miss, so the star is won by taking the near ones with the
+  wok and keeping the revolver for when there is no time.  The tool puts Fuse at 18.0 seconds short at level 1 now,
   which is inside the end of chapter 3 (The Last Word, 22.0 short): it goes back in order with the rest of
   chapter 4 when that is tuned, and not under a player half way through it.
 
