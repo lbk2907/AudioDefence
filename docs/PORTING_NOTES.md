@@ -1606,7 +1606,13 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   0x10001f230 answers False for the port's own now, and for any world with no challenges at all - the
   same crash reached another way, and one that was there before any of this.  The button says "back to
   Extra" and goes there, since "next arena" would be a lie about a challenge in no arena; the overview's
-  own Back goes the same way for the same reason.
+  own Back goes the same way for the same reason.  Since 2026-09-29 (user request) a chapter is walked as a
+  world is: Next challenge opens the arena after it in its chapter (`additions.arena_after`), or the
+  chapter's list when that one wants a gun not bought, as the original falls back to its challenge list;
+  and the last arena of a chapter says "next chapter" and goes to the Extra screen, as the last of a world
+  says "next arena" and goes to the world list (`App.go_to_challenge_after` 0x100081c70).  Copy results on
+  an Extra arena's completed or failed screen opens "Audio Defence Extra Challenge Statistics" (user
+  request, the same day), so a paste of one is not taken for one of the original's challenges.
 
   Three more screens had to be told the same thing, and were not until a player found them.  Every screen
   behind a challenge goes back to its list through `goToChallengeSelector` 0x1000816e0, which opens the

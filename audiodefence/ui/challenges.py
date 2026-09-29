@@ -36,6 +36,15 @@ def _challenge_rows(challenge: dict, outcome: str) -> list:
     return rows + [(False, 'Result', outcome)]
 
 
+def _statistics_heading(challenge: dict) -> str:
+    """PORT ADDITION: the first line of a challenge's Copy results.  An Extra arena's says so (user request,
+    2026-09-29), so a paste of one is not taken for one of the original's challenges."""
+    from ..game.additions import chapter_of
+    if chapter_of(challenge.get('challenge_id')) is not None:
+        return 'Audio Defence Extra Challenge Statistics'
+    return 'Audio Defence Challenge Statistics'
+
+
 def _play_buttons_sound(key: str) -> None:
     """playButtonSound of the challenge screens: S3DSound <key> of the "buttons" playlist at gain 3."""
     pl = S3DEngine.engine().play_list_with_name('buttons')
@@ -508,7 +517,7 @@ class ChallengeFailedScreen(ViewControllerScreen):
             self.first_accessible_element = self.results_view.children[0]
 
     def copy_results_button_pressed(self) -> None:        # PORT ADDITION: the rows, as they read
-        results.copy_results(self, 'Audio Defence Challenge Statistics',
+        results.copy_results(self, _statistics_heading(self.challenge_dict),
                              rows=results.rows_from_table(self.results_view))
 
     def mission_select_button_pressed(self) -> None:      # 0x100071e1c
@@ -631,15 +640,17 @@ class AccessibleChallengeCompletedScreen(AccessibleGameOverEndlessScreen):
         if ChallengeData.shared().has_challenge_after(self.challenge_dict.get('challenge_id'),
                                                       GameParameters.shared().last_challenge_world):
             return
-        from ..game.additions import chapter_of
-        chapter = chapter_of(self.challenge_dict.get('challenge_id'))
-        if chapter is not None:
-            # PORT ADDITION: an arena of the port's is part of no arena of theirs, so "next arena" would be
-            # a lie and the world selector the wrong place to send anybody.  It goes back to the chapter it
-            # came from, and says which one that is.
-            back = 'back to %s' % chapter
-            self.next_challenge_button.label = back
-            self.next_challenge_button.set_title(back)
+        from ..game.additions import arena_after, chapter_of
+        cid = self.challenge_dict.get('challenge_id')
+        if chapter_of(cid) is not None:
+            # PORT ADDITION (user request, 2026-09-29): a chapter is to Extra what a world is to the
+            # challenges.  Next challenge opens the arena after this one in its chapter
+            # (App.go_to_challenge_after), and the last of a chapter says "next chapter" and goes to the
+            # Extra screen, as the last of a world says "next arena" and goes to the world list.  It used to
+            # say "back to Chapter N" and go back to the chapter it came from.
+            if arena_after(cid) is None:
+                self.next_challenge_button.label = 'next chapter'
+                self.next_challenge_button.set_title('next chapter')
             return
         self.next_challenge_button.label = 'next arena'
         self.next_challenge_button.set_title('next arena')
@@ -702,6 +713,6 @@ class AccessibleChallengeCompletedScreen(AccessibleGameOverEndlessScreen):
         App.delegate().go_to_challenge_with_dict(self.challenge_dict)
 
     def copy_results_button_pressed(self) -> None:        # PORT ADDITION: the table, as it reads
-        results.copy_results(self, 'Audio Defence Challenge Statistics')
+        results.copy_results(self, _statistics_heading(self.challenge_dict))
 
     # REMOVED (user request): the magic tap 0x10006974c pressed Next mission.

@@ -1432,6 +1432,15 @@ def chapter_arenas(chapter: str) -> tuple:
     return ()
 
 
+def arena_after(challenge_id: str):
+    """The arena after this one in its chapter - what Next challenge opens - or None for the last of a
+    chapter, and for a challenge that is not one of ours."""
+    arenas = chapter_arenas(chapter_of(challenge_id))
+    if challenge_id in arenas and arenas.index(challenge_id) + 1 < len(arenas):
+        return arenas[arenas.index(challenge_id) + 1]
+    return None
+
+
 def chapter_stars_required(chapter: str) -> int:
     """Every star the chapters before this one hold, less `SPARE_STARS`; the first chapter is open."""
     before = 0

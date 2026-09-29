@@ -175,14 +175,24 @@ class App:
         from .game.challenge_data import ChallengeData
         from .game.parameters import GameParameters
         cd = ChallengeData.shared()
+        from .game.additions import arena_after, chapter_of
+        chapter = chapter_of(challenge)
+        if chapter is not None:
+            # PORT ADDITION (user request, 2026-09-29): the same walk through a chapter of Extra.  The arena
+            # after this one in its chapter, opened as its row in the chapter opens it, or - wanting a gun
+            # not bought - the chapter's list, which says so, as the original falls back to the challenge
+            # list; after the last of a chapter, the Extra screen, as the original goes to the world list.
+            nxt = arena_after(challenge)
+            if nxt is None:
+                self.go_to_extra_menu()
+            elif cd.has_weapon_for_challenge_with_name(nxt):
+                self.go_to_accessible_challenge_overview_with_dictionary(self.dictionary_for_challenge_with_name(nxt))
+            else:
+                self.go_to_extra_chapter(chapter)
+            return
         world = GameParameters.shared().last_challenge_world
         if not cd.has_challenge_after(challenge, world):
-            from .game.additions import chapter_of       # PORT ADDITION: back to the list it came from
-            chapter = chapter_of(challenge)
-            if chapter is not None:
-                self.go_to_extra_chapter(chapter)
-            else:
-                self.go_to_world_selector()
+            self.go_to_world_selector()
             return
         nxt = cd.challenge_after(challenge, world)
         if self.screen_reader_running():
