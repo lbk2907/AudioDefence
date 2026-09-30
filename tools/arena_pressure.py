@@ -165,7 +165,8 @@ def deadline(kind: str, distance: float, spawn_time: float) -> float:
     speed = float(e.get('speed') or 0) * MULT['speed']
     if not speed:
         return float('inf')                               # it never comes to you
-    aggressive = float(e.get('agressiveSpeed') or e.get('speed') or 0) * MULT['speed']
+    # The charge is read before the speed cards are applied (`Enemy.__init__`), so they hasten only the walk.
+    aggressive = float(e.get('agressiveSpeed') or e.get('speed') or 0)
     # An enemy with a `circling` dict does not walk at the player.  State 2 heads along
     # (1 - circlingFactor) * toward-the-player + circlingFactor * sideways, so only that fraction of its
     # speed closes the distance: a Clown at 0.9 covers two tenths of a unit a second out of two.  The
@@ -304,7 +305,7 @@ def reach_time(kind: str, distance: float, spawn_time: float, at: float) -> floa
         return float('inf')
     if distance <= at:
         return spawn_time + spawn_sound(kind)
-    aggressive = float(e.get('agressiveSpeed') or e.get('speed') or 0) * MULT['speed']
+    aggressive = float(e.get('agressiveSpeed') or e.get('speed') or 0)
     f = _f(e.get('circling'), 'circlingFactor')
     walk = max(0.0, distance - max(at, AGGRESSIVE_AT)) / (speed * max(0.05, 1.0 - f))
     close = max(0.0, min(distance, AGGRESSIVE_AT) - at) / aggressive if at < AGGRESSIVE_AT else 0.0
@@ -478,7 +479,7 @@ def distance_at(kind: str, distance: float, spawn_time: float, t: float) -> floa
     walk = pace(kind) * MULT['speed']
     if not walk or t <= spawn_time + spawn_sound(kind):
         return distance
-    aggressive = float(e.get('agressiveSpeed') or e.get('speed') or 0) * MULT['speed']
+    aggressive = float(e.get('agressiveSpeed') or e.get('speed') or 0)
     t -= spawn_time + spawn_sound(kind)
     to_three = max(0.0, distance - AGGRESSIVE_AT) / walk
     if t <= to_three:
