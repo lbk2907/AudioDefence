@@ -500,7 +500,7 @@ PLISTS['port_stampede'] = {
     'bricks': ['port_stampede_1', 'port_stampede_2', 'port_stampede_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
     #: PORT ADDITION (user request): the modifiers this arena is played with, whatever the deck last did.
-    #: A flag written twice is applied twice, and `times()` counts the stack, so this is +40% speed.
+    #: A flag written twice is applied twice, and `times()` counts the stack; this one is written once, +20%.
     'Modifiers': ['fasterEnemies'],
     'time_limit_star': {'reward': 200, 'objective': 120},
     'accuracy_star': {'reward': 200, 'objective': 35},
