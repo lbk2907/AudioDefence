@@ -2124,10 +2124,17 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   bought the gun hears the row say `locked` if that is what it now is.
 * PORT ADDITION: a challenge may name the modifiers it is played with (user request).  The original has no
   such key and none of its challenges wants one: a challenge is the same arena for everybody, which is the
-  point of its stars.  One of the port's own needs a modifier to be an arena at all - Three Bullets hands
-  out three rounds and expects each to kill - so a `Modifiers` list on a challenge dictionary is applied by
+  point of its stars.  Some of the port's own are built on one - Stampede's speed, Iron Sights' narrow
+  cone, Rust's short cylinder - so a `Modifiers` list on a challenge dictionary is applied by
   `ChallengeGameplayController.view_did_load` (0x1000da420) through `applyModifier:` 0x100035da4 like any
   card's.
+
+  Applied first, before the weapons and the first wave are made.  `Weapon.__init__` reads `lessBullets`,
+  `goldenBullet` and the spread and head-shot modifiers when a weapon is made, and `Enemy.__init__` the
+  speed and life ones when an enemy is made; applied after them, as they first were, a start from the
+  overview played Iron Sights with the ordinary spread, Rust with a full cylinder and the first wave of
+  Stampede, Carousel and The Last Word at ordinary speed and life, while Restart from the pause menu, which
+  does not reset the modifiers, played the arenas as designed.  The referee found it (2026-09-30).
 
   Exactly those modifiers, and nothing else: they are reset first.  Nothing resets them between the tarot
   screen and the next game-over screen, so a player who walked out of an endless game without finishing it

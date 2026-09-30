@@ -908,8 +908,8 @@ class ChallengeGameplayController(GameplayController):
         self.check_skip_button_counter = 0
 
     def view_did_load(self) -> None:                      # 0x1000da420
-        super().view_did_load()
         self.init_challenge_modifiers()                   # PORT ADDITION: see below
+        super().view_did_load()
         self.timer_view_hidden = False
         self.timer_label_text = '00:00'
 
@@ -917,10 +917,16 @@ class ChallengeGameplayController(GameplayController):
         """PORT ADDITION (user request): the modifiers a challenge asks to be played with.
 
         The original has no such key, and none of its challenges wants one: a challenge is the same arena
-        for everybody, which is the point of its stars.  One of the port's own arenas needs a modifier to
-        be an arena at all - Three Bullets hands out three rounds and expects each to kill, which is only
-        true with `alwaysCritical` - so a challenge may name flags in a `Modifiers` list and get exactly
-        those.
+        for everybody, which is the point of its stars.  Some of the port's own arenas are built on one -
+        Stampede's speed, Iron Sights' narrow cone, Rust's short cylinder - so a challenge may name flags in
+        a `Modifiers` list and get exactly those.
+
+        Before anything is built: `Weapon.__init__` reads `lessBullets`, `goldenBullet` and the spread and
+        head-shot modifiers when the weapon is made, and `Enemy.__init__` the speed and life ones when the
+        enemy is made, and `super().view_did_load()` makes the weapons and the first wave.  Applied after
+        it, as it first was, a start from the overview played Iron Sights with a revolver of the ordinary
+        spread, Rust with a full cylinder and the first wave of Stampede at ordinary speed - while Restart
+        from the pause menu, which does not reset the modifiers, played them as designed (2026-09-30).
 
         Exactly those, and nothing else: the modifiers are reset first.  Nothing resets them between the
         tarot screen (`ui/tarot.py`) and the next game-over screen, so a player who left an endless game
