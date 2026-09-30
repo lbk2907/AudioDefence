@@ -1429,6 +1429,227 @@ PLISTS['port_armory'] = {
 }
 
 
+# ================================================================================== the second round
+#: Arenas added on 2026-09-30 to bring each chapter to seven to ten (user request), and to put every
+#: weapon, enemy and power-up the game has to use somewhere; where each is played is `CHAPTERS`' business.
+
+# ------------------------------------------------------------------------------------ Shooting Gallery
+#: Targets that stand still, and walkers that do not.
+#:
+#: Bob, Jim and Ted are the tutorial's dummies: a whole zombie's sound set and a speed of 0, so they stand
+#: where they spawn and groan there for ever, and `brickIsCleared` 0x1000a1658 will not pass a wave until
+#: they are dead - nothing about them is dangerous, and nothing ends without them.  Bob has 1 life.  Jim and
+#: Ted have 10, which the revolver's `dispersal` 90 makes two rounds at level one anywhere outside its
+#: ten-degree `criticalSpread` (9 and a fraction a round) and one inside it (x1.3), so a round well centred is
+#: worth two; with 999 rounds that is a lesson and never a lock.  They stand five to ten units out, where the
+#: wok cannot reach them, and at least 25 degrees from any walker's bearing, so a round meant for a walker
+#: never finds one of them instead.
+#:
+#: The walkers are ordinary ones from ten units, four to seven seconds apart and never more than three
+#: within five units in any eight seconds, so there is always a quiet moment to go looking.  Each wave's
+#: standing ones are harder to hear than the last: Ted, as loud as a Zombie, and Bob, 3 dB under, in the
+#: first, Ted alone for four seconds, 35 degrees from where the player starts facing; Jim, 6 dB under, in
+#: the second; and in the last all three further out, and the diamond, whose glow is 6 dB under a Zombie and
+#: ten units away, arriving while four walkers are on their way in.
+#:
+#: The diamond is the only one in this arena that pays.  `Enemy.die` pays a diamond only to an enemy whose
+#: key is exactly `Diamond`, and `_wave` numbers its keys, so it is written into the last wave by hand.
+PLISTS['port_gallery_1'] = _wave(
+    [('Ted', 235, 7.0), ('WeakZombie', 20, 10.0, 4.0), ('Zombie', 150, 10.0, 10.0),
+     ('Bob', 80, 6.0, 14.0), ('ZombieB', 320, 10.0, 18.0)], no_blast=True)
+PLISTS['port_gallery_2'] = _wave(
+    [('Jim', 45, 8.0), ('Zombie', 200, 10.0, 2.0), ('WeakZombieB', 330, 10.0, 6.0),
+     ('Bob', 160, 8.0, 9.0), ('ZombieB', 100, 10.0, 11.0), ('Ted', 290, 9.0, 15.0),
+     ('Zombie', 20, 10.0, 16.0), ('WeakZombie', 240, 10.0, 20.0)], no_blast=True)
+PLISTS['port_gallery_3'] = _wave(
+    [('Jim', 330, 9.0), ('Zombie', 20, 10.0, 2.0), ('ZombieB', 250, 10.0, 5.0),
+     ('Bob', 60, 9.0, 8.0), ('WeakZombie', 100, 10.0, 9.0), ('Zombie', 180, 10.0, 12.5),
+     ('WeakZombieC', 300, 10.0, 16.0), ('Ted', 210, 10.0, 16.0), ('ZombieC', 0, 10.0, 19.5),
+     ('ZombieB', 260, 10.0, 23.0)], no_blast=True)
+PLISTS['port_gallery_3']['Enemies']['Diamond'] = {'spawn_angle': 140.0, 'spawn_distance': 10.0,
+                                                  'spawn_time': 12.0}
+PLISTS['port_gallery'] = {
+    'challenge_id': 'port_gallery',
+    'title': 'Shooting Gallery',
+    'objective': 'Not all of them are coming for you. The ones that are not will still have to be found.',
+    'tip': 'If the walking stops and the wave does not end, something is still out there. It is not going '
+           'anywhere, and it will wait for you.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'SG',
+    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_gallery_1', 'port_gallery_2', 'port_gallery_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'time_limit_star': {'reward': 150, 'objective': 150},
+    'accuracy_star': {'reward': 150, 'objective': 60},
+}
+
+# ---------------------------------------------------------------------------------------------- Busker
+#: The Banjo, which at 1500 coins is the first thing most players will buy, and an arena that asks for
+#: nothing else.  It does 30 a swing and locks everything for only 0.3 seconds (`MeleeWeapon`), thirty-five
+#: degrees either side and three units out; a swing inside its ten-degree `criticalSpread` is precise (x1.3,
+#: 39), which is a Zombie or a Whisperer in one, and a swing outside it needs a second.  A Reject is always
+#: one.  So everything here comes right up to the player: one at a time in the first wave, then twos and
+#: threes, seven units out on bearings all round, each group within reach about five seconds after the one
+#: before it and never more than six within five units in any eight seconds.
+#:
+#: Whisperers walk inside some of the crowds, which is where they belong: their walk is 25 dB under a
+#: Zombie's and cannot be followed, but `Enemy.update` turns them aggressive at three units and they scream
+#: (-17 dB, louder than a Zombie's walk), and then take 3.6 seconds to arrive at 0.75.  Three units is
+#: exactly the banjo's reach, so the scream is the cue to swing, and the only thing this arena asks a player
+#: to hear that is not loud.  The first wave has one on its own, sixty degrees round from the zombie before
+#: it, so the scream is heard once for what it is.
+#:
+#: The two Runners come last in the last wave, on their own: each reaches arm's length two to three seconds
+#: after the crowd before it has been dealt with and three or more before the next.  A Runner has 40 life,
+#: one more than a precise swing, so it is two swings in the 2.1 seconds it is inside reach - or five of the
+#: twelve revolver rounds from further out, which is what the rounds are for.
+PLISTS['port_busker_1'] = _wave(
+    [('WeakZombie', 0, 7.0, 0.0), ('Zombie', 143, 7.0, 5.0), ('WeakZombieB', 71, 7.0, 10.0),
+     ('ZombieB', 230, 7.0, 15.0), ('QuietZombie', 290, 7.0, 20.0), ('Zombie', 196, 7.0, 25.0)],
+    no_blast=True)
+PLISTS['port_busker_2'] = _wave(
+    _pack(('Zombie', 'WeakZombie'), 30, 7.0, 0.0)
+    + _pack(('ZombieB', 'QuietZombie', 'WeakZombieB'), 170, 7.0, 5.0)
+    + _pack(('Zombie', 'ZombieC'), 300, 7.0, 10.0)
+    + _pack(('WeakZombieC', 'QuietZombie', 'Zombie'), 80, 7.0, 15.0)
+    + _pack(('ZombieB', 'WeakZombie'), 220, 7.0, 20.0), no_blast=True)
+PLISTS['port_busker_3'] = _wave(
+    _pack(('Zombie', 'WeakZombieB', 'ZombieB'), 10, 7.0, 0.0)
+    + _pack(('ZombieC', 'QuietZombie', 'WeakZombie'), 140, 7.0, 4.5)
+    + _pack(('ZombieB', 'Zombie', 'WeakZombieC'), 240, 7.0, 9.0)
+    + [('Runner', 180, 11.0, 16.2)]
+    + _pack(('Zombie', 'QuietZombie', 'ZombieB'), 50, 7.0, 19.0)
+    + _pack(('WeakZombieB', 'ZombieC', 'Zombie'), 310, 7.0, 23.5)
+    + [('RunnerB', 110, 11.0, 32.0)], no_blast=True)
+PLISTS['port_busker'] = {
+    'challenge_id': 'port_busker',
+    'title': 'Busker',
+    'objective': 'A crowd always gathers round anyone who plays, and this one wants to stand very close.',
+    'tip': 'Face them squarely and one note is enough. Some of them will not make a sound until they are '
+           'close enough to touch.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'BU',
+    'weapons': [{'name': 'pistol', 'ammo': '12'}, {'name': 'banjo'}],
+    'bricks': ['port_busker_1', 'port_busker_2', 'port_busker_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
+    'time_limit_star': {'reward': 200, 'objective': 150},
+    'accuracy_star': {'reward': 200, 'objective': 70},
+}
+
+# ------------------------------------------------------------------------------------------------ Fore
+#: The golf club, 4000 coins: 45 a swing, forty degrees either side and three units out, which is anything
+#: light in one at level one - a Reject, a Zombie, a Runner (40).  What it costs is its lock, half a second in
+#: which nothing else can be used, and `MeleeWeapon` takes it whether the swing found anything or not: a swing
+#: at a Runner three and a half units out hits nothing and is still coming back when the Runner, 2.1 seconds
+#: from arm's length to contact, gets there.
+#:
+#: The heavier ones are the arena.  A Chainsaw has 70 life, two swings at level one (precise 58.5 and critical
+#: 67.5 both fall short), and closes its last three units at 1.45 in 1.9 seconds, after circling in at 0.725 so
+#: that it is never quite where it was; three revolver rounds first (27.5 at ten units, 29.4 at five) leave it
+#: on 41 to 42.5, which is one swing.  The Hulk has 100: three swings in the 3.6 seconds it is in reach, or six
+#: rounds and one.  Eighteen rounds is three for each of the five Chainsaws and a start on the Hulk, and not
+#: enough to shoot the Runners too (five each).
+#:
+#: Everything comes within reach on its own: four to five seconds apart in the first two waves and three and
+#: a half in the last, every Runner and Chainsaw with nothing else arriving within three seconds of it.  The
+#: Hulk's arrival roar is 3.67 or 5.71 seconds, so it reaches three units anywhere from 11.7 to 13.7 seconds
+#: into the last wave; the Zombie before it is in reach at 9.5 and nothing after it before 17.7, so neither
+#: roar puts it on top of anything.  WeakZombieD, used before only in Hydra, walks in the first and last waves.
+PLISTS['port_fore_1'] = _wave(
+    [('Zombie', 30, 7.0, 0.0), ('Runner', 150, 11.0, 6.2), ('WeakZombieD', 250, 7.0, 9.0),
+     ('Runner', 60, 11.0, 16.2), ('Zombie', 200, 7.0, 19.4), ('RunnerB', 320, 11.0, 26.2)], no_blast=True)
+PLISTS['port_fore_2'] = _wave(
+    [('Zombie', 100, 7.0, 0.0), ('Chainsaw', 220, 10.0, 0.0), ('Runner', 20, 11.0, 11.7),
+     ('WeakZombie', 300, 7.0, 13.4), ('Chainsaw', 130, 10.0, 14.65), ('ZombieB', 350, 7.0, 23.9),
+     ('RunnerB', 250, 11.0, 30.2)], no_blast=True)
+PLISTS['port_fore_3'] = _wave(
+    [('Zombie', 45, 7.0, 0.0), ('Hulk', 160, 9.0, 0.0), ('WeakZombieD', 90, 7.0, 8.0),
+     ('Chainsaw', 30, 10.0, 10.65), ('Runner', 290, 11.0, 13.7), ('Chainsaw', 250, 10.0, 17.65),
+     ('Zombie', 220, 7.0, 18.9), ('WeakZombieD', 150, 7.0, 25.5), ('RunnerB', 100, 11.0, 31.2),
+     ('Chainsaw', 180, 10.0, 31.65), ('ZombieC', 330, 7.0, 32.6), ('RunnerC', 20, 11.0, 42.2)],
+    no_blast=True)
+PLISTS['port_fore'] = {
+    'challenge_id': 'port_fore',
+    'title': 'Fore',
+    'objective': 'Most of what is coming is in a hurry, and the club reaches no further than your arms.',
+    'tip': 'A swing at empty air still has to come back before the next one. Some of them will need '
+           'softening before they get that close.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'FO',
+    'weapons': [{'name': 'pistol', 'ammo': '18'}, {'name': 'golf'}],
+    'bricks': ['port_fore_1', 'port_fore_2', 'port_fore_3'],
+    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'time_limit_star': {'reward': 250, 'objective': 170},
+    'accuracy_star': {'reward': 250, 'objective': 70},
+}
+
+# ---------------------------------------------------------------------------------------- Bad Company
+#: The Micro SMG with its rounds counted, and crowds that walk in round a Farty.
+#:
+#: A Farty has 50 life and its own `explosion` out of `enemies.plist`, {radius 3, damages 50, dispersal 75}:
+#: `Enemy.die` sets it off, and `hit_by_explosion` puts 37.5 flat into everything within three units of it,
+#: which is a Zombie (35), a Whisperer (35) or a Reject (20) dead.  FartyB's is {3, 30, 50}, 15 flat, which
+#: leaves a Reject standing on 5 - one more round each, and a crowd that goes on walking after the bang.  At
+#: level one a Farty is ten rounds of the Micro SMG (eight precise), and 160 rounds against the 288 it would
+#: take to kill everything here one at a time means the crowds have to go with their Farties.  The wok is
+#: there for what walks in alone.
+#:
+#: The crowd walks with its Farty (`_gassy`): the Farty in the middle and half a unit ahead, so a round aimed
+#: at the middle of the crowd's sound finds it - `calculate_hit_enemies` takes the nearest in angle, and on a
+#: tie the nearer - and the rest fifteen degrees either side and behind, every one inside its three units
+#: from ten units out.  A fourth walks a little further back and joins them only from eight units, so the
+#: bigger crowds are worth a moment's wait; and a Farty killed inside five units rings the ears for up to
+#: thirteen seconds, so the wait has an end.  Groups come within five units about five seconds apart.
+#:
+#: Two Farties side by side, in the last wave, do not simply chain: a blast of 37.5 does not kill a Farty of
+#: 50.  It leaves the second on 12.5, three rounds, and the second's blast takes the half of the crowd the
+#: first did not reach.
+#:
+#: `NoBlast` refuses these waves only the blast the Chain Reaction card lends; a Farty's own is its own
+#: (`Brick.__init__`).
+
+
+def _gassy(kinds, farty: str, bearing: float, distance: float, at: float, spread: float = 15.0) -> list:
+    """A crowd walking in round a Farty: it in the middle and half a unit ahead, the rest either side of it
+    and behind - the first three inside the three units its blast reaches from ten units out, a fourth and
+    fifth from about eight."""
+    places = ((-spread, 0.5), (spread, 0.5), (0.0, 1.2), (-spread, 1.5), (spread, 1.5))
+    return [(farty, bearing, distance, at)] + [
+        (k, bearing + places[i][0], distance + places[i][1], at + 0.3 * (i + 1)) for i, k in enumerate(kinds)]
+
+
+_REJ = ('WeakZombie', 'WeakZombieB', 'WeakZombieC')
+PLISTS['port_company_1'] = _wave(
+    _gassy(_REJ, 'Farty', 20, 10.0, 0.0)
+    + [('Zombie', 140, 10.0, 6.0)]
+    + _gassy(('WeakZombieC', 'WeakZombie', 'WeakZombieB'), 'Farty', 240, 10.0, 12.0)
+    + [('WeakZombieB', 320, 10.0, 18.0)], no_blast=True)
+PLISTS['port_company_2'] = _wave(
+    _gassy(('Zombie', 'ZombieB', 'WeakZombie', 'Zombie'), 'Farty', 60, 10.0, 0.0)
+    + _gassy(_REJ, 'FartyB', 190, 10.0, 5.0)
+    + [('Zombie', 300, 10.0, 10.0)]
+    + _gassy(('ZombieC', 'WeakZombieB', 'Zombie'), 'Farty', 120, 10.0, 15.0)
+    + [('WeakZombieD', 340, 10.0, 20.0)], no_blast=True)
+PLISTS['port_company_3'] = _wave(
+    [('Farty', 325, 10.0, 0.0), ('Farty', 340, 10.4, 0.3),
+     ('Zombie', 325, 11.1, 0.6), ('ZombieB', 333, 10.9, 0.9), ('WeakZombieC', 340, 11.5, 1.2),
+     ('Zombie', 353, 10.9, 1.5)]
+    + _gassy(('WeakZombie', 'WeakZombieC', 'WeakZombieB'), 'FartyB', 90, 10.0, 7.0)
+    + _gassy(('Zombie', 'QuietZombie', 'ZombieB', 'WeakZombie'), 'Farty', 200, 10.0, 12.0)
+    + [('Zombie', 30, 10.0, 17.0)]
+    + _gassy(('ZombieB', 'WeakZombieC', 'ZombieC'), 'Farty', 245, 10.0, 22.0), no_blast=True)
+PLISTS['port_company'] = {
+    'challenge_id': 'port_company',
+    'title': 'Bad Company',
+    'objective': 'Nowhere near enough rounds for all of them, and some of them are not safe to stand next to.',
+    'tip': 'The rest of the crowd does not seem to mind who it walks beside. Choose your moment, and do not '
+           'let it be too close.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'BC',
+    'weapons': [{'name': 'microsmg', 'ammo': '160'}, {'name': 'wok'}],
+    'bricks': ['port_company_1', 'port_company_2', 'port_company_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'time_limit_star': {'reward': 300, 'objective': 160},
+    'accuracy_star': {'reward': 300, 'objective': 60},
+}
+
+
 #: The port's own arenas, gathered into chapters (user request).
 #:
 #: A chapter is `(name, the arenas in it)`.  Inside a chapter each arena names the one before it in
@@ -1444,6 +1665,12 @@ PLISTS['port_armory'] = {
 #: game, while Scrapyard's sixty rounds are two hundred damage short of its zombies and the tool does not
 #: count that shortfall in its margin at all.
 #:
+#: The second round's arenas (2026-09-30) are placed by a scripted player instead, which plays an arena with
+#: the game's own code at virtual time with a human's reaction time, and finds the slowest reaction that
+#: still wins: the tool cannot price a dummy that holds a wave or a Farty's blast.  Shooting Gallery, the
+#: gentlest there is, comes first; Busker, the Banjo's, before The Survivor; Fore after Sidestep; and Bad
+#: Company before Powder Keg, so the Farty is met where it is the whole idea before it is one of several.
+#:
 #: The chapters are the port's own structure and not worlds in `challenges_index`, which they could have
 #: been: `apply_to` reaches that file and the world list would have given locks, star counts and a
 #: "you need N stars" row for nothing.  It would also have changed Somethin' Else's game.
@@ -1452,13 +1679,13 @@ PLISTS['port_armory'] = {
 #: early, for a player who had not touched them.  Counting on this side costs a screen and a few lines and
 #: leaves their progression exactly as they shipped it.
 CHAPTERS = (
-    #: Every arena a player already owns the guns for, in the order the tool measures: 15.7 seconds of
-    #: slack down to 2.2.
-    ('Chapter 1', ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets',
-                   'port_scrap', 'port_nowake', 'port_survivor')),
+    #: The guns a player already owns, and the Banjo, which at 1500 coins is the first most will buy: in
+    #: the order the tool measures, 15.7 seconds of slack down to 2.2, with the second round's placed round it.
+    ('Chapter 1', ('port_gallery', 'port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets',
+                   'port_scrap', 'port_nowake', 'port_busker', 'port_survivor')),
     #: Where the slack runs out: 1.4 seconds short down to 12.3.
-    ('Chapter 2', ('port_longwalk', 'port_stampede', 'port_sidestep', 'port_keg', 'port_hydra',
-                   'port_biggame')),
+    ('Chapter 2', ('port_longwalk', 'port_stampede', 'port_sidestep', 'port_fore', 'port_company',
+                   'port_keg', 'port_hydra', 'port_biggame')),
     #: Harder again (user request): 13.6 seconds short down to 25.6.
     ('Chapter 3', ('port_ironsights', 'port_thunder', 'port_rust', 'port_drop', 'port_carousel',
                    'port_last')),
@@ -1469,8 +1696,8 @@ CHAPTERS = (
 )
 
 #: How many of the stars in the chapters before it a chapter may be opened without (user request): two.
-#: Every chapter asks for all the stars the chapters before it hold but these - 19 of chapter 1's 21 for
-#: chapter 2, 37 of 39 for chapter 3, 55 of 57 for chapter 4 - and two is less than the three an arena is
+#: Every chapter asks for all the stars the chapters before it hold but these - 25 of chapter 1's 27 for
+#: chapter 2, 49 of 51 for chapter 3, 67 of 69 for chapter 4 - and two is less than the three an arena is
 #: worth, so no arena can be left unbeaten on the way: what may be missed is two accuracy or time stars,
 #: across everything behind you.  It does not shrink as the chapters go on, because at nought a single star
 #: a player cannot win - The Last Word's time star, say - would shut every chapter after it for good.
