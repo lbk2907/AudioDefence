@@ -1627,7 +1627,11 @@ PLISTS['port_company'] = {
 #: recording and its walk): never two due inside one lock unless they are a pair from opposite sides a second
 #: apart, which two swings and a half turn answer inside 3.6 s; Runners on their own; each Hulk (two swings)
 #: with nothing due in its window whichever of its two roars (3.7 or 5.7 s) it plays.
-_ARRIVE = {'QuietZombie': 0.58, 'Zombie': 1.51, 'ZombieB': 1.25, 'ZombieC': 1.90, 'Runner': 1.44,
+#:
+#: How long each kind's arrival recording is, in seconds (a Hulk's shorter roar); chapter 6's `_slots`
+#: places its groups by it too.
+_ARRIVE = {'QuietZombie': 0.58, 'Zombie': 1.51, 'ZombieB': 1.25, 'ZombieC': 1.90, 'WeakZombie': 2.60,
+           'WeakZombieB': 1.42, 'WeakZombieC': 1.39, 'Runner': 1.44, 'RunnerB': 1.44, 'RunnerC': 1.44,
            'Hulk': 3.67, 'HulkB': 3.67}
 _WALK = {'QuietZombie': 0.5, 'Zombie': 0.5, 'ZombieB': 0.5, 'ZombieC': 0.5, 'Runner': 1.3, 'Hulk': 0.75,
          'HulkB': 0.75}
@@ -2564,6 +2568,536 @@ PLISTS['port_riotact'] = {
     'accuracy_star': {'reward': 600, 'objective': 70},
 }
 
+#: How fast the kinds that do not walk at 0.5 close in, in units a second.
+_SPEED = {'Hulk': 0.75, 'HulkB': 0.75, 'Runner': 1.3, 'RunnerB': 1.3, 'RunnerC': 1.3}
+
+
+def _slots(slots, first: float, every: float) -> list:
+    """Groups that come within five units `every` seconds apart, the first at `first`.  Each slot is
+    `(group, bearing)`, `(group, bearing, distance)` for one walking in from further off, or None for a quiet
+    one; a group is a pack (a tuple of kinds) walking in from ten units, one kind on its own from eleven, or
+    'Shield', a Riot Gear Zombie walking in the middle of three Zombies (`_escort`).  The spawn times are
+    worked back from the moment the first of the group would reach five units on its shortest arrival
+    sound (`_ARRIVE`)."""
+    out = []
+    for i, slot in enumerate(slots):
+        if slot is None:
+            continue
+        group, bearing = slot[:2]
+        if group == 'Shield':
+            at = round(max(0.0, first + i * every - (1.25 + 10.0)), 2)
+            out += _escort(('Zombie', 'ZombieB', 'ZombieC'), 'Shield', bearing, 10.0, at)
+            continue
+        kinds = group if isinstance(group, tuple) else (group,)
+        dist = slot[2] if len(slot) > 2 else (10.0 if isinstance(group, tuple) else 11.0)
+        lead = min(_ARRIVE[k] + (dist - 5.0) / _SPEED.get(k, 0.5) for k in kinds)
+        at = round(max(0.0, first + i * every - lead), 2)
+        out += _pack(group, bearing, dist, at) if isinstance(group, tuple) else [(group, bearing, dist, at)]
+    return out
+
+#: The shortest arrival sound and the walking speed of each kind used (handbook 4.1), for `_slots`.
+
+
+_BELT4 = (('Zombie', 'ZombieB', 'WeakZombie', 'ZombieC'), ('ZombieB', 'WeakZombieB', 'Zombie', 'Zombie'),
+       ('ZombieC', 'Zombie', 'QuietZombie', 'ZombieB'))
+_BELT5 = (('Zombie', 'ZombieB', 'WeakZombieC', 'ZombieC', 'Zombie'),
+       ('ZombieB', 'Zombie', 'QuietZombie', 'ZombieC', 'ZombieB'),
+       ('ZombieC', 'WeakZombie', 'Zombie', 'ZombieB', 'Zombie'))
+_BELT_H3 = ('Hulk', 'HulkB', 'Hulk')
+
+# ------------------------------------------------------------------------------------------------ Belt Fed
+#: The Machine Gun, which no arena had handed out.  Held down it fires every 0.2 s at twenty degrees either
+#: side rather than thirty (`Weapon.spread` answers `continuous_spread` in state 3): 16 a round at level four
+#: and a hundred rounds to a belt, 10 and fifty at level one.  Then `reloadTime` 6, the longest in the game,
+#: with nothing else in hand but a wok - and a swing throws a reload away (`shoot_with_melee`).
+#:
+#: So the arena is bursts and the quiet between them.  Groups come within five units four and a half to five
+#: seconds apart (`_slots` works each spawn time back from that moment, on the shorter arrival sound): packs
+#: of four and five, and Hulks in twos and threes, and at level four a burst is about a belt.  Between bursts
+#: nothing comes but one Runner on its own, ten seconds clear of everything else, and that is where a belt
+#: goes in.  A belt changed in the middle of a burst is six seconds of a pack and a Hulk trio walking in
+#: untouched.  The gun says when it is nearly out: under held fire `_warningloop` sounds once the clip is
+#: down to its last fifth (`running_low`), which is the moment to finish what is in front and change it.
+#:
+#: No Chainsaws, Dodges or Berserks.  The fast ones come alone, and nothing here minds being hit.
+PLISTS['port_beltfed_1'] = _wave(_slots((
+    (_BELT4[0], 20), (_BELT4[1], 140), ('Hulk', 260), (_BELT4[2], 80), (_HH, 200), (_BELT4[0], 320),
+    None, ('Runner', 110), None,
+    (_BELT5[0], 230), (_HH, 350), (_BELT4[1], 100), (_BELT5[1], 220)), 12.0, 5.0),
+    no_blast=True)
+PLISTS['port_beltfed_2'] = _wave(_slots((
+    (_BELT5[0], 10), (_BELT_H3, 130), (_BELT5[1], 250), (_HH, 60), (_BELT5[2], 180), (_BELT_H3, 300),
+    (_BELT5[0], 70), (_BELT_H3, 190),
+    None, ('Runner', 310), None,
+    (_BELT5[1], 90), (_BELT_H3, 210), (_BELT5[2], 330), (_HH, 150), (_BELT5[0], 270 + 15), (_BELT_H3, 40)),
+    12.0, 4.5), no_blast=True)
+PLISTS['port_beltfed_3'] = _wave(_slots((
+    (_BELT5[0], 0), (_BELT_H3, 120), (_BELT5[1], 240), (_BELT_H3, 60), (_BELT5[2], 180), (_BELT_H3, 300),
+    (_BELT5[0], 90), (_BELT_H3, 210),
+    (_BELT5[1], 330), None, ('Runner', 100), None,
+    (_BELT_H3, 220), (_BELT5[1], 340), (_BELT_H3, 160), (_BELT5[2], 40), (_BELT_H3, 270 + 15),
+    (_BELT5[0], 150), (_BELT_H3, 30),
+    (_BELT5[1], 250)), 12.0, 4.0),
+    no_blast=True)
+PLISTS['port_beltfed'] = {
+    'challenge_id': 'port_beltfed',
+    'title': 'Belt Fed',
+    'objective': 'A gun that fires for as long as you hold it, and takes its time when it stops.',
+    'tip': 'The belt tells you when it is nearly out. The quiet moments are the ones to spend on it.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'BF',
+    'weapons': [{'name': 'machinegun', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_beltfed_1', 'port_beltfed_2', 'port_beltfed_3'],
+    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'time_limit_star': {'reward': 600, 'objective': 300},
+    'accuracy_star': {'reward': 600, 'objective': 55},
+}
+
+_Z4Q = ('ZombieB', 'QuietZombie', 'Zombie', 'ZombieC')
+#: The Machine Gun and the Claymore: a gun that never stops and a blade that stops everything.  The gun is
+#: the crowd's answer - held, it fires every 0.2 s into a cone narrowed to twenty degrees, 50 rounds to the
+#: belt at level one and 100 at four - and it has two faults, both the original's.  The belt takes **six
+#: seconds** to change (`reloadTime` 6, the longest in the game), and every surviving hit on a Dodge sends it
+#: three and a half units sideways (`hit_by_weapon` 0x100060b30), which at anything under ten units is
+#: outside a twenty degree cone: a belt spent on a Dodge is a belt spent making it dance.  The Claymore does
+#: 85 at level four and a Dodge has 80, so one swing at arm's length ends it (70 at level one, 91 inside
+#: its five degree precise cone); a Chainsaw has 70 and is one swing at any level.  But a swing locks the gun
+#: for as long as it lasts (1.5 s at level four, 2.5 at one) and **throws away a belt change in progress**
+#: (`shoot_with_melee`, kept from the original), so the two cannot be used at once, and the order is the
+#: arena: blade first and then the belt, or the belt early while nothing is coming.
+#:
+#: Built to the chapter 4 rules: crowds in fours, a group coming within five units about every four seconds
+#: and never more than ten in any eight; every Dodge and Chainsaw on its own between two crowds; Runners in
+#: one small pack from one bearing, never two packs within 2.3 s of each other.  No Berserk (a belt held on
+#: a crowd walking past one would find it) and no Riot Gear Zombie (inside three units it never raises its
+#: shield, but it is three swings).  Hulks come in pairs from eleven units, and either roar (3.7 or 5.7 s)
+#: puts them in reach between two other groups.
+PLISTS['port_coldsteel_1'] = _wave(
+    _pack(_Z4, 20, 10.0, 0.5)
+    + _pack(_Z4, 150, 10.0, 5.5)
+    + [('Dodge', 270, 11.0, 11.0)]
+    + _pack(_Z4Q, 80, 10.0, 13.5)
+    + [('Chainsaw', 200, 10.0, 17.5)]
+    + _pack(_Z4, 320, 10.0, 21.5)
+    + [('DodgeB', 110, 11.0, 27.0)]
+    + _pack(_Z4, 240, 10.0, 29.5)
+    + _pack(_R2, 30, 11.0, 39.0, spread=5.0), no_blast=True)
+PLISTS['port_coldsteel_2'] = _wave(
+    _pack(_Z4, 0, 10.0, 0.5)
+    + _pack(_HH, 120, 11.0, 4.3)
+    + [('Dodge', 240, 11.0, 13.0)]
+    + _pack(_Z4, 190, 10.0, 15.5)
+    + [('Chainsaw', 60, 10.0, 23.5)]
+    + _pack(_R3, 300, 11.0, 24.9, spread=5.0)
+    + _pack(_Z4Q, 100, 10.0, 27.5)
+    + [('DodgeB', 210, 11.0, 33.0)]
+    + _pack(_HH, 330, 11.0, 35.3)
+    + _pack(_Z4, 150, 10.0, 42.5), no_blast=True)
+PLISTS['port_coldsteel_3'] = _wave(
+    _pack(_Z4, 30, 10.0, 0.5)
+    + _pack(_HH, 200, 11.0, 4.3)
+    + [('Dodge', 110, 11.0, 13.0)]
+    + _pack(_Z4Q, 290, 10.0, 15.5)
+    + [('Chainsaw', 240, 10.0, 23.5)]
+    + _pack(_R3, 60, 11.0, 24.9, spread=5.0)
+    + _pack(_HH, 160, 11.0, 27.3)
+    + [('DodgeB', 330, 11.0, 36.0)]
+    + _pack(_Z4, 250, 10.0, 38.5)
+    + [('Chainsaw', 10, 10.0, 42.5)]
+    + _pack(_R3, 190, 11.0, 51.9, spread=5.0)
+    + _pack(_Z4Q, 300, 10.0, 50.5), no_blast=True)
+PLISTS['port_coldsteel'] = {
+    'challenge_id': 'port_coldsteel',
+    'title': 'Cold Steel',
+    'objective': 'A gun that does not stop, until it has to, and a blade for everything it cannot hold.',
+    'tip': 'Some of them will not stand still for a belt, and the belt takes a long time to change. The '
+           'blade takes one swing, and it does not wait for the belt.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'CS',
+    'weapons': [{'name': 'machinegun', 'ammo': '999'}, {'name': 'claymore'}],
+    'bricks': ['port_coldsteel_1', 'port_coldsteel_2', 'port_coldsteel_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
+    'time_limit_star': {'reward': 600, 'objective': 200},
+    'accuracy_star': {'reward': 600, 'objective': 55},
+}
+
+_JUG4 = (('Zombie', 'ZombieB', 'WeakZombie', 'ZombieC'), ('ZombieB', 'Zombie', 'QuietZombie', 'Zombie'),
+       ('ZombieC', 'WeakZombieB', 'Zombie', 'ZombieB'))
+_JUG5 = (('Zombie', 'ZombieB', 'WeakZombie', 'ZombieC', 'Zombie'),
+       ('ZombieC', 'Zombie', 'QuietZombie', 'ZombieB', 'Zombie'))
+_JUG_H3 = ('Hulk', 'HulkB', 'Hulk')
+
+# ---------------------------------------------------------------------------------------------- Juggernaut
+#: The Long Walk again, a chapter of guns later.  A Colossus is 500 life at a quarter of a unit a second, and
+#: the Machine Gun at level four puts one down in about 35 rounds - seven seconds of holding the trigger, a
+#: third of a belt (at level one it is more than a whole one).  So the half minute of revolver fire is gone
+#: and what is left is the order of things: one, two and then three of them walk in from in front, ten units
+#: out and some forty seconds from reaching the player, while the crowds come up from the half behind, a
+#: group every four and a half to five seconds (`_slots`), Zombie packs and Hulks in twos and threes, and a
+#: Runner alone in a gap.  The Colossi will wait; the crowd will not, and a Colossus started on a belt with
+#: ten rounds left in it takes the six-second reload with it, with its back to the crowd.
+PLISTS['port_juggernaut_1'] = _wave(
+    [('Colossus', 0, 10.0, 0.0)]
+    + _slots(((_JUG4[0], 180), (_JUG4[1], 225), (_HH, 140), (_JUG4[2], 200), None, ('Runner', 160), None,
+              (_JUG5[0], 215), (_HH, 185), (_JUG4[0], 150)), 12.0, 5.0), no_blast=True)
+PLISTS['port_juggernaut_2'] = _wave(
+    [('Colossus', 330, 10.0, 0.0), ('Colossus', 40, 10.0, 8.0)]
+    + _slots(((_JUG5[0], 190), (_JUG_H3, 150), (_JUG5[1], 230), (_HH, 170), None, ('Runner', 120), None,
+              (_JUG5[1], 210), (_JUG_H3, 140), (_JUG5[0], 250), (_HH, 180),
+              (_JUG5[1], 130)), 12.0, 4.5), no_blast=True)
+PLISTS['port_juggernaut_3'] = _wave(
+    [('Colossus', 0, 10.0, 0.0), ('Colossus', 65, 10.0, 6.0), ('Colossus', 295, 11.0, 16.0)]
+    + _slots(((_JUG5[0], 180), (_JUG_H3, 225), (_JUG5[1], 135), (_JUG_H3, 200), None, ('Runner', 240), None,
+              (_JUG5[0], 160), (_JUG_H3, 210), (_JUG5[1], 120), (_JUG_H3, 185), None, ('RunnerB', 150), None,
+              (_JUG5[0], 230), (_JUG_H3, 170), (_JUG5[1], 205)), 12.0, 4.5), no_blast=True)
+PLISTS['port_juggernaut'] = {
+    'challenge_id': 'port_juggernaut',
+    'title': 'Juggernaut',
+    'objective': 'They are slow, they are enormous, and they did not come alone.',
+    'tip': 'They are slow enough to wait until your belt is full. What comes up behind you is not.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'JG',
+    'weapons': [{'name': 'machinegun', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_juggernaut_1', 'port_juggernaut_2', 'port_juggernaut_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
+    'time_limit_star': {'reward': 650, 'objective': 240},
+    'accuracy_star': {'reward': 650, 'objective': 55},
+}
+
+def _noise(wave, **where):
+    """Passers-by that stay for the rest of the challenge: kind -> (bearing, distance, spawn time)."""
+    wave['PasserBy'] = {k: {'spawn_angle': float(a), 'spawn_distance': float(d), 'spawn_time': float(t)}
+                        for k, (a, d, t) in where.items()}
+    return wave
+
+
+_RACKET4 = (('Zombie', 'ZombieB', 'WeakZombie', 'ZombieC'), ('ZombieB', 'WeakZombieB', 'Zombie', 'ZombieC'))
+_RACKET5 = (('Zombie', 'ZombieB', 'WeakZombie', 'ZombieC', 'Zombie'),
+       ('ZombieC', 'Zombie', 'WeakZombieB', 'ZombieB', 'Zombie'))
+#: what walks in behind the noise: only the loud ones (no Rejects, no Whisperers)
+_L4 = ('Zombie', 'ZombieC', 'ZombieB', 'Zombie')
+_L5 = ('ZombieC', 'Zombie', 'ZombieB', 'ZombieC', 'Zombie')
+_RACKET_H3 = ('Hulk', 'HulkB', 'Hulk')
+
+# -------------------------------------------------------------------------------------------------- Racket
+#: Finding things through noise.  `ambient_foundry` is the original's own factory floor, and on top of it a
+#: Jukebox from the first wave (music at gain 6: from nine units, louder than a Zombie at three), the Machine
+#: from the second (a loud loop, -16 dB at gain 3.5) and a second Jukebox from the third - passers-by stay
+#: for the rest of the challenge, so they add up.  Some groups walk in on the noise's own bearing, from eleven
+#: or twelve units, and cannot be told from it until they are five or six units out; so only loud ones walk
+#: there (Zombies - no Rejects, no Whisperers, no Hulks and no Runners), and what comes from a clear bearing
+#: is everything else.  Groups come within five units four and a half to five seconds apart (`_slots`).
+#:
+#: All of it can be quietened.  A round into a jukebox stops it for ten seconds (`JukeBox.hit_by_weapon`,
+#: `pauseTime` 10); the Machine blown up - 130 life, nine rounds at level four, and seven units out, so its
+#: blast (15 within three units) leaves the ears alone - stays gone for 35 to 54 seconds before it comes back
+#: (`Machine.update`, state 502).  The Machine Gun, because it is the chapter's.
+#: noise: a jukebox at 60 degrees (wave 1), the Machine at 200 (wave 2), a second jukebox at 300 (wave 3)
+PLISTS['port_racket_1'] = _noise(_wave(_slots((
+    (_RACKET4[0], 180), (_RACKET4[1], 300), (_L4, 60, 11.0), (_RACKET4[0], 240), ('Hulk', 120),
+    (_L4, 60, 11.0),
+    None, ('Runner', 200), None,
+    (_RACKET5[0], 0), (_HH, 150), (_L5, 60, 11.0), (_RACKET5[1], 270 + 15)), 12.0, 5.0), no_blast=True),
+    Jukebox=(60, 8.0, 1.0))
+PLISTS['port_racket_2'] = _noise(_wave(_slots((
+    (_RACKET5[0], 100), (_L4, 200, 12.0), (_RACKET_H3, 320), (_L5, 60, 11.0), (_HH, 160),
+    None, ('Runner', 20), None,
+    (_RACKET_H3, 250), (_L5, 200, 12.0), (_RACKET5[0], 290), (_L5, 60, 11.0), (_RACKET_H3, 130),
+    None, ('RunnerB', 330), None,
+    (_RACKET5[1], 0), (_L5, 200, 12.0), (_RACKET_H3, 100)), 12.0, 4.5), no_blast=True),
+    Machine=(200, 7.0, 2.0))
+PLISTS['port_racket_3'] = _noise(_wave(_slots((
+    (_RACKET5[0], 0), (_L5, 300, 11.0), (_RACKET_H3, 150), (_L5, 200, 12.0), (_HH, 100), (_L5, 60, 11.0),
+    (_RACKET_H3, 240),
+    None, ('Runner', 130), None,
+    (_RACKET5[1], 20), (_L5, 300, 11.0), (_RACKET_H3, 130), (_L5, 60, 11.0), (_HH, 250),
+    None, ('RunnerC', 350), None,
+    (_RACKET_H3, 110), (_L5, 200, 12.0), (_RACKET5[1], 150), (_L5, 300, 11.0),
+    (_RACKET_H3, 20)), 12.0, 4.5), no_blast=True),
+    Jukebox=(300, 9.0, 1.0))
+PLISTS['port_racket'] = {
+    'challenge_id': 'port_racket',
+    'title': 'Racket',
+    'objective': 'Music, machinery, and somewhere underneath it all, footsteps.',
+    'tip': 'Everything out here can be made to be quiet for a while, even the music. Some of it stays quiet '
+           'for longer than the rest.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'RK',
+    'weapons': [{'name': 'machinegun', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_racket_1', 'port_racket_2', 'port_racket_3'],
+    'ambient': {'ambientPlaylist': 'ambient_foundry', 'gain': 0.5},
+    'time_limit_star': {'reward': 700, 'objective': 330},
+    'accuracy_star': {'reward': 650, 'objective': 50},
+}
+
+#: Collateral's lesson with the heaviest things in the game, and two guns that each get half of it wrong.
+#: `hit_by_weapon` 0x100060b30 is what wakes a Berserk, sends a Dodge sideways and raises a Riot Gear
+#: Zombie's shield; `hit_by_explosion` 0x100061284 does none of the three and goes straight through a shield
+#: that is already up.  So the Tactical Rifle - forty rounds at level four, held fire every quarter second
+#: into a twenty degree cone, a four second reload - is for the Hulks and the crowds that walk in the open,
+#: and the Bazooka is for everything touchy: 80 where it lands and 60 to all within five units at level four
+#: (60 and 45 at one), which is a Dodge in one rocket on target, a crowd of Zombies in one anywhere near, and
+#: a Hulk pair in two.  It reaches fifteen units where the rifle reaches eleven, so the Hulks, which come from
+#: thirteen, can be met early - at four units a second, a rocket there is three seconds in the air.
+#:
+#: Twenty-five rockets is not enough to use them on everything (every group by rocket is about 35), which is
+#: the arena: the rifle for what can take a bullet, rockets for what cannot.  And a rocket goes to the
+#: nearest thing within thirty degrees (`target_enemi_for_explosive_weapon`), which near a resting Berserk is
+#: the Berserk - harmless: it lands on it without waking it, and the crowd walking past three units behind
+#: takes the flat 60.  The rifle aimed at that crowd finds the Berserk instead.
+#:
+#: Where each special is, and why (the chapter 4 rules): a Berserk rests seven units out on a crowd's way in
+#: (`_resting`) and leaves by itself; a Riot Gear Zombie walks inside its crowd at its pace (`_escort`); a
+#: Dodge comes alone (it outruns everything at 0.5).  No shotgun and no Minigun crate, so nothing wide can
+#: find a Berserk by accident.  Groups come within five units about five seconds apart and never more than
+#: ten in any eight.
+PLISTS['port_heavyweights_1'] = _wave(
+    _resting(_Z4, 40, 10.0, 1.0)
+    + _pack(_HH, 170, 13.0, 3.0)
+    + [('Dodge', 280, 12.0, 13.5)]
+    + _escort(_Z3, 'Shield', 100, 10.0, 17.0)
+    + _resting(_Z4, 45, 10.0, 23.0)
+    + [('Hulk', 330, 13.0, 28.0)], no_blast=True)
+PLISTS['port_heavyweights_2'] = _wave(
+    _pack(_HH, 0, 13.0, 0.0)
+    + _resting(_Z4, 120, 10.0, 10.0)
+    + [('Dodge', 240, 12.0, 14.5)]
+    + _escort(_Z3, 'Shield', 300, 10.0, 18.5)
+    + _pack(_HH, 60, 13.0, 20.5)
+    + [('DodgeB', 170, 12.0, 31.0)]
+    + _escort(_Z3, 'Shield', 200, 10.0, 34.0), no_blast=True)
+PLISTS['port_heavyweights_3'] = _wave(
+    _resting(_Z4, 20, 10.0, 1.0)
+    + _pack(_HH, 140, 13.0, 2.0)
+    + _escort(_Z3, 'Shield', 260, 10.0, 12.0)
+    + [('Dodge', 80, 12.0, 17.5)]
+    + _pack(_HH, 320, 13.0, 19.5)
+    + _resting(_Z4, 190, 10.0, 28.5)
+    + [('DodgeB', 40, 12.0, 34.5)]
+    + _escort(_Z3, 'Shield', 110, 10.0, 37.0)
+    + _pack(_HH, 230, 13.0, 41.0)
+    + [('Dodge', 350, 12.0, 51.0)], no_blast=True)
+PLISTS['port_heavyweights'] = {
+    'challenge_id': 'port_heavyweights',
+    'title': 'Heavyweights',
+    'objective': 'Everything out here is big, and some of it is touchy.',
+    'tip': 'A bullet is taken personally. A blast, it seems, is not. Count your rockets.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'HW',
+    'weapons': [{'name': 'tactical', 'ammo': '999'}, {'name': 'bazooka', 'ammo': '25'}, {'name': 'wok'}],
+    'bricks': ['port_heavyweights_1', 'port_heavyweights_2', 'port_heavyweights_3'],
+    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'time_limit_star': {'reward': 650, 'objective': 200},
+    'accuracy_star': {'reward': 650, 'objective': 60},
+}
+
+def _tesla(wave, at, cow=None):
+    """One Tesla crate, `at` seconds into the wave (a wave can force one), and perhaps a cow: `cow` is the
+    bearing it walks in from, eleven units out, timed to be six units away and still coming when the crate
+    starts to beep (1.56 s of arrival and 0.5 a second), so that it is the nearest thing for the whole
+    fifteen seconds unless it is shot."""
+    wave['PowerUp'] = {'force_spawn_time': at, 'type': 'tesla'}
+    if cow is not None:
+        wave['PasserBy'] = {'Cow': {'spawn_angle': float(cow), 'spawn_distance': 11.0,
+                                    'spawn_time': round(max(0.1, at + 6.75 - 1.56 - 10.0), 2)}}
+    return wave
+
+
+_ROD3 = (('Zombie', 'ZombieB', 'ZombieC'), ('ZombieB', 'Zombie', 'WeakZombie'),
+         ('ZombieC', 'WeakZombieB', 'Zombie'))
+_ROD4 = (('Zombie', 'ZombieB', 'ZombieC', 'Zombie'), ('ZombieC', 'Zombie', 'WeakZombieB', 'ZombieB'))
+# ------------------------------------------------------------------------------------------- Lightning Rod
+#: The Tesla (`TeslaPowerUp`): 2.86 s after its crate is opened, and every two seconds after that for as many
+#: kills as its level (one to four), `BrickManager.closest_enemy` - the nearest shootable thing to the
+#: player, whatever it is - has its life set to nought.  That is a Colossus in one stroke, or a Riot Gear
+#: Zombie behind its shield, or a cow.  The rifle is the Tactical, which no arena had handed out (held, a
+#: round every 0.25 s at twenty degrees; 15 a round at level four, forty to a magazine, four seconds to
+#: reload): a Colossus is some forty rounds of it and twelve seconds, and there are one, then two, then two
+#: of them, with a group coming within five units every four to five seconds around them.  A crate is one
+#: zap at level one (four at level four), so in waves 2 and 3 one Colossus is the rifle's whatever happens,
+#: and the second one too if the zap goes astray.
+#:
+#: One crate a wave (`PowerUp`'s force_spawn_time; a wave forces one), five units out on a random bearing and
+#: beeping from 6.75 s after its time for fifteen seconds.  Each starts beeping while something smaller is
+#: still nearer than the Colossus, so the zap goes where the player lets it.  In waves 2 and 3 a cow walks in
+#: too - a `PasserBy` with no orientation walks straight through the player - timed to be six units out and
+#: coming as the crate starts, so that for all fifteen seconds it is the nearest thing there is: one round,
+#: or a Colossus left standing.  It can be heard; it moos.
+#:
+#: Shields walk inside their crowd (`_escort`), Runners come alone.  No Berserk: a zap would take it, but a
+#: rifle round that found it would wake it, and it would be one more thing nearer than the Colossus.
+PLISTS['port_lightningrod_1'] = _tesla(_wave(
+    [('Colossus', 30, 11.0, 4.0)]
+    + _slots(((_ROD3[0], 150), (_ROD3[1], 250), (_ROD3[2], 110), (_ROD3[0], 200), (_ROD3[1], 330)),
+             12.0, 5.0),
+    no_blast=True), 8.0)
+PLISTS['port_lightningrod_2'] = _tesla(_wave(
+    [('Colossus', 300, 11.0, 0.0), ('Colossus', 120, 11.0, 10.0)]
+    + _slots(((_ROD4[0], 150), ('Shield', 200), (_HH, 60), (_ROD4[1], 240), (_HH, 330), None, ('Runner', 20),
+              None, (_ROD4[0], 100), (_HH, 220), (_ROD4[1], 340),
+              ('Shield', 170)), 12.0, 4.0), no_blast=True),
+    6.0, cow=80)
+PLISTS['port_lightningrod_3'] = _tesla(_wave(
+    [('Colossus', 0, 11.0, 0.0), ('Colossus', 180, 11.0, 12.0)]
+    + _slots(((_ROD4[0], 180), ('Shield', 60), (_HH, 300), (_ROD4[1], 40), (_HH, 200), None, ('Runner', 150),
+              None, ('Shield', 330), (_HH, 90), (_ROD4[0], 210), (_HH, 270 + 15), (_ROD4[1], 20), None,
+              ('RunnerB', 160), None, (_ROD4[0], 250), (_HH, 100)), 12.0, 4.0), no_blast=True),
+    10.0, cow=270 + 20)
+PLISTS['port_lightningrod'] = {
+    'challenge_id': 'port_lightningrod',
+    'title': 'Lightning Rod',
+    'objective': 'Some of what is coming is too big for this rifle. What is dropped in to help is not '
+                 'particular.',
+    'tip': 'What is in the crate strikes whatever is closest to you. Be sure that is the one you want gone.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'LR',
+    'weapons': [{'name': 'tactical', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_lightningrod_1', 'port_lightningrod_2', 'port_lightningrod_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
+    'time_limit_star': {'reward': 650, 'objective': 220},
+    'accuracy_star': {'reward': 650, 'objective': 55},
+}
+
+#: The Sonic Cannon: one round to a clip, so every shot is followed by the 1.8 second reload, and a shot
+#: every 1.83 seconds is all it will ever do (`Weapon.reload` does not wait for the shot's cooldown).  What it
+#: buys is that one is enough: 65 at level four with a 75 per cent floor is 49 even at eleven units, which is
+#: anything of 35 to 47 life at any range the gun reaches - a Zombie, a Runner, a Reject (at level one, 50
+#: falls to 37.5 at eleven units, and a Runner there needs a hit inside the ten degree precise cone).  So the
+#: arena keeps time: single arrivals on a beat from bearings all round (`SCATTER`), one shot each, and the
+#: turn to the next made during the reload.
+#:
+#: Two things break the beat.  A Hulk or a Dodge takes two shots, and has to be made room for by getting
+#: ahead.  And the bands: four Rejects round a Farty walking a unit ahead of them.  Shot one at a time they
+#: are five beats; the Farty's death is 37.5 to everything within three units (`Enemy.die` calls
+#: `explode`; `explosion` {3, 50, 75} in enemies.plist), and a Reject has 20 - so they are one beat, if the
+#: one shot goes to the Farty.
+#: The gun hits whatever is nearest the aim in angle, and the Rejects walk ten degrees either side, so a shot
+#: within five degrees of the band's middle is the Farty's.  It is also the one to listen for: its walk is
+#: 3.6 dB under a Zombie's and a Reject's 7 to 11, so it is the loudest thing in its band and it is in the
+#: middle.  Killed beyond five units, its blast does not ring the ears.
+#:
+#: The Runners come one at a time, never in packs, each a beat after the last (1.9 to 2.2 seconds, which
+#: the 1.83 second shot can keep up with, and each has seven seconds or more inside the gun's reach).  No
+#: more than ten come within five units in any eight seconds.
+_REJECTS = ('WeakZombie', 'WeakZombieC', 'WeakZombieB', 'WeakZombie')
+
+
+def _band(bearing: float, distance: float, at: float, kinds=_REJECTS):
+    """Four Rejects round a Farty that walks a unit ahead of them: ten degrees either side, two of them a
+    unit further back, so every one of them is inside the three units its blast reaches."""
+    offsets = ((-10.0, 0.0), (10.0, 0.0), (-10.0, 1.0), (10.0, 1.0))
+    return [('Farty', bearing, distance - 1.0, at)] + [
+        (k, bearing + a, distance + d, round(at + 0.3 * (i + 1), 2))
+        for i, (k, (a, d)) in enumerate(zip(kinds, offsets))]
+
+
+def _beat(kinds, count: int, every: float, first: float = 0.0, bearings=SCATTER):
+    """Single arrivals on a beat, from bearings all round; Runners from eleven units, the rest from ten."""
+    out = []
+    for i in range(count):
+        k = kinds[i % len(kinds)]
+        out.append((k, bearings[i % len(bearings)], 11.0 if k.startswith('Runner') else 10.0,
+                    round(first + i * every, 2)))
+    return out
+
+
+PLISTS['port_tempo_1'] = _wave(
+    _beat(('Zombie', 'ZombieB', 'ZombieC', 'Zombie'), 8, 2.5)
+    + _band(300, 10.0, 20.0) + [('Runner', 170, 11.0, 24.0)]
+    + _band(60, 10.0, 28.0) + [('RunnerB', 230, 11.0, 32.0)], no_blast=True)
+PLISTS['port_tempo_2'] = _wave(
+    _beat(('Runner', 'Zombie', 'RunnerB', 'ZombieB'), 12, 2.2, bearings=_turned(4))
+    + [('Hulk', 250, 12.0, 6.0)]
+    + _band(140, 10.0, 12.0) + _band(20, 10.0, 26.0) + _band(200, 10.0, 34.0), no_blast=True)
+PLISTS['port_tempo_3'] = _wave(
+    _beat(('Runner', 'RunnerB', 'RunnerC'), 7, 1.9, bearings=_turned(8))
+    + _band(100, 10.0, 11.0) + [('Dodge', 250, 12.0, 14.0)] + _band(330, 10.0, 20.0)
+    + _beat(('RunnerB', 'Runner', 'RunnerC'), 7, 1.9, first=25.0, bearings=_turned(14))
+    + [('Hulk', 180, 12.0, 36.0)] + _band(60, 10.0, 40.0), no_blast=True)
+PLISTS['port_tempo'] = {
+    'challenge_id': 'port_tempo',
+    'title': 'Tempo',
+    'objective': 'One shot, then a reload, every time. They keep time too, and some of them come in bands.',
+    'tip': 'Stay ahead of the beat and there is room for the ones that take two. A band is only as strong '
+           'as the loud one in the middle.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'TP',
+    'weapons': [{'name': 'sonic', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_tempo_1', 'port_tempo_2', 'port_tempo_3'],
+    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'time_limit_star': {'reward': 650, 'objective': 180},
+    'accuracy_star': {'reward': 650, 'objective': 65},
+}
+
+_CLOSE3 = ('ZombieB', 'Zombie', 'ZombieC')
+_CLOSE_W3 = ('WeakZombie', 'WeakZombieC', 'WeakZombieB')
+
+#: The last arena, for now: one of everything the chapters taught, each with the answer it was taught with,
+#: and four weapons from across the shop to give those answers.  The Hunting Rifle, the first gun anyone
+#: bought (Big Game), is in hand: 25 a shot at level four, a Hulk in four, the Colossus in twenty.  The
+#: Grenade Launcher (chapter 4) is for what only a blast should touch.  The Golf club is for arm's length:
+#: 50 a swing and a quarter-second lock at level four, one swing for anything light.  And the Machine Gun is
+#: here as **one belt** - a hundred rounds, which at level four is exactly one belt and never needs its six
+#: second change (two belts of fifty at level one): the answer to the moment that goes wrong.  The Colossus
+#: is a third of it at level four and half of it at level one.
+#:
+#: What comes, and what it was answered with before:
+#:
+#: * a band - four Rejects round a Farty a unit ahead of them (Powder Keg): one grenade, or a shot
+#:   into the Farty, whose 37.5 within three units is more than a Reject's 20;
+#: * a crowd of Rejects walking past a resting Berserk (Do Not Wake It, Collateral): a grenade lands on the
+#:   Berserk, the nearest thing in front, does not wake it, and its flat 30 (22.5 at level one) takes every
+#:   Reject within five units.  A bullet aimed at the crowd finds the Berserk;
+#: * a Riot Gear Zombie inside a crowd of Rejects (Collateral): the grenade goes through the shield;
+#: * a Dodge, alone (Sidestep): a grenade does not send it sideways;
+#: * Runners, three from one bearing (Stampede): the rifle, or the belt;
+#: * Hulks in pairs from twelve units (The Wall), a Chainsaw alone (Carousel), two Whisperers (heard by
+#:   their scream at three units, and one swing of the club each);
+#: * and in the last wave a Colossus from ten units (The Long Walk), at the player 42 seconds in, with all of
+#:   the above arriving from every other side while it comes.  Twenty rifle hits, or a third of the belt: when
+#:   is the wave.
+#:
+#: Built to every rule the chapter 4 test left: groups come within five units about five seconds apart and
+#: never more than ten in any eight; Dodges, Chainsaws and Runner packs come on their own, and never two
+#: Runner packs together; Berserks rest on a crowd's way in and leave by themselves; nothing wide in the
+#: arena - no shotgun, no Minigun crate - can find a Berserk by accident.  Rejects rather than Zombies round
+#: the Berserks, so that one grenade is always a whole crowd.
+
+PLISTS['port_closingtime_1'] = _wave(
+    _band(30, 10.0, 0.0)
+    + _resting(_REJECTS, 150, 10.0, 5.0)
+    + [('Runner', 270, 11.0, 16.0), ('RunnerB', 275, 11.3, 16.3), ('RunnerC', 265, 11.0, 16.6)]
+    + _pack(_HH, 90, 12.0, 14.0)
+    + _escort(_CLOSE_W3, 'Shield', 210, 10.0, 20.5)
+    + [('QuietZombie', 330, 10.0, 28.0), ('QuietZombie', 350, 10.0, 29.5)], no_blast=True)
+PLISTS['port_closingtime_2'] = _wave(
+    _escort(_CLOSE3, 'Shield', 0, 10.0, 0.0)
+    + [('Dodge', 120, 12.0, 4.7)]
+    + _resting(_REJECTS, 240, 10.0, 7.6)
+    + [('Chainsaw', 60, 10.0, 12.4)]
+    + _pack(_HH, 300, 12.0, 18.4)
+    + _pack(_R3, 180, 11.0, 21.0, spread=5.0)
+    + _band(100, 10.0, 25.6)
+    + [('DodgeB', 210, 12.0, 33.0)], no_blast=True)
+PLISTS['port_closingtime_3'] = _wave(
+    [('Colossus', 0, 10.0, 0.0)]
+    + _resting(_REJECTS, 150, 10.0, 0.8)
+    + _pack(_HH, 100, 12.0, 9.5)
+    + _pack(_R3, 250, 11.0, 12.5, spread=5.0)
+    + _escort(_CLOSE_W3, 'Shield', 200, 10.0, 15.0)
+    + [('Dodge', 300, 12.0, 20.5)]
+    + _band(60, 10.0, 23.0)
+    + [('Chainsaw', 170, 10.0, 29.0)]
+    + _pack(_HH, 230, 12.0, 31.0)
+    + _pack(_R3, 120, 11.0, 45.5, spread=5.0), no_blast=True)
+PLISTS['port_closingtime'] = {
+    'challenge_id': 'port_closingtime',
+    'title': 'Closing Time',
+    'objective': 'One of everything, and then all of it at once. This is the last of them, for now.',
+    'tip': 'You have met every one of these before, and each of them had an answer. Nothing out here '
+           'shares one.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'CT',
+    'weapons': [{'name': 'hunting', 'ammo': '999'}, {'name': 'grenade', 'ammo': '20'},
+                {'name': 'machinegun', 'ammo': '100'}, {'name': 'golf'}],
+    'bricks': ['port_closingtime_1', 'port_closingtime_2', 'port_closingtime_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
+    'time_limit_star': {'reward': 700, 'objective': 190},
+    'accuracy_star': {'reward': 700, 'objective': 60},
+}
+
 
 #: The port's own arenas, gathered into chapters (user request).
 #:
@@ -2589,6 +3123,8 @@ PLISTS['port_riotact'] = {
 #: Point Blank, and Short Game after Fuse, which is where the launcher is bought.  Chapter 5 is in the order
 #: its guns are bought, each introduced on its own first (Crowd Control, Artillery), and within that by the
 #: scripted player at level 4; Riot Act, which asks for everything the chapter taught, is the last.
+#: Chapter 6 opens on Belt Fed, the Machine Gun's own, and goes by the same measure to Tempo, the Sonic
+#: Cannon's, the hardest; Closing Time, the finale, is last.
 #:
 #: The chapters are the port's own structure and not worlds in `challenges_index`, which they could have
 #: been: `apply_to` reaches that file and the world list would have given locks, star counts and a
@@ -2617,15 +3153,19 @@ CHAPTERS = (
     #: decision, 2026-09-30), so a player may have to play Endless before going on.
     ('Chapter 5', ('port_riot', 'port_chain', 'port_encore', 'port_artillery', 'port_blowback',
                    'port_titans', 'port_scarecrows', 'port_riotact')),
+    #: The Machine Gun, the Tesla and the Sonic Cannon, and a finale asking for what every chapter taught.
+    ('Chapter 6', ('port_beltfed', 'port_coldsteel', 'port_juggernaut', 'port_racket', 'port_heavyweights',
+                   'port_lightningrod', 'port_tempo', 'port_closingtime')),
 )
 
 #: How many of the stars in the chapters before it a chapter may be opened without (user request): two.
 #: Every chapter asks for all the stars the chapters before it hold but these - 22 of chapter 1's 24 for
-#: chapter 2, 46 of 48 for chapter 3, 70 of 72 for chapter 4, 94 of 96 for chapter 5 - and two is less
-#: than the three an arena is worth, so no arena can be left unbeaten on the way: what may be missed is two
-#: accuracy or time stars, across everything behind you.  It does not shrink as the chapters go on, because at nought a single star
-#: a player cannot win - The Last Word's time star, say - would shut every chapter after it for good.
-#: It was 12, 26 and 40 at first, which let a player into a chapter with a third of the one before unplayed.
+#: chapter 2, 46 of 48 for chapter 3, 70 of 72 for chapter 4, 94 of 96 for chapter 5, 118 of 120 for
+#: chapter 6 - and two is less than the three an arena is worth, so no arena can be left unbeaten on the
+#: way: what may be missed is two accuracy or time stars, across everything behind you.  It does not shrink
+#: as the chapters go on, because at nought a single star a player cannot win - The Last Word's time star,
+#: say - would shut every chapter after it for good.  It was 12, 26 and 40 at first, which let a player into
+#: a chapter with a third of the one before unplayed.
 SPARE_STARS = 2
 
 #: Every arena of the port's, in the order they are played.  What `go_to_challenge_list_for` and the
