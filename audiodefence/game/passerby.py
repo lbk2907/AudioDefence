@@ -96,6 +96,29 @@ class PasserBy(Enemy):
         self.set_state(201)
         self.play_any_sound_containing('_moving_')
 
+    def deactivate_playlist(self) -> None:
+        """DIVERGENCE: the passer-by is finished - it has walked off, its death has been heard out, or the
+        game is over - so its own voices stop, and stay stopped; and the playlist it shares with the others
+        of its kind is deactivated only when none of them still needs it.
+
+        In the original every cow of a kind plays through the one sound its playlist holds, and deactivating
+        the playlist silences it.  The port gives each enemy its own copy (`Enemy.voice_of`), and a copy
+        reaches `S3DPlayList.deactivate` only while the playlist is active.  A playlist of cows is shared by
+        every cow of that kind in the arena, so the first to walk off deactivated it under the next one:
+        a cow still to come walked in unheard, and one already walking had its sound cut, and its walking
+        loop (`play_any_sound_containing`'s end callback) started it again on a playlist nothing would
+        deactivate a second time.  That cow was then heard walking long after it had gone, beyond the end
+        of the game and through every game after it, and could not be shot, since it was no longer in the
+        arena (user report, 2026-09-30, from Cattle Call).  `destroyed` is what ends that loop, so it is set
+        first."""
+        from .brick_manager import BrickManager
+        self.destroyed = True
+        if not any(p is not self and p.playlist is self.playlist and not p.destroyed
+                   for p in BrickManager.shared().passer_by_manager.all_passer_by()):
+            super().deactivate_playlist()
+        for s in self.all_voices():
+            s.stop()
+
     def get_type(self) -> int:                            # 0x10000c0a4
         return 1
 

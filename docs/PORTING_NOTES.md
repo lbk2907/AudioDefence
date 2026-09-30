@@ -190,6 +190,19 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   Shield zombie has one attack sound, so its second kill in a run was always silent.  The file is still
   chosen by the playlist with the same random draws; a copy has its own source, position and end callback
   on the same buffer, and the playlist stops and unloads the copies with its own sounds.
+* A passer-by that is finished - walked off, its death heard out, or the game over - stops its own voices,
+  and deactivates the playlist it shares with the others of its kind only when none of them still needs it
+  (`PasserBy.deactivate_playlist`).  `-[ADPasserBy update:]` 0x10000b770 and the manager's `clean` 0x1000d59bc
+  deactivate the playlist and nothing else, which in the original silenced the one sound a kind has.  With a
+  copy each (above) it did not: the playlist of a kind is shared by every cow of that kind, so the first to
+  walk off deactivated it under the next - a cow still to come walked in unheard, and one already walking had
+  its sound cut and its walking loop (`play_any_sound_containing`'s end callback) start it again on a
+  playlist nothing would deactivate a second time.  That cow was heard walking long after it had gone,
+  beyond the end of the game and into every game after it, and could not be shot (user report, 2026-09-30,
+  from Cattle Call).  Measured in a headless play of Cattle Call to its end: one to three cows' walking
+  loops still playing after the game's clean-up before this, none after, and every cow still walking at
+  the end heard - one of them, the second of its kind in the arena, had been silent.  Only the Extra
+  arenas bring a kind of cow back in a later wave; Endless never has two of a kind at once.
 * A critical kill of an enemy with no critical death sound falls back on its ordinary death.
   `playDeathSound` 0x100063688 looks for `death_crit`, then `_diecrit_` on a critical kill and for nothing
   else, having first stopped the enemy's hit sound (0x1000637a4); Shield, WeakZombieD, ZombieC and the
