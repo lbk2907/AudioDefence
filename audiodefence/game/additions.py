@@ -511,9 +511,14 @@ PLISTS['port_stampede'] = {
 #:
 #: Ted, Jim and Bob are zombies with the whole sound set - spawn, approach, aggressive, hit, death - and a
 #: speed of 0.  They stand where they spawn and never come, so the wok cannot touch them (it reaches 3) and
-#: `brickIsCleared` 0x1000a1658 will not pass the wave until they are dead.  Ted and Jim have 10 life, which
-#: is exactly one revolver round at level one and less than one at every level above it.  So: one round
-#: each, three of them, three rounds, and no modifier propping it up.
+#: `brickIsCleared` 0x1000a1658 will not pass the wave until they are dead.  So: one round each, three of
+#: them, three rounds, and no modifier propping it up.
+#:
+#: They are Bob, who has 1 life, and not Ted and Jim, who have 10 (2026-09-30).  The revolver's `dispersal`
+#: is 90, so at level one a round does 9 and a fraction of a point anywhere but at the muzzle, and only a
+#: hit within its ten-degree `criticalSpread` (x1.3) or a critical made 10: a round on target that was a
+#: few degrees off left Ted standing on under one life, with nothing left to finish him and nothing to say
+#: why.  Bob dies to any round that finds him, which is what the arena always claimed.
 #:
 #: Everything else in here walks, and has to be met with the wok at arm's length, because there is nothing
 #: left to shoot it with.  A WeakZombie is one swing and a Zombie is two; they arrive far enough apart to be
@@ -525,12 +530,12 @@ PLISTS['port_stampede'] = {
 #: the very best, and with two more behind it that was a chapter 2 moment in the fourth arena of chapter 1 -
 #: invisible while the tool let the wok swing at things ten units away (`wave_pressure`'s `swing`).
 PLISTS['port_three_bullets_1'] = _wave(
-    [('Ted', 200, 9.0), ('WeakZombie', 0, 9.0, 2.0), ('Zombie', 120, 9.0, 8.0)], no_blast=True)
+    [('Bob', 200, 9.0), ('WeakZombie', 0, 9.0, 2.0), ('Zombie', 120, 9.0, 8.0)], no_blast=True)
 PLISTS['port_three_bullets_2'] = _wave(
-    [('Jim', 60, 10.0), ('Zombie', 250, 9.0, 1.0), ('WeakZombie', 140, 9.0, 4.0),
+    [('Bob', 60, 10.0), ('Zombie', 250, 9.0, 1.0), ('WeakZombie', 140, 9.0, 4.0),
      ('ZombieB', 20, 9.0, 8.0)], no_blast=True)
 PLISTS['port_three_bullets_3'] = _wave(
-    [('Ted', 310, 10.0), ('Zombie', 45, 9.0, 1.0), ('ZombieB', 190, 9.0, 5.0),
+    [('Bob', 310, 10.0), ('Zombie', 45, 9.0, 1.0), ('ZombieB', 190, 9.0, 5.0),
      ('ZombieC', 105, 9.0, 10.0), ('WeakZombieB', 265, 9.0, 14.0), ('Zombie', 330, 9.0, 18.0)],
     no_blast=True)
 PLISTS['port_three_bullets'] = {

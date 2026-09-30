@@ -1700,10 +1700,13 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   **Three Bullets** is the one the tool cannot rank, and it is placed by judgement - fourth of the thirteen -
   with the reason written here.  Ted, Jim and Bob are zombies with the whole sound set - spawn, approach, aggressive, hit,
   death - and a speed of 0: they stand where they spawn and never come.  So the wok cannot touch them
-  (reach 3), `brickIsCleared` 0x1000a1658 will not pass a wave until they are dead, and Ted and Jim have
-  10 life, which is exactly one revolver round at level one and less at every level above.  Three of them,
-  three rounds, no modifier holding it up - and everything else in the arena walks and has to be met at
-  arm's length, because there is nothing left to shoot it with.  Its difficulty is categorical rather than
+  (reach 3), `brickIsCleared` 0x1000a1658 will not pass a wave until they are dead.  The three are Bob,
+  who has 1 life, since 2026-09-30; they were Ted and Jim, with 10, on the belief that 10 was one revolver
+  round at level one.  It is not: the revolver's `dispersal` is 90, so a level one round does 9 and a
+  fraction anywhere but at the muzzle, and only a hit inside its ten-degree `criticalSpread` (x1.3) or a
+  critical made 10 - a round a few degrees off left the dummy on under one life and the wave with no way
+  to end.  Three of them, three rounds, no modifier holding it up - and everything else in the arena walks
+  and has to be met at arm's length, because there is nothing left to shoot it with.  Its difficulty is categorical rather than
   arithmetic: what the tool cannot price is that a melee duel with no health is the frightening thing in
   this game.  (It used to measure the wok at 25 damage a second as though a swing reached ten units, and
   called the arena comfortable; priced as a weapon that reaches three, since 2026-09-28, it puts it a second
