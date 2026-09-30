@@ -981,6 +981,49 @@ class ChallengeGameplayController(GameplayController):
         self.weapon_manager = WeaponManager.with_challenge_weapon_array(self.challenge_dictionary.get('weapons'))
         self._attach_touch_objects()
 
+    def hand_over_weapons(self, entries: list, announce: bool = True) -> None:
+        """PORT ADDITION (user request): a wave of a challenge that carries its own `Weapons` - a list in the
+        form of the challenge's `weapons` - takes the player's weapons away and hands over those instead,
+        so that one long arena can go from the guns of one chapter to the guns of the next.
+
+        The original's challenges are armed once, for every wave.  Such a challenge lists in its own
+        `weapons` every gun any of its waves hands over, because that list is what the overview checks
+        (`hasWeaponForChallengeWithName:` 0x10001f868) and names when one is not bought; its first wave
+        then carries the first set, handed over before anything is heard.
+
+        The new guns are made before the old ones are let go: a gun of the same name shares its playlist
+        (`Weapon.__init__` activates it, `dealloc` deactivates it), and activating one again is not
+        immediate, so the old gun releases only the playlists nothing new is using.  A reload in progress
+        and a held trigger are stopped first, as a switch of weapon stops them.  The first new gun is drawn
+        as a switch draws it - its deploy sound, and its name if the announcer is on - and the new set is
+        read out."""
+        from .weapon_manager import WeaponManager
+        old = self.weapon_manager
+        new = WeaponManager.with_challenge_weapon_array(entries)
+        if old is not None:
+            kept = {id(w.playlist) for w in list(new.weapons_array) + [new.melee_weapon]
+                    if w is not None and w.playlist is not None}
+            for w in list(old.weapons_array or []) + [old.melee_weapon]:
+                if w is None:
+                    continue
+                if w.state == 6 or w.state == 8:
+                    w.interrupt_reload()
+                w.stop_firing_now()
+                if w.playlist is not None and id(w.playlist) in kept:
+                    w.playlist = None                     # the new gun of that name plays through it
+            old.clean()
+        self.weapon_manager = new
+        self._attach_touch_objects()
+        if getattr(self, 'accessible_game_view', None) is not None:
+            self.accessible_game_view.weapon_manager = new
+        if not announce:
+            return
+        new.current_weapon.deploy()
+        if self.host is not None:
+            names = [WeaponManager.shared().display_name_for_item_with_name(w.name)
+                     for w in list(new.weapons_array) + [new.melee_weapon] if w is not None]
+            self.host.announce('New weapons: %s' % ', '.join(names))
+
     def init_brick_manager(self) -> None:                 # 0x1000daf74
         bm = BrickManager.shared()
         bm.reset()

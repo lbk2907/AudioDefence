@@ -2148,6 +2148,19 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   overview played Iron Sights with the ordinary spread, Rust with a full cylinder and the first wave of
   Stampede, Carousel and The Last Word at ordinary speed and life, while Restart from the pause menu, which
   does not reset the modifiers, played the arenas as designed.  The referee found it (2026-09-30).
+* PORT ADDITION: a wave of a challenge may hand over weapons of its own (user request, 2026-10-01), so that
+  one long arena can go from the guns of one chapter to the guns of the next.  A brick's `Weapons` - a list
+  in the form of the challenge's `weapons` - is handed over when the brick is loaded
+  (`BrickManager.load_brick_with_name` to `ChallengeGameplayController.hand_over_weapons`): the guns in hand
+  are taken away and the new ones given, the first of them drawn as a switch draws it (its deploy sound,
+  and its name if the announcer is on), and the set read out - "New weapons: Police Shotgun, Revolver,
+  Golf".  The first wave's is handed over before anything is heard, and says nothing.  The challenge's
+  own `weapons` lists every gun any wave hands over, because that is what the overview checks
+  (`hasWeaponForChallengeWithName:` 0x10001f868) and names when one is not bought.  The new guns are made
+  before the old are let go, since a gun of the same name shares its playlist and activating one again is
+  not immediate: the old gun releases only the playlists nothing new is using.  Checked headless with a
+  two-wave arena: the second wave's guns in hand and fired, the revolver carried across still heard, the
+  wok's playlist released.
 
   Exactly those modifiers, and nothing else: they are reset first.  Nothing resets them between the tarot
   screen and the next game-over screen, so a player who walked out of an endless game without finishing it
