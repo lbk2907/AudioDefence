@@ -954,11 +954,12 @@ replacing them.
   and on the pause screen, the keys do nothing and the game's music and ambience are untouched.
 - **Settings → Miscellaneous → Reset all settings** puts every setting back to its default, except your key
   bindings.
-- **Play → Extra**, challenges written for this port rather than ported. Each is read out first on the
-  game's own challenge screen — objective, tip and stars — as the selector does for the original's. The
-  first is **Powder Keg**: three rings of Zombies rigged to blow, standing close enough that one kill
-  takes a whole ring, with a crowd that will not explode walking in between them. The rings get bigger,
-  closer and harder to set off as they go.
+- **Play → Extra**, forty-eight arenas written for this port rather than ported, in six chapters of eight.
+  An arena opens when the one before it is beaten, and a chapter on the stars won in the chapters before
+  it. Each is read out first on the game's own challenge screen — objective, tip and stars — as the
+  selector does for the original's, and none of them says how it is beaten. Between them they use every
+  weapon in the armory, every power-up a crate can hold and every kind of zombie; from chapter 4 on some
+  want guns upgraded with diamonds, so a player may have to play Endless before going on.
 - **Game controllers**: a DualSense, DualShock, Xbox, Switch Pro or most other pads, in the menus and in
   play, with a stick that turns as fast as it is pushed, vibration for the heartbeat, hits, kills,
   explosions and your death, the phone's shake, and a DualSense's triggers that feel like a gun, each at
