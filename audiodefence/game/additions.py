@@ -486,8 +486,8 @@ PLISTS['port_survivor'] = {
 # ----------------------------------------------------------------------------------------- Stampede
 #: Everything that runs.  A Runner covers 1.3 units a second, a Chainsaw 1.45 and a Clown 2, so from twelve
 #: units the first one is on a player in six seconds and they keep arriving closer together.  And the arena
-#: asks to be played with `fasterEnemies` twice over, which is `enemi_speed_modifier` at 1.4: the same
-#: crowd, forty per cent less time to deal with it.
+#: asks to be played with `fasterEnemies`, which is `enemi_speed_modifier` at 1.2 on the walk (the charge is
+#: read before it): the same crowd, a sixth less time to deal with it.
 PLISTS['port_stampede_1'] = _crowd(('Runner', 'RunnerB'), 4, 12.0, 4.0)
 PLISTS['port_stampede_2'] = _crowd(('Runner', 'Chainsaw', 'RunnerB', 'RunnerC'), 8, 12.0, 2.4)
 PLISTS['port_stampede_3'] = _crowd(('Runner', 'Chainsaw', 'RunnerB', 'Clown', 'RunnerC'), 11, 12.0, 2.1)
