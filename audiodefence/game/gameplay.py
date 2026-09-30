@@ -981,6 +981,14 @@ class ChallengeGameplayController(GameplayController):
         self.weapon_manager = WeaponManager.with_challenge_weapon_array(self.challenge_dictionary.get('weapons'))
         self._attach_touch_objects()
 
+    def allows_revive(self) -> bool:
+        """PORT ADDITION (user request, 2026-10-01): a challenge with `Revive` offers the revive that Endless
+        offers when the player dies - for diamonds, twice the price each time (`show_revive_view`) - or the
+        failed screen, which is starting over.  The original's challenges have no such key and end at the
+        first death, as they always did.  It is for an arena long enough that one mistake in its last minute
+        should not cost all of it; the wave died in is fought again (`BrickManager.retry_current_brick`)."""
+        return bool((self.challenge_dictionary or {}).get('Revive'))
+
     def hand_over_weapons(self, entries: list, announce: bool = True) -> None:
         """PORT ADDITION (user request): a wave of a challenge that carries its own `Weapons` - a list in the
         form of the challenge's `weapons` - takes the player's weapons away and hands over those instead,

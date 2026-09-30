@@ -361,7 +361,11 @@ class Enemy:
         self.set_state(-1)
         bm = BrickManager.shared()
         if bm.mode == 2:
-            bm.game_over()
+            gvc = bm.gameplay_view_controller
+            if gvc is not None and getattr(gvc, 'allows_revive', lambda: False)():
+                bm.show_revive_view()                     # PORT ADDITION: see `allows_revive`
+            else:
+                bm.game_over()
         if bm.mode == 1:
             bm.show_revive_view()
 

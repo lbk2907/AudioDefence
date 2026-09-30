@@ -541,9 +541,35 @@ class BrickManager:
             self.gameplay_view_controller.show_revive_view()
 
     def revive(self) -> None:                                   # 0x1000c7558
+        if self.mode == 2:
+            self.retry_current_brick()                          # PORT ADDITION: see there
+            return
         self.clear_current_brick()
         self.load_next_brick()
         self.next_diamond_time += 10
+
+    def retry_current_brick(self) -> None:
+        """PORT ADDITION (user request, 2026-10-01): a revive in a challenge that allows one
+        (`ChallengeGameplayController.allows_revive`) starts the wave the player died in again.
+
+        Endless's revive clears the wave and goes on to the next, which in Endless is only another wave.  In
+        a challenge it would be a skip bought with diamonds - past the hardest wave, or, from the last one,
+        past `challenge_is_over` to the first wave again, since `scenario_brick_name_for_wave_number` wraps.
+        So the wave is loaded again from its beginning, and fought with the weapons it was begun with, fresh:
+        its own `Weapons` if it hands some over, or else the last set handed over before it, or else the
+        challenge's own."""
+        self.clear_current_brick()
+        self.current_wave -= 1
+        self.load_next_brick()
+        gvc = self.gameplay_view_controller
+        brick = self.current_brick()
+        if gvc is None or not hasattr(gvc, 'hand_over_weapons'):
+            return
+        if (brick.brick_dictionary or {}).get('Weapons'):
+            return                                              # its own were handed over as it loaded
+        weapons = next((b.brick_dictionary.get('Weapons') for b in reversed(self.bricks)
+                        if (b.brick_dictionary or {}).get('Weapons')), None)
+        gvc.hand_over_weapons(weapons or gvc.challenge_dictionary.get('weapons'))
 
     def game_over(self) -> None:                                # 0x1000c75b0
         from .missions import MissionManager

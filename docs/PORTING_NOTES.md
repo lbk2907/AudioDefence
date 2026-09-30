@@ -2161,6 +2161,19 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   not immediate: the old gun releases only the playlists nothing new is using.  Checked headless with a
   two-wave arena: the second wave's guns in hand and fired, the revolver carried across still heard, the
   wok's playlist released.
+* PORT ADDITION: a challenge may offer a revive (user request, 2026-10-01).  With `Revive` on the challenge
+  dictionary, a death offers what Endless offers - the revive for diamonds, twice the price each time
+  (`show_revive_view` 0x10005ba78), or the failed screen, which is starting over - where
+  `-[ADEnemy afterAttackSound]` 0x1000605f4 sends every challenge to `gameOver` at once.  The revive is not
+  Endless's, though: `revive` 0x1000c7558 clears the wave and loads the next, which in a challenge is a skip
+  bought with diamonds - past the hardest wave, and from the last one past `challengeIsOver` to wave one
+  again, since the scenario wraps (0x1000c28d8).  A challenge's revive loads the wave died in again from its
+  beginning (`BrickManager.retry_current_brick`), with the weapons it was begun with, fresh: its own
+  `Weapons`, the last set handed over before it, or the challenge's.  It is for the Extra mode's long remix,
+  where one mistake in the last minute should not cost all of it; the original's challenges have no such key
+  and end at the first death as they always did.  Checked headless: three deaths in the second wave of a
+  two-wave arena offered 1, 2 and 4 diamonds, each revive brought the same wave back with the first wave's
+  guns full and read out, and the third, refused, went to the failed screen with 7 of 10 diamonds left.
 
   Exactly those modifiers, and nothing else: they are reset first.  Nothing resets them between the tarot
   screen and the next game-over screen, so a player who walked out of an endless game without finishing it
