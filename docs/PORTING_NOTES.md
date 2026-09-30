@@ -2498,9 +2498,12 @@ observable effect at all.
   explosion sounds are dry.  Changing it would rewrite how the game sounds.
 * **The explosion falloff cancels its own radius**: `1 - (d2 / radius) * radius`, so damage falls off by
   squared distance whatever the blast radius.  Changing it would re-balance every explosive weapon.
-* **A dead Berserk-style enemy cannot be hit by a blast until it wakes.**  `canBeShotAt` 0x100061f68 excludes
-  state 0, and both the blast solver and the explosive weapon's targeting consult it, so an explosion next to
-  a Berserk that has not been shot does nothing.  Confirmed in play with the grenade.
+* **A blast never wakes a Berserk.**  `hit_by_explosion` 0x100061284 takes the life off and nothing else;
+  only a weapon's hit (`hit_by_weapon` 0x100060b30) sends it berserk, so a grenade next to a Berserk that has
+  not been shot leaves it resting, as was seen in play - but it does take the damage.  (This entry used to
+  say the blast could not touch it at all: `canBeShotAt` 0x100061f68 excludes only state 0, an enemy still
+  waiting for its spawn time, and a resting Berserk has arrived.  Measured 2026-09-30: a grenade took 45 off
+  one resting and one walking away, and neither woke.)
 * The accessible Endless game-over screen is silent, because `-[Accessible_ADGameOverEndlessViewController
   viewDidLoad]` 0x100099f50 never calls `[super viewDidLoad]` and so never starts `game_over_theme`.  Kept at
   the user's request: it is the score you just lost, not a menu.

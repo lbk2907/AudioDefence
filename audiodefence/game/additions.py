@@ -1261,8 +1261,10 @@ PLISTS['port_fuse'] = {
 # ------------------------------------------------------------------------------------------- Collateral
 #: What a blast does not do.  `hit_by_explosion` 0x100061284 takes the life off and nothing else: it does not
 #: send a Dodge sideways and it does not wake a Berserk, both of which are `hit_by_weapon`'s doing (0x100060b30),
-#: and it never asks whether a Riot Gear Zombie's shield is up.  A Berserk woken is 225 life charging, a Dodge
-#: shot steps aside, a shield raised is a wall - so the grenades are the way through.
+#: and it never asks whether a Riot Gear Zombie's shield is up - though the hit sound it schedules raises a
+#: walking one's shield a moment later, as a bullet's would, which stops the next bullet and not the next
+#: blast.  A Berserk woken is 225 life charging, a Dodge shot steps aside, a shield raised is a wall - so the
+#: grenades are the way through.
 #:
 #: Rebuilt so that each of the three is somewhere it can really be (user request, 2026-09-29: "too many, and
 #: does it make sense").  The first draft had every one of them escorted in the middle of a crowd, and two of

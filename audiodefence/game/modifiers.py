@@ -69,12 +69,13 @@ PAIRED_FLAGS = {
     'houseBand': ('baseComboBonus', 'jukebox'),
 }
 
-#: PORT ADDITION (user request): the blast an enemy is given by Chain Reaction, which is the one the
-#: game already uses - `enemies.plist` gives Farty, FartyB, Machine and the three Cars exactly this, and
-#: nothing else has an `explosion` at all.  Keeping their numbers means a zombie with a bomb is a zombie
-#: carrying the bomb this game already knows, and the chain that follows is the original's own: a blast
-#: damages everything inside its radius and then checks their deaths, so a neighbour killed by one and
-#: carrying its own goes off in turn, and that goes on as far as the crowd reaches.
+#: PORT ADDITION (user request): the blast an enemy is given by Chain Reaction, which is one the game
+#: already uses - `enemies.plist` gives the Farty exactly this, FartyB, the Machine and the three Cars a
+#: smaller one ({3, 30, 50}), and nothing else has an `explosion` at all.  Keeping the Farty's numbers means
+#: a zombie with a bomb is a zombie carrying the bomb this game already knows, and the chain that follows is
+#: the original's own: a blast damages everything inside its radius and then checks their deaths, so a
+#: neighbour killed by one and carrying its own goes off in turn, and that goes on as far as the crowd
+#: reaches.
 CHAIN_REACTION_BLAST = {'radius': 3, 'damages': 50, 'dispersal': 75}
 
 PORT_FLAGS = ('earlyPowerUp', 'luckyNight', 'lessPowerUps', 'lessCoins', 'alwaysCritical',
