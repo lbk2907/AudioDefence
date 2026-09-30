@@ -1649,6 +1649,279 @@ PLISTS['port_company'] = {
     'accuracy_star': {'reward': 300, 'objective': 60},
 }
 
+# ------------------------------------------------------------------------------------------- Cattle Call
+#: The Cattle Prod: 60 a swing (65 at level four), which is anything up to a Runner in one, in the widest
+#: cone any melee weapon has - fifty degrees either side - and then a second and a half (1.2 at level
+#: four) in which nothing can be swung or fired, the revolver included.
+#:
+#: The QuietZombie is what it is for.  It arrives in silence and walks 25 dB under a Zombie, and the first
+#: a player really hears of it is the scream when it turns aggressive three units out; from there it closes
+#: at 0.75 and arrives 3.6 s later.  A hundred degrees of cone finds what the ear can only roughly place:
+#: turn to the scream and swing.
+#:
+#: The cows are the catch.  A swing takes whatever in the cone is nearest the aim *in angle*
+#: (`calculate_hit_enemies`), and a cow is a target with one life.  A cow given no orientation walks straight
+#: through the player at 0.5, so it is within reach for twelve seconds - six on the side it came from and six
+#: on the other.  Each one here is timed to be in reach, about forty degrees from a Whisperer, when that
+#: Whisperer screams (the first, in wave 1, beside an ordinary Zombie, to learn it on): a swing aimed at the
+#: scream takes the Whisperer, one aimed somewhere between the two takes the cow and costs the lock.  None is
+#: ever closer than 35 degrees to one, because at ten a swing would be a coin toss rather than a skill; and
+#: every cow can be heard coming for fifteen seconds, so the eighteen revolver rounds can also clear one out
+#: of the way, bring a Runner down at range, or take half a Hulk (five rounds and one swing instead of two).
+#:
+#: Everything is placed by the moment it comes within reach (`_reaching`, worked back through its arrival
+#: recording and its walk): never two due inside one lock unless they are a pair from opposite sides a second
+#: apart, which two swings and a half turn answer inside 3.6 s; Runners on their own; each Hulk (two swings)
+#: with nothing due in its window whichever of its two roars (3.7 or 5.7 s) it plays.
+_ARRIVE = {'QuietZombie': 0.58, 'Zombie': 1.51, 'ZombieB': 1.25, 'ZombieC': 1.90, 'Runner': 1.44,
+           'Hulk': 3.67, 'HulkB': 3.67}
+_WALK = {'QuietZombie': 0.5, 'Zombie': 0.5, 'ZombieB': 0.5, 'ZombieC': 0.5, 'Runner': 1.3, 'Hulk': 0.75,
+         'HulkB': 0.75}
+_COW_ARRIVE = (1.56, 1.41, 2.11)          # Cow, Cow2, Cow3
+
+
+def _reaching(spec):
+    """(kind, bearing, the second of the wave it comes within three units) -> a `_wave` entry."""
+    out = []
+    for kind, bearing, t in spec:
+        d = 11.0 if kind.startswith('Runner') else 10.0
+        out.append((kind, bearing, d, round(t - _ARRIVE[kind] - (d - 3.0) / _WALK[kind], 2)))
+    return out
+
+
+def _cows_in(*places):
+    """Cows from eleven units, each given by its bearing and the second it comes within reach."""
+    return {'Cow%s' % (i + 1 if i else ''): {'spawn_angle': float(a), 'spawn_distance': 11.0,
+                                             'spawn_time': round(t - _COW_ARRIVE[i] - 16.0, 2)}
+            for i, (a, t) in enumerate(places)}
+
+
+_W = 'QuietZombie'
+PLISTS['port_cattlecall_1'] = _wave(_reaching(
+    [('Zombie', 30, 15.6), (_W, 150, 19.6), ('Zombie', 240, 24.6), (_W, 60, 28.6), ('ZombieB', 200, 33.1),
+     (_W, 320, 37.6), ('Zombie', 110, 42.1)]), no_blast=True, passers=_cows_in((195, 24.1)))
+PLISTS['port_cattlecall_2'] = _wave(_reaching(
+    [(_W, 0, 14.6), ('Zombie', 120, 18.1), (_W, 220, 21.6), (_W, 40, 22.6), ('Hulk', 300, 28.1),
+     (_W, 130, 33.6), ('Runner', 90, 37.2), (_W, 250, 40.6), (_W, 100, 44.1), ('ZombieB', 190, 47.6)]),
+    no_blast=True, passers=_cows_in((80, 22.6), (210, 39.9)))
+PLISTS['port_cattlecall_3'] = _wave(_reaching(
+    [(_W, 45, 14.6), (_W, 225, 15.6), ('Zombie', 160, 18.6), (_W, 300, 20.6), (_W, 110, 21.4),
+     ('Hulk', 210, 24.5), (_W, 20, 28.0), (_W, 250, 30.0), ('Runner', 150, 32.0), (_W, 330, 34.5),
+     (_W, 150, 35.3), ('ZombieC', 70, 38.0), (_W, 230, 41.0), ('Runner', 300, 42.0), (_W, 100, 44.5),
+     (_W, 200, 45.3), ('HulkB', 320, 48.0), (_W, 160, 54.5)]),
+    no_blast=True, passers=_cows_in((60, 27.5), (190, 34.5), (120, 54.0)))
+PLISTS['port_cattlecall'] = {
+    'challenge_id': 'port_cattlecall',
+    'title': 'Cattle Call',
+    'objective': 'The quiet ones make no sound until they are close enough to touch, and the cows have '
+                 'wandered in again.',
+    'tip': 'The prod reaches wide, and it does not care what it finds. Be sure of what is nearest to where '
+           'you are pointing.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'CC',
+    'weapons': [{'name': 'pistol', 'ammo': '18'}, {'name': 'prod'}],
+    'bricks': ['port_cattlecall_1', 'port_cattlecall_2', 'port_cattlecall_3'],
+    'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
+    'time_limit_star': {'reward': 350, 'objective': 190},
+    'accuracy_star': {'reward': 350, 'objective': 70},
+}
+
+# -------------------------------------------------------------------------------------------- Front Line
+#: The Tactical Rifle, and a line that does not stop coming.  At level one it puts 10 a round into what it
+#: is pointed at (a 75 % floor: 7.9 at ten units, 9.5 at five), 0.25 s apart while the trigger is held,
+#: in a cone narrowed to twenty degrees - and it holds 25 rounds and takes **four seconds** to fill again.
+#: A Zombie is four or five rounds, so a magazine is five of them, and the line here brings one every two
+#: seconds or so: the reload has to be put somewhere, and where is the arena.
+#:
+#: The Riot Gear Zombie is what decides where.  A round into one while it walks does its full damage, and
+#: it keeps walking for as long as its `_shielddown_` recording lasts (2.2 or 2.8 s); then it stops and
+#: nothing a gun does touches it for five seconds and its `_shieldup_` (1.7 or 1.9 s) - rounds held into it
+#: then are rounds thrown away, and each one says so with a `shieldimpact`.  So one burst into a Shield
+#: is half its life and seven seconds of it standing still while the line walks past it: it comes in
+#: last, on its own, and the magazine and the reload can go to the rest in the meantime.  At level one it
+#: is sixteen rounds, about two windows; at level four (15 a round, 40 in the magazine) nearly one.
+#: (Hits during its 4.25 s arrival or inside three units never raise the shield; a quick player can find
+#: that out.)
+#:
+#: A Hulk in waves 2 and 3 is the other thing worth a magazine: 100 life at 0.75 u/s, twelve rounds at
+#: level one.  Its arrival roar is 3.7 or 5.7 s; either way it walks in while the line around it is still
+#: at range, and nothing else fast is due then.  One Runner closes wave 3, alone, after the line.
+#:
+#: Each wave comes from one side - the right, the left, behind - and never from straight ahead, bearing
+#: 270, which is where the player starts facing and where the hit test's degrees wrap round
+#: (`_deg360`): a target across that seam loses the nearest-in-angle contest it should win.  Whisperers
+#: walk in the line and die with it; nothing has to be found by them.
+def _line(kinds, bearings, distance: float, every: float, first: float = 0.0):
+    """Walkers one at a time, `every` seconds apart, going back and forth across the bearings of one side."""
+    return [(kinds[i % len(kinds)], bearings[i], distance, round(first + i * every, 2))
+            for i in range(len(bearings))]
+
+
+PLISTS['port_frontline_1'] = _wave(
+    _line(('Zombie', 'WeakZombie', 'ZombieB', 'Zombie', 'WeakZombieB', 'ZombieC', 'Zombie', 'ZombieB'),
+          (10, 40, 345, 25, 0, 35, 355, 20), 10.0, 2.5)
+    + [('Shield', 15, 11.0, 6.0)], no_blast=True)
+PLISTS['port_frontline_2'] = _wave(
+    _line(('ZombieB', 'Zombie', 'WeakZombie', 'ZombieC', 'QuietZombie', 'Zombie', 'WeakZombieB', 'ZombieB',
+           'Zombie', 'ZombieC', 'Zombie'),
+          (150, 190, 130, 175, 205, 140, 160, 195, 125, 180, 145), 10.0, 2.2)
+    + [('Shield', 140, 11.0, 3.0), ('Hulk', 170, 11.0, 9.0), ('Shield', 185, 11.0, 15.0)], no_blast=True)
+PLISTS['port_frontline_3'] = _wave(
+    _line(('Zombie', 'ZombieB', 'WeakZombie', 'ZombieC', 'Zombie', 'QuietZombie', 'ZombieB', 'WeakZombieB',
+           'Zombie', 'ZombieC', 'ZombieB', 'WeakZombie', 'Zombie', 'ZombieB'),
+          (60, 100, 30, 120, 80, 45, 135, 70, 20, 110, 90, 40, 125, 55), 10.0, 2.0)
+    + [('Shield', 80, 11.0, 2.0), ('Hulk', 60, 11.0, 8.0), ('Shield', 40, 11.0, 14.0),
+       ('HulkB', 110, 11.0, 20.0), ('Runner', 90, 11.0, 40.0)], no_blast=True)
+PLISTS['port_frontline'] = {
+    'challenge_id': 'port_frontline',
+    'title': 'Front Line',
+    'objective': 'They come from one side at a time, in a line that does not stop, and some of them '
+                 'brought shields.',
+    'tip': 'A shield takes a moment to go up and a long time to come down. Know what the rest of the '
+           'magazine is for before you start it.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'FL',
+    'weapons': [{'name': 'tactical', 'ammo': '999'}, {'name': 'wok'}],
+    'bricks': ['port_frontline_1', 'port_frontline_2', 'port_frontline_3'],
+    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'time_limit_star': {'reward': 350, 'objective': 180},
+    'accuracy_star': {'reward': 350, 'objective': 60},
+}
+
+# -------------------------------------------------------------------------------------------- Short Game
+#: Two tools that wait for each other.  The Grenade Launcher puts 45 into whatever it lands on and 22.5 into
+#: everything else within five units (30 flat at level four), which is a crowd of Rejects in one; five to a
+#: clip at level one, one a second, two seconds to reload.  The golf club is 45 a swing (50 at four) in a
+#: forty-degree cone at arm's length, which is anything light in one, and locks everything for half a
+#: second (a quarter at four).  But a swing locks the launcher too and **throws away a reload in progress**
+#: (`shoot_with_melee`), and a grenade fired keeps the club from swinging for a second after it
+#: (`is_weapon_ready_to_shoot`, the gun's own cooldown).  Club first and then the launcher costs half a
+#: second; the launcher first and then the club costs a whole one, and a Runner in reach has two.
+#:
+#: The crowds are Rejects, most with a Zombie walking half a unit ahead in the middle (`_escort`): the
+#: grenade goes to the nearest thing in front of the player (`target_enemi_for_explosive_weapon`), which is
+#: that Zombie, so on target it takes the lot, and a little off it leaves the Zombie on 12.5 to walk in to
+#: the club.  What gets through comes on its own, into the club's reach while a crowd is still out at range
+#: on another side: Runners, a Whisperer, a Chainsaw (70, two swings - it circles, so a grenade's lead is
+#: wrong for it) and a Hulk (two grenades on target and a swing, or three swings; both of its roars, 3.7 and
+#: 5.7 s, leave it room).  The Dodges go the other way: a club sends one sidestepping out of reach every time
+#: it lands, and a blast never does.  In wave 3 a Runner comes down the very bearing a crowd is on, ahead of
+#: it: a grenade meant for the crowd goes to the Runner and bursts at the player's feet, so it has to be
+#: clubbed first.
+#:
+#: Thirty grenades is two for every crowd and heavy with some to spare, not one for every Zombie.
+#: Everything within five units is spaced about five seconds a group, and no eight seconds bring more than
+#: about ten.
+_W3 = ('WeakZombieC', 'WeakZombie', 'WeakZombieB')
+
+PLISTS['port_shortgame_1'] = _wave(
+    _pack(_W4, 30, 11.0, 0.0)
+    + [('Zombie', 200, 9.0, 2.0)]
+    + _pack(('WeakZombieB', 'WeakZombie', 'WeakZombieC', 'WeakZombieB'), 150, 11.0, 7.0)
+    + [('ZombieB', 330, 9.0, 10.0)]
+    + _pack(('WeakZombieC', 'WeakZombieB', 'WeakZombie', 'WeakZombieC'), 240, 11.0, 14.0)
+    + [('Zombie', 90, 9.0, 17.0), ('Runner', 20, 11.0, 26.0)], no_blast=True)
+PLISTS['port_shortgame_2'] = _wave(
+    _escort(_W3, 'Zombie', 60, 11.0, 0.0)
+    + [('Runner', 190, 11.0, 6.0)]
+    + _escort(('WeakZombieB', 'WeakZombieC', 'WeakZombie'), 'ZombieB', 300, 11.0, 5.0)
+    + [('QuietZombie', 120, 9.0, 9.0)]
+    + _escort(('WeakZombie', 'WeakZombieB', 'WeakZombieC'), 'ZombieC', 170, 11.0, 11.0)
+    + [('Runner', 40, 11.0, 17.0)]
+    + _pack(_W4, 40, 11.0, 18.5)
+    + [('Zombie', 250, 9.0, 20.0), ('Dodge', 20, 11.0, 23.0)]
+    + _escort(_W3, 'Zombie', 110, 11.0, 24.0), no_blast=True)
+PLISTS['port_shortgame_3'] = _wave(
+    _escort(_W4, 'Zombie', 0, 11.0, 0.0)
+    + [('Runner', 300, 11.0, 12.0), ('Hulk', 200, 11.0, 10.3)]
+    + _escort(('WeakZombieB', 'WeakZombieC', 'WeakZombie'), 'ZombieB', 120, 11.0, 13.5)
+    + [('DodgeB', 20, 11.0, 21.5), ('Chainsaw', 60, 10.0, 23.5)]
+    + _escort(('WeakZombie', 'WeakZombieB', 'WeakZombieC', 'WeakZombieB'), 'ZombieC', 240, 11.0, 27.5)
+    + _pack(_W4, 330, 11.0, 33.5) + [('Runner', 330, 11.0, 39.0)]
+    + [('QuietZombie', 160, 9.0, 41.4)]
+    + _escort(_W3, 'Zombie', 90, 11.0, 41.5)
+    + [('Runner', 210, 11.0, 53.0)]
+    + _escort(('WeakZombieC', 'WeakZombie', 'WeakZombieB', 'WeakZombie'), 'ZombieB', 180, 11.0, 51.5),
+    no_blast=True)
+PLISTS['port_shortgame'] = {
+    'challenge_id': 'port_shortgame',
+    'title': 'Short Game',
+    'objective': 'A launcher for the crowds and a club for whatever walks through them.',
+    'tip': 'Each of them waits for the other, and one of them waits longer. Decide which comes first before '
+           'it matters.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'SG',
+    'weapons': [{'name': 'grenade', 'ammo': '30'}, {'name': 'golf'}],
+    'bricks': ['port_shortgame_1', 'port_shortgame_2', 'port_shortgame_3'],
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
+    'time_limit_star': {'reward': 450, 'objective': 220},
+    'accuracy_star': {'reward': 450, 'objective': 70},
+}
+
+# ----------------------------------------------------------------------------------------- Bonfire Night
+#: The power-ups no arena has used, as part of the plan rather than a present.  `PowerUp` with
+#: `force_spawn_time` puts a crate five units out on a bearing of its own two seconds later; it arrives over
+#: 4.7 s, beeps for fifteen, and has one life - and the Sawn-off hits everything sixty degrees either side
+#: of where it points, crates included, so a shell fired towards a pack on the crate's side opens it
+#: whether that was meant or not.  It beeps where it is, and the player chooses when.
+#:
+#: **Fireworks** (waves 1 and 3): from the moment it opens, everything within ten units of the player takes
+#: a blast every half second for eight seconds - about 21 in all at level one (16.5-27), 49 at level four,
+#: and nothing at all beyond ten.  For the Sawn-off at level one that is the difference between two shells
+#: and one: its damage is nearly all distance (`dispersal` 1: 28 at three units, 21 at six, 14 at eight), a
+#: Zombie has 35 and no plain shell kills one, and a Zombie with 14 left dies to a shell at eight units.  So
+#: it is worth most opened when every crowd is inside ten units, and little before.  In wave 1 that is the
+#: moment the crate can first be shot - three crowds walk in from nine, ten and a half and twelve units and
+#: reach five units three seconds apart - so the first one teaches it; in wave 3 the crate is ready five
+#: seconds before the crowd is inside ten units, and two Zombies come in first on a bearing of their own, to
+#: be shot with the crate somewhere beeping - on their side of the player or not.
+#:
+#: **Tornado** (wave 2): four gusts over ten seconds, each pushing everything outward a quarter of a unit at
+#: level one (1.25 at level four): at level one about two seconds of a Zombie's walk, which is a Sawn-off
+#: reload (2.3 s), and ten seconds at level four.  It comes in the middle of two pairs of crowds from
+#: opposite sides; opened when the shells are gone and a pack is at arm's length it buys the reload, and
+#: opened by a stray shell with a pack at three units it only pushes it out of the shotgun's best range.
+#:
+#: One crate a wave, and each after the one before is long over: a crate appearing stops whatever power-up
+#: is still running, and none here is meant to.  The paired crowds of wave 2 come four seconds apart, time for
+#: two shells, a reload and a half turn.  Runners come as one pair at the end of waves 2 and 3, after the
+#: last crowd is due to be dead: at level one a Runner needs two shells unless one is a critical, so they must
+#: find both barrels loaded, and nothing else must be asking for them.
+_Z3 = ('Zombie', 'ZombieB', 'ZombieC')
+_Z3B = ('ZombieB', 'ZombieC', 'Zombie')
+_Z3C = ('ZombieC', 'Zombie', 'ZombieB')
+
+PLISTS['port_bonfire_1'] = _wave(
+    _pack(_Z3, 30, 9.0, 0.0) + _pack(('ZombieB', 'Zombie', 'WeakZombie'), 150, 10.5, 0.5)
+    + _pack(('ZombieC', 'WeakZombieB', 'Zombie'), 250, 12.0, 1.0)
+    + [('Zombie', 100, 10.0, 18.0), ('WeakZombieB', 320, 10.0, 22.0), ('ZombieB', 200, 10.0, 26.0)],
+    no_blast=True)
+PLISTS['port_bonfire_1']['PowerUp'] = {'force_spawn_time': 0.1, 'type': 'fireworks'}
+PLISTS['port_bonfire_2'] = _wave(
+    _pack(_Z3, 60, 10.0, 0.0) + _pack(_Z3B, 240, 10.0, 4.0)
+    + _pack(('Zombie', 'ZombieC', 'ZombieB', 'WeakZombie'), 150, 10.0, 10.0) + _pack(_Z3C, 330, 10.0, 14.0)
+    + [('Zombie', 200, 10.0, 20.0)] + _pack(('Runner', 'RunnerB'), 100, 11.0, 33.0, spread=5.0),
+    no_blast=True)
+PLISTS['port_bonfire_2']['PowerUp'] = {'force_spawn_time': 6.0, 'type': 'tornado'}
+PLISTS['port_bonfire_3'] = _wave(
+    _pack(('Zombie', 'ZombieB'), 300, 9.0, 5.0)
+    + _pack(_Z3, 20, 12.0, 9.0) + _pack(_Z3B, 140, 12.0, 10.0) + _pack(_Z3C, 250, 12.0, 11.0)
+    + _pack(_Z3, 200, 10.0, 29.0) + _pack(_Z3B, 20, 10.0, 32.0)
+    + _pack(('ZombieC', 'Zombie', 'ZombieB', 'WeakZombieB'), 110, 10.0, 37.0)
+    + _pack(('Runner', 'RunnerB'), 250, 11.0, 52.0, spread=5.0), no_blast=True)
+PLISTS['port_bonfire_3']['PowerUp'] = {'force_spawn_time': 3.0, 'type': 'fireworks'}
+PLISTS['port_bonfire'] = {
+    'challenge_id': 'port_bonfire',
+    'title': 'Bonfire Night',
+    'objective': 'Forty shells, a crowd for every few of them, and a crate every wave. What is in it helps '
+                 'only if it is opened at the right moment.',
+    'tip': 'A shotgun opens anything in front of it. Know where the crate is, and what will be near you when '
+           'it opens.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'BN',
+    'weapons': [{'name': 'sawnoff', 'ammo': '40'}, {'name': 'wok'}],
+    'bricks': ['port_bonfire_1', 'port_bonfire_2', 'port_bonfire_3'],
+    'ambient': {'ambientPlaylist': 'ambient_foundry', 'gain': 0.5},
+    'time_limit_star': {'reward': 450, 'objective': 210},
+    'accuracy_star': {'reward': 450, 'objective': 70},
+}
+
 
 #: The port's own arenas, gathered into chapters (user request).
 #:
@@ -1669,7 +1942,10 @@ PLISTS['port_company'] = {
 #: the game's own code at virtual time with a human's reaction time, and finds the slowest reaction that
 #: still wins: the tool cannot price a dummy that holds a wave or a Farty's blast.  Shooting Gallery, the
 #: gentlest there is, comes first; Busker, the Banjo's, before The Survivor; Fore after Sidestep; and Bad
-#: Company before Powder Keg, so the Farty is met where it is the whole idea before it is one of several.
+#: Company before Powder Keg, so the Farty is met where it is the whole idea before it is one of several;
+#: Cattle Call, the prod's, second in chapter 3 and Front Line, the Tactical's, after Rust; Bonfire Night,
+#: gentler than anything else in chapter 4, straight after the Sawn-off is bought for Point Blank, and Short
+#: Game after Fuse, which is where the launcher is bought.
 #:
 #: The chapters are the port's own structure and not worlds in `challenges_index`, which they could have
 #: been: `apply_to` reaches that file and the world list would have given locks, star counts and a
@@ -1687,17 +1963,17 @@ CHAPTERS = (
     ('Chapter 2', ('port_longwalk', 'port_stampede', 'port_sidestep', 'port_fore', 'port_company',
                    'port_keg', 'port_hydra', 'port_biggame')),
     #: Harder again (user request): 13.6 seconds short down to 25.6.
-    ('Chapter 3', ('port_ironsights', 'port_thunder', 'port_rust', 'port_drop', 'port_carousel',
-                   'port_last')),
+    ('Chapter 3', ('port_ironsights', 'port_cattlecall', 'port_thunder', 'port_rust', 'port_frontline',
+                   'port_drop', 'port_carousel', 'port_last')),
     #: The armory (user request): 27.7 seconds short down to 39.8, by the tool's crowd-weapon reckoning
     #: (`area_pressure`).
-    ('Chapter 4', ('port_pointblank', 'port_oneswing', 'port_fuse', 'port_collateral', 'port_crossfire',
-                   'port_armory')),
+    ('Chapter 4', ('port_pointblank', 'port_bonfire', 'port_oneswing', 'port_fuse', 'port_shortgame',
+                   'port_collateral', 'port_crossfire', 'port_armory')),
 )
 
 #: How many of the stars in the chapters before it a chapter may be opened without (user request): two.
 #: Every chapter asks for all the stars the chapters before it hold but these - 25 of chapter 1's 27 for
-#: chapter 2, 49 of 51 for chapter 3, 67 of 69 for chapter 4 - and two is less than the three an arena is
+#: chapter 2, 49 of 51 for chapter 3, 73 of 75 for chapter 4 - and two is less than the three an arena is
 #: worth, so no arena can be left unbeaten on the way: what may be missed is two accuracy or time stars,
 #: across everything behind you.  It does not shrink as the chapters go on, because at nought a single star
 #: a player cannot win - The Last Word's time star, say - would shut every chapter after it for good.
