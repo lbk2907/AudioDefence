@@ -45,7 +45,17 @@ class PasserByManager:
         for p in list(self.passers_by):
             p.update(dt)
         bm = BrickManager.shared()
-        if bm.mode != 1:
+        # PORT DIVERGENCE (user request, 2026-09-30): `update:` 0x1000d59e4 returns here for any mode but
+        # Endless, so the cows and the cars a modifier asks for arrive only there.  `startTimers` 0x1000d57c0
+        # sets their clocks whatever the mode is and then nothing ever reads them again, while the Jukebox
+        # and the Generator it adds itself have always worked anywhere - so three of the four already did
+        # what a challenge would want and two of them did nothing.  A challenge a player writes can ask for
+        # all four (`game/custom.ARENA_EXTRAS`), so a challenge counts here as well.
+        #
+        # Nothing of the game's own changes: not one of the original's 45 challenges carries a `Modifiers`
+        # key at all, and of the port's six arenas that do, none names `cows` or `cars`.  Modes 3 and 4 - the
+        # looping scenario and the menu demo - are left as they were, being nobody's to write.
+        if bm.mode not in (1, 2):
             return
         mods = GameModifiers.shared()
         if mods.cows:
