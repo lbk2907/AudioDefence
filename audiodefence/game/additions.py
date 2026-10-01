@@ -1529,7 +1529,7 @@ PLISTS['port_fore'] = {
     'icon': 'Challenge_icon_02', 'icon_title': 'FO',
     'weapons': [{'name': 'pistol', 'ammo': '18'}, {'name': 'golf'}],
     'bricks': ['port_fore_1', 'port_fore_2', 'port_fore_3'],
-    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
     'time_limit_star': {'reward': 250, 'objective': 170},
     'accuracy_star': {'reward': 250, 'objective': 70},
 }
@@ -1739,7 +1739,7 @@ PLISTS['port_frontline'] = {
     'icon': 'Challenge_icon_02', 'icon_title': 'FL',
     'weapons': [{'name': 'tactical', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_frontline_1', 'port_frontline_2', 'port_frontline_3'],
-    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
     'time_limit_star': {'reward': 350, 'objective': 180},
     'accuracy_star': {'reward': 350, 'objective': 60},
 }
@@ -1936,7 +1936,7 @@ PLISTS['port_riot'] = {
     'icon': 'Challenge_icon_02', 'icon_title': 'CO',
     'weapons': [{'name': 'policeshotgun', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_riot_1', 'port_riot_2', 'port_riot_3'],
-    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
     'time_limit_star': {'reward': 500, 'objective': 170},
     'accuracy_star': {'reward': 500, 'objective': 85},
 }
@@ -2376,7 +2376,7 @@ PLISTS['port_titans'] = {
     'icon': 'Challenge_icon_02', 'icon_title': 'TI',
     'weapons': [{'name': 'bazooka', 'ammo': '999'}, {'name': 'policeshotgun', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_titans_1', 'port_titans_2', 'port_titans_3'],
-    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
     'time_limit_star': {'reward': 500, 'objective': 160},
     'accuracy_star': {'reward': 500, 'objective': 70},
 }
@@ -2563,7 +2563,7 @@ PLISTS['port_riotact'] = {
     'icon': 'Challenge_icon_02', 'icon_title': 'RA',
     'weapons': [{'name': 'policeshotgun', 'ammo': '999'}, {'name': 'bazooka', 'ammo': '999'}, {'name': 'golf'}],
     'bricks': ['port_riotact_1', 'port_riotact_2', 'port_riotact_3'],
-    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
     'time_limit_star': {'reward': 600, 'objective': 170},
     'accuracy_star': {'reward': 600, 'objective': 70},
 }
@@ -2647,7 +2647,7 @@ PLISTS['port_beltfed'] = {
     'icon': 'Challenge_icon_02', 'icon_title': 'BF',
     'weapons': [{'name': 'machinegun', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_beltfed_1', 'port_beltfed_2', 'port_beltfed_3'],
-    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
     'time_limit_star': {'reward': 600, 'objective': 300},
     'accuracy_star': {'reward': 600, 'objective': 55},
 }
@@ -2881,7 +2881,7 @@ PLISTS['port_heavyweights'] = {
     'icon': 'Challenge_icon_02', 'icon_title': 'HW',
     'weapons': [{'name': 'tactical', 'ammo': '999'}, {'name': 'bazooka', 'ammo': '25'}, {'name': 'wok'}],
     'bricks': ['port_heavyweights_1', 'port_heavyweights_2', 'port_heavyweights_3'],
-    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
     'time_limit_star': {'reward': 650, 'objective': 200},
     'accuracy_star': {'reward': 650, 'objective': 60},
 }
@@ -3017,7 +3017,7 @@ PLISTS['port_tempo'] = {
     'icon': 'Challenge_icon_02', 'icon_title': 'TP',
     'weapons': [{'name': 'sonic', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_tempo_1', 'port_tempo_2', 'port_tempo_3'],
-    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
     'time_limit_star': {'reward': 650, 'objective': 180},
     'accuracy_star': {'reward': 650, 'objective': 65},
 }
@@ -3385,7 +3385,7 @@ PLISTS['port_remix'] = {
                 {'name': 'machinegun', 'ammo': '999'}, {'name': 'sonic', 'ammo': '999'},
                 {'name': 'banjo'}, {'name': 'prod'}, {'name': 'claymore'}, {'name': 'wok'}, {'name': 'golf'}],
     'bricks': ['port_remix_%d' % i for i in range(1, 13)],
-    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
     'time_limit_star': {'reward': 800, 'objective': 840},
     'accuracy_star': {'reward': 800, 'objective': 55},
 }
