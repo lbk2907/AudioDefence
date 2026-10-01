@@ -3098,6 +3098,299 @@ PLISTS['port_closingtime'] = {
     'accuracy_star': {'reward': 700, 'objective': 60},
 }
 
+# ---------------------------------------------------------------------------------------------- Reprise
+#: The whole of the Extra mode again, in the order it was played, as one challenge of twelve waves: six acts
+#: of two, one for each chapter, and each act fought with that chapter's weapons (user request).  A wave may
+#: carry `Weapons` of its own - the challenge's form, handed over as the wave loads - so the first wave of
+#: every act takes the last act's weapons away and hands over the next set, reads it out ("New weapons:
+#: ..."), and draws its first gun.  The challenge's own `weapons` names every one of them, because that is
+#: the list the overview checks; the first wave's set replaces it before anything is heard.
+#:
+#: It is long - ten to twelve minutes - and one enemy reaching the player ends it, so every act is a little
+#: gentler than the chapter it remembers, and a death offers the revive (`Revive`) and fights the wave again.
+#: It is measured as if there were none.  Nothing here can use a modifier or a second ambience (both are the
+#: challenge's, not a wave's), and nothing that stays is left behind: cows walk off, so they are used, and
+#: no jukebox or machine is, because a passer-by stays for every wave after the one it came in.
+#:
+#: Each act's first wave starts quietly - nothing inside eight units for the first six seconds or so - so the
+#: new weapons can be heard and a player can cycle to the one they want before anything needs it.
+
+#: Arrival lengths and speeds for the kinds `_ARRIVE` and `_slots` do not know, so a group can be placed by
+#: the moment it comes within five units rather than by the moment it is heard (the shortest recording of
+#: each lottery; handbook 4.1).  A Chainsaw circles in at 0.725 a second, a Farty walks a unit ahead of its
+#: band.
+_REMIX_ARRIVE = dict(_ARRIVE, Chainsaw=4.60, Dodge=3.34, DodgeB=3.34, Farty=2.14, FartyB=2.14, Colossus=3.41,
+                     Shield=4.25, WeakZombieD=1.70)
+_REMIX_SPEED = {'Hulk': 0.75, 'HulkB': 0.75, 'Runner': 1.3, 'RunnerB': 1.3, 'RunnerC': 1.3, 'Chainsaw': 0.725,
+                'Dodge': 0.9, 'DodgeB': 0.9, 'Colossus': 0.25}
+
+
+def _remix_lead(kind: str, distance: float) -> float:
+    """Seconds from spawning to five units out, for one walking in straight from `distance`."""
+    return _REMIX_ARRIVE[kind] + max(0.0, distance - 5.0) / _REMIX_SPEED.get(kind, 0.5)
+
+
+def _remix_when(reach: float, kinds, distance: float, step: float = 0.3) -> float:
+    """When a group - `kinds` spawning `step` seconds apart from `distance` - must start for its first to
+    come within five units at `reach`."""
+    return round(max(0.0, reach - min(step * i + _remix_lead(k, distance) for i, k in enumerate(kinds))), 2)
+
+
+def _remix_slots(slots, first: float, every: float) -> list:
+    """`_slots` for this arena: groups coming within five units `every` seconds apart from `first`, `None`
+    for a quiet slot.  A group is a pack (a tuple of kinds, ten units out), one kind alone (eleven for a
+    Runner, ten for the rest), 'Shield' (a Riot Gear Zombie in the middle of three Rejects) or 'band' (four
+    Rejects round a Farty, `_band`); a third member of the slot is the distance."""
+    out = []
+    for i, slot in enumerate(slots):
+        if slot is None:
+            continue
+        group, bearing = slot[:2]
+        reach = first + i * every
+        if group == 'Shield':
+            dist = slot[2] if len(slot) > 2 else 10.0
+            at = reach - _remix_lead('WeakZombieC', dist)
+            out += _escort(('WeakZombie', 'WeakZombieC', 'WeakZombieB'), 'Shield', bearing, dist,
+                           round(max(0.0, at), 2))
+        elif group == 'band':
+            dist = slot[2] if len(slot) > 2 else 10.0
+            at = reach - _remix_lead('Farty', dist - 1.0)
+            out += _band(bearing, dist, round(max(0.0, at), 2))
+        elif isinstance(group, tuple):
+            dist = slot[2] if len(slot) > 2 else 10.0
+            at = min(reach - _remix_lead(k, dist) - 0.3 * j for j, k in enumerate(group))
+            out += _pack(group, bearing, dist, round(max(0.0, at), 2))
+        else:
+            dist = slot[2] if len(slot) > 2 else (11.0 if group.startswith('Runner') else 10.0)
+            out.append((group, bearing, dist, round(max(0.0, reach - _remix_lead(group, dist)), 2)))
+    return out
+
+
+def _remix_beat(kinds, bearings, every: float, first: float, distance: float = 10.0) -> list:
+    """One at a time on a beat, the kinds and the bearings taken in turn; a Runner a unit further out."""
+    return [(kinds[i % len(kinds)], b,
+             distance + (1.0 if kinds[i % len(kinds)].startswith('Runner') else 0.0),
+             round(first + i * every, 2)) for i, b in enumerate(bearings)]
+
+
+def _remix_singles(entries) -> list:
+    """One at a time, each given by `(kind, bearing, the second it comes within five units[, distance])`."""
+    out = []
+    for one in entries:
+        kind, bearing, reach = one[:3]
+        dist = one[3] if len(one) > 3 else (11.0 if kind.startswith('Runner') else 10.0)
+        out.append((kind, bearing, dist, round(max(0.0, reach - _remix_lead(kind, dist)), 2)))
+    return out
+
+
+def _remix_asleep(bearing: float, at: float, kinds=('Zombie', 'WeakZombie')) -> list:
+    """Do Not Wake It's shape, for single-shot guns: a Berserk resting seven units out and two walkers going
+    past it twenty-five degrees either side, so a shot at either has something nearer in angle than it."""
+    return [('Berserk', bearing, 7.0, at), (kinds[0], bearing - 25.0, 10.0, at + 1.0),
+            (kinds[1], bearing + 25.0, 10.0, at + 5.0)]
+
+
+def _remix_heads(wave: dict, head: str, heads, after: float = 2.0) -> dict:
+    """Hydra: `heads` - (kind, bearing, distance) - start `after` seconds after `head` dies
+    (`spawn_after`)."""
+    for kind, bearing, dist in heads:
+        wave['Enemies']['%s %d' % (kind, 90 + len(wave['Enemies']))] = {
+            'spawn_angle': float(bearing), 'spawn_distance': float(dist),
+            'spawn_after': {'enemy': head, 'time': after}}
+    return wave
+
+
+#: The six sets.  One or two guns and a melee weapon from each chapter, so that across the six every gun of
+#: the Extra mode is handed over once and every melee weapon at least once: the revolver, the Micro SMG and
+#: the Banjo; the Hunting Rifle, the Micro SMG again and the Golf Club; the Tactical Rifle, the revolver and
+#: the Cattle Prod; the Sawn-off, the Grenade Launcher and the Claymore; the Police Shotgun, the Bazooka and
+#: the wok; the Machine Gun, the Sonic Cannon and the Golf Club.  Rounds are unlimited except where counting
+#: them was the chapter's point (the launchers).
+_REMIX_ARMS = (
+    [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '999'}, {'name': 'banjo'}],
+    [{'name': 'hunting', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '999'}, {'name': 'golf'}],
+    [{'name': 'tactical', 'ammo': '999'}, {'name': 'pistol', 'ammo': '999'}, {'name': 'prod'}],
+    [{'name': 'sawnoff', 'ammo': '999'}, {'name': 'grenade', 'ammo': '30'}, {'name': 'claymore'}],
+    [{'name': 'policeshotgun', 'ammo': '999'}, {'name': 'bazooka', 'ammo': '40'}, {'name': 'wok'}],
+    [{'name': 'machinegun', 'ammo': '999'}, {'name': 'sonic', 'ammo': '999'}, {'name': 'golf'}],
+)
+
+# ---- Act one: chapter 1 - Clockwork, Barnyard and Busker; Three Bullets, Do Not Wake It and The Wall
+#: Clockwork's metronome, round four bearings three seconds apart, with Barnyard's cows walking through it
+#: between the bearings (a round into a cow is one not in a zombie), and Busker's end: two small crowds
+#: standing up at seven units, arm's length for the banjo in a few seconds, a Whisperer in each.
+PLISTS['port_remix_1'] = _wave(
+    _remix_beat(('WeakZombie', 'Zombie', 'ZombieB', 'QuietZombie', 'Zombie', 'WeakZombieB', 'ZombieC',
+                 'Zombie',
+                 'QuietZombie', 'ZombieB'), (20, 110, 200, 290) * 2 + (20, 110), 3.0, 2.0)
+    + _pack(('Zombie', 'QuietZombie', 'WeakZombie'), 65, 7.0, 36.0)
+    + _pack(('ZombieB', 'WeakZombieC', 'QuietZombie'), 245, 7.0, 43.0), no_blast=True,
+    passers=_cows((65, 11, 3), (155, 11, 11), (335, 11, 19)))
+PLISTS['port_remix_1']['Weapons'] = _REMIX_ARMS[0]
+#: What will not come to you, what should not be woken and what does not die to a cylinder: two Bobs and
+#: the arena's one Diamond standing still, two Berserks resting with walkers passing wide of them, and two
+#: Hulks and a Riot Gear Zombie (two Rejects with it) walking in from twelve.
+PLISTS['port_remix_2'] = _wave(
+    [('Bob', 200, 9.0, 0.0), ('Hulk', 300, 12.0, 4.0)]
+    + _remix_asleep(100, 1.0)
+    + _escort(('WeakZombie', 'WeakZombieB'), 'Shield', 20, 12.0, 11.0) + [('Bob', 60, 10.0, 14.0)]
+    + _remix_asleep(230, 16.0, ('ZombieB', 'Zombie'))
+    + [('QuietZombie', 150, 10.0, 25.0), ('HulkB', 110, 12.0, 28.0), ('Zombie', 340, 10.0, 31.0)],
+    no_blast=True)
+PLISTS['port_remix_2']['Enemies']['Diamond'] = {'spawn_angle': 175.0, 'spawn_distance': 6.0,
+                                                 'spawn_time': 22.0}
+
+# ---- Act two: chapter 2 - The Long Walk, Sidestep and Bad Company; Stampede, Hydra, Fore and Big Game
+#: The Long Walk: a Colossus from twelve units in front, and a crowd coming one at a time from behind while
+#: it walks; then a Dodge alone, and Bad Company's Farty with three Rejects round it, to be shot while they
+#: are round it and not after they are close.
+PLISTS['port_remix_3'] = _wave(
+    [('Colossus', 0, 12.0, 0.0), ('Zombie', 160, 10.0, 3.0), ('WeakZombie', 200, 10.0, 9.0),
+     ('ZombieB', 180, 10.0, 15.0), ('QuietZombie', 170, 10.0, 21.0), ('Dodge', 90, 12.0, 24.0),
+     ('Zombie', 215, 10.0, 27.0)]
+    + _gassy(('WeakZombie', 'WeakZombieB', 'WeakZombieC'), 'Farty', 240, 10.0, 31.0)
+    + [('ZombieC', 130, 10.0, 38.0)], no_blast=True)
+PLISTS['port_remix_3']['Weapons'] = _REMIX_ARMS[1]
+#: Stampede's Runners one at a time, six seconds or more apart, never two at once; Big Game's Hulks for the
+#: rifle; Fore's Chainsaw for the club; and two Hydra heads, each growing two more two seconds after it dies.
+PLISTS['port_remix_4'] = _remix_heads(_remix_heads(_wave(
+    [('Zombie', 150, 9.0, 2.0), ('Hulk', 60, 12.0, 0.0)]
+    + _remix_singles((('Runner', 250, 19.0), ('HulkB', 300, 25.0, 12.0), ('Chainsaw', 200, 30.0),
+                      ('RunnerB', 30, 35.0), ('Zombie', 330, 39.0, 9.0), ('Runner', 110, 45.0),
+                      ('Hulk', 240, 48.0, 12.0), ('RunnerC', 180, 53.0))), no_blast=True),
+    'Zombie 1', (('WeakZombie', 130, 8.0), ('WeakZombieB', 170, 8.0))),
+    'Zombie 7', (('ZombieB', 310, 7.5), ('WeakZombieC', 350, 7.5)))
+
+# ---- Act three: chapter 3 - Front Line and Cattle Call; The Drop and Carousel
+#: Front Line: one broad side (fifteen to ninety-five degrees, clear of the seam at 270) walking in one at a
+#: time, two seconds apart, with two Riot Gear Zombies and two Hulks inside the line.  Then Cattle Call from
+#: the other side: Whisperers that nobody hears until they scream at three units, each alone, and a cow
+#: walking in among them for the prod to find if it is nearer.
+PLISTS['port_remix_5'] = _wave(
+    _line(('Zombie', 'WeakZombie', 'ZombieB', 'Zombie', 'WeakZombieB', 'ZombieC', 'Zombie', 'ZombieB',
+           'QuietZombie', 'Zombie', 'ZombieC', 'WeakZombie', 'Zombie', 'ZombieB'),
+          (40, 70, 25, 55, 85, 35, 65, 20, 50, 90, 30, 75, 45, 60), 10.0, 2.0, first=2.0)
+    + [('Shield', 45, 11.0, 4.0), ('Hulk', 60, 11.0, 10.0), ('Shield', 80, 11.0, 16.0),
+       ('HulkB', 30, 11.0, 22.0)]
+    + _reaching([('QuietZombie', 220, 44.0), ('QuietZombie', 250, 48.0), ('Zombie', 195, 51.0),
+                 ('QuietZombie', 235, 54.5), ('QuietZombie', 205, 58.0)]), no_blast=True,
+    passers=_cows_in((210, 50.0)))
+PLISTS['port_remix_5']['Weapons'] = _REMIX_ARMS[2]
+#: Carousel without its speed cards: Chainsaws and Clowns circling in a little over two seconds apart,
+#: walkers between them; and The Drop's crate, a Minigun, dropped in while four of them are going round.
+PLISTS['port_remix_6'] = _wave(_remix_beat(
+    ('Chainsaw', 'Clown', 'Zombie', 'Chainsaw', 'Clown', 'ZombieB', 'Clown', 'Chainsaw', 'Zombie', 'Clown',
+     'Hulk', 'Chainsaw', 'Clown', 'ZombieC', 'Chainsaw', 'Clown'),
+    (30, 150, 260, 300, 90, 210, 340, 120, 45, 180, 280, 60, 240, 0, 200, 100), 2.2, 0.0), no_blast=True)
+PLISTS['port_remix_6']['PowerUp'] = {'force_spawn_time': 14.0, 'type': 'minigun'}
+
+# ---- Act four: chapter 4 - Point Blank, Fuse and Bonfire Night; One Swing, Crossfire and Short Game
+#: Packs of four, four and a half seconds apart, from eleven units: grenades for them far out, shells for
+#: them close (Point Blank's 46 at three units against 30 at seven), and Runners in packs of their own;
+#: Bonfire Night's Fireworks while packs are inside ten units; and Crossfire's two packs from opposite sides
+#: half a second apart - Zombies, not Runners, so a shell, a half turn and a shell still leave room.
+PLISTS['port_remix_7'] = _wave(
+    _remix_slots(((_Z4, 30, 11.0), (('WeakZombie', 'Zombie', 'WeakZombieC', 'ZombieB'), 150, 11.0),
+                  (('ZombieC', 'Zombie', 'ZombieB', 'WeakZombie'), 250, 11.0), (_R3, 100, 11.0), None,
+                  None, (_Z4, 210, 11.0), (_R2, 300),
+                  (('ZombieB', 'WeakZombieB', 'Zombie', 'ZombieC'), 60, 11.0)),
+                 15.5, 4.5)
+    + _remix_slots(((('Zombie', 'ZombieC', 'ZombieB'), 330), (('ZombieB', 'Zombie', 'QuietZombie'), 150)),
+                   36.0, 0.5),
+    no_blast=True)
+PLISTS['port_remix_7']['PowerUp'] = {'force_spawn_time': 20.0, 'type': 'fireworks'}
+PLISTS['port_remix_7']['Weapons'] = _REMIX_ARMS[3]
+#: One Swing's singles - a Runner, a Chainsaw - each alone, for the claymore or a shell; Short Game's crowds
+#: of Rejects for the launcher; a Crossfire pair; two Hulks, three shells between them if they are let in
+#: together; and Crossfire's Runners from both sides, the second pair two and a half seconds behind the first
+#: (a shell, a half turn and a shell).
+PLISTS['port_remix_8'] = _wave(_remix_slots((
+    (_W4, 40, 11.0), ('Runner', 220), (_Z4, 130), ('Chainsaw', 300), (_Z4, 0), None, (_HH, 70, 11.0), None,
+    (_R2, 250), None, (('WeakZombieB', 'WeakZombie', 'WeakZombieC', 'WeakZombieB'), 160, 11.0)), 13.0, 4.5)
+    + _remix_slots(((('ZombieB', 'Zombie', 'ZombieC'), 180),), 31.5, 1.0)
+    + _remix_slots(((_R2, 70),), 51.5, 1.0), no_blast=True)
+
+# ---- Act five: chapter 5 - Crowd Control, Artillery and Riot Act; Titans and Scarecrows
+#: Artillery's packs standing up thirteen units out, where only the rocket reaches, and Crowd Control's lines
+#: at nine, shoulder to shoulder, one shell's cone wide, about five seconds apart at five units; a pack of
+#: Runners on its own, a Riot Gear Zombie in its crowd far out, two Hulks and a Dodge alone.
+_REMIX_L5 = (('WeakZombie', 'Zombie', 'WeakZombieC', 'ZombieB', 'WeakZombie'),
+             ('ZombieB', 'WeakZombie', 'Zombie', 'WeakZombieC', 'ZombieC'))
+_REMIX_L6 = ('Zombie', 'WeakZombieC', 'ZombieC', 'WeakZombie', 'ZombieB')
+PLISTS['port_remix_9'] = _wave(
+    _pack(_P4[0], 30, 13.0, _remix_when(16.0, _P4[0], 13.0), spread=5.0)
+    + _shoulder(_REMIX_L5[0], 150, 70, 9.0, _remix_when(21.0, _REMIX_L5[0], 9.0, 0.25))
+    + _pack(_P4[1], 250, 13.0, _remix_when(26.5, _P4[1], 13.0), spread=5.0)
+    + _pack(_R3, 90, 11.0, _remix_when(33.0, _R3, 11.0), spread=5.0)
+    + _shoulder(_REMIX_L6, 330, 100, 9.0, _remix_when(37.5, _REMIX_L6, 9.0, 0.25))
+    + _escort(('WeakZombie', 'WeakZombieB', 'WeakZombieC'), 'Shield', 200, 13.0,
+              _remix_when(42.5, ('WeakZombie', 'WeakZombieB', 'WeakZombieC'), 13.0))
+    + _pack(_HH, 110, 13.0, _remix_when(47.0, _HH, 13.0))
+    + [('Dodge', 20, 14.0, _remix_when(51.5, ('Dodge',), 14.0))]
+    + _shoulder(_REMIX_L5[1], 240, 80, 9.0, _remix_when(56.0, _REMIX_L5[1], 9.0, 0.25))
+    + _pack(_P4[2], 150, 13.0, _remix_when(61.0, _P4[2], 13.0), spread=5.0), no_blast=True)
+PLISTS['port_remix_9']['Weapons'] = _REMIX_ARMS[4]
+#: Titans: two Colossi with crowds walking in on their bearings and past them, where a rocket at one lands
+#: among them.  Scarecrows: a Bob, a Jim and a Ted standing close in front of the crowds behind them, in the
+#: way of a rocket and not of a shell.  Five seconds between groups at five units.
+PLISTS['port_remix_10'] = _wave(
+    [('Colossus', 330, 12.0, 0.0), ('Colossus', 150, 11.5, 8.0)]
+    + _beside(_TRIOS[0], 330, _remix_when(22.5, _TRIOS[0], 13.5))
+    + _field('Bob', 60, 4.5, 6.0) + _parted(_P4[1], 60, 13.0, _remix_when(27.5, _P4[1], 13.0))
+    + _beside(_TRIOS[1], 150, _remix_when(32.5, _TRIOS[1], 13.5))
+    + _pack(_R3, 240, 11.0, _remix_when(37.5, _R3, 11.0), spread=5.0)
+    + _field('Jim', 20, 4.5, 24.0) + _parted(_P4[3], 20, 13.0, _remix_when(42.5, _P4[3], 13.0))
+    + [('Chainsaw', 110, 10.0, _remix_when(47.5, ('Chainsaw',), 10.0))]
+    + _beside(_TRIOS[2], 330, _remix_when(52.5, _TRIOS[2], 13.5))
+    + _field('Ted', 200, 4.5, 41.0) + _parted(_HH, 200, 13.0, _remix_when(57.5, _HH, 13.0))
+    + _pack(_R2, 90, 11.0, _remix_when(62.5, _R2, 11.0), spread=5.0), no_blast=True)
+
+# ---- Act six: chapter 6 - Juggernaut, Belt Fed and Lightning Rod; Tempo and Closing Time
+#: Juggernaut: two Colossi in front, slow enough to wait for a full belt, and crowds and Hulks from behind
+#: four seconds apart with two quiet slots for the belt change (Belt Fed).  Lightning Rod's crate comes down
+#: while the Colossi are still coming: its lightning takes whatever is nearest.
+_REMIX_P5 = (('Zombie', 'ZombieB', 'WeakZombie', 'ZombieC', 'Zombie'),
+             ('ZombieC', 'Zombie', 'QuietZombie', 'ZombieB', 'Zombie'))
+_REMIX_H3 = ('Hulk', 'HulkB', 'Hulk')
+PLISTS['port_remix_11'] = _wave(
+    [('Colossus', 0, 11.0, 0.0), ('Colossus', 60, 11.0, 10.0)]
+    + _remix_slots(((_REMIX_P5[0], 180), (_REMIX_H3, 140, 12.0), (_Z4B, 215), (_REMIX_H3, 200, 12.0),
+                    None, ('Runner', 160), None, (_REMIX_P5[1], 230), (_REMIX_H3, 120, 12.0), (_Z4, 190),
+                    (_HH, 250, 12.0), (_Z4, 150), (_REMIX_H3, 205, 12.0)), 14.0, 4.0), no_blast=True)
+PLISTS['port_remix_11']['PowerUp'] = {'force_spawn_time': 12.0, 'type': 'tesla'}
+PLISTS['port_remix_11']['Weapons'] = _REMIX_ARMS[5]
+#: Tempo: one at a time on a beat of two seconds, Runners and Zombies in turn, for a gun that fires once a
+#: reload, and bands of Rejects round a Farty.  Closing Time: one of everything after it - a Riot Gear
+#: Zombie in its crowd, a Dodge alone, two Hulks, a Berserk resting with walkers going wide of it, a
+#: Chainsaw and a last pack of Runners.
+PLISTS['port_remix_12'] = _wave(
+    _remix_beat(('Runner', 'Zombie', 'RunnerB', 'ZombieB', 'Runner', 'ZombieC', 'RunnerC', 'Zombie',
+                 'RunnerB',
+                 'ZombieB'), (20, 200, 110, 290, 60, 240, 160, 330, 90, 180), 2.0, 1.0)
+    + _remix_slots((('band', 300), ('Shield', 60), ('Dodge', 200, 12.0), (_HH, 250, 12.0), None, None,
+                    ('Chainsaw', 300), ('band', 20), None, (_R3, 90, 11.0)), 34.0, 4.5)
+    + _remix_asleep(130, 39.5), no_blast=True)
+
+PLISTS['port_remix'] = {
+    'challenge_id': 'port_remix',
+    'title': 'Reprise',
+    'objective': 'Every chapter again, one after another, and a different set of weapons for each of them.',
+    'tip': 'Nothing you are handed stays with you for long, so there is nothing to save it for. Every part '
+           'of this has been played to you before.',
+    'icon': 'Challenge_icon_02', 'icon_title': 'RP',
+    'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '999'},
+                {'name': 'hunting', 'ammo': '999'}, {'name': 'tactical', 'ammo': '999'},
+                {'name': 'sawnoff', 'ammo': '999'}, {'name': 'grenade', 'ammo': '30'},
+                {'name': 'policeshotgun', 'ammo': '999'}, {'name': 'bazooka', 'ammo': '40'},
+                {'name': 'machinegun', 'ammo': '999'}, {'name': 'sonic', 'ammo': '999'},
+                {'name': 'banjo'}, {'name': 'prod'}, {'name': 'claymore'}, {'name': 'wok'}, {'name': 'golf'}],
+    'bricks': ['port_remix_%d' % i for i in range(1, 13)],
+    'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
+    'Revive': True,
+    'time_limit_star': {'reward': 800, 'objective': 840},
+    'accuracy_star': {'reward': 800, 'objective': 55},
+}
+
 
 #: The port's own arenas, gathered into chapters (user request).
 #:
@@ -3124,7 +3417,8 @@ PLISTS['port_closingtime'] = {
 #: its guns are bought, each introduced on its own first (Crowd Control, Artillery), and within that by the
 #: scripted player at level 4; Riot Act, which asks for everything the chapter taught, is the last.
 #: Chapter 6 opens on Belt Fed, the Machine Gun's own, and goes by the same measure to Tempo, the Sonic
-#: Cannon's, the hardest; Closing Time, the finale, is last.
+#: Cannon's, the hardest; Closing Time, the finale, is last.  Reprise is measured act by act, each a little
+#: easier than its chapter, since it is long and one death ends it.
 #:
 #: The chapters are the port's own structure and not worlds in `challenges_index`, which they could have
 #: been: `apply_to` reaches that file and the world list would have given locks, star counts and a
@@ -3134,8 +3428,8 @@ PLISTS['port_closingtime'] = {
 #: early, for a player who had not touched them.  Counting on this side costs a screen and a few lines and
 #: leaves their progression exactly as they shipped it.
 CHAPTERS = (
-    #: The guns a player already owns, and the Banjo, which at 1500 coins is the first most will buy: in
-    #: the order the tool measures, 15.7 seconds of slack down to 2.2, with the second round's placed round it.
+    #: The guns a player already owns, and the Banjo, which at 1500 coins is the first most will buy: in the
+    #: order the tool measures, 15.7 seconds of slack down to 2.2, with the second round's placed round it.
     ('Chapter 1', ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets', 'port_scrap',
                    'port_nowake', 'port_busker', 'port_survivor')),
     #: Where the slack runs out: 1.4 seconds short down to 12.3.
@@ -3156,16 +3450,19 @@ CHAPTERS = (
     #: The Machine Gun, the Tesla and the Sonic Cannon, and a finale asking for what every chapter taught.
     ('Chapter 6', ('port_beltfed', 'port_coldsteel', 'port_juggernaut', 'port_racket', 'port_heavyweights',
                    'port_lightningrod', 'port_tempo', 'port_closingtime')),
+    #: Reprise, every chapter again in one long arena with the weapons changing hands between acts (user
+    #: request), on its own after the last chapter rather than a ninth in it, so the chapters stay at eight.
+    ('Finale', ('port_remix',)),
 )
 
 #: How many of the stars in the chapters before it a chapter may be opened without (user request): two.
 #: Every chapter asks for all the stars the chapters before it hold but these - 22 of chapter 1's 24 for
 #: chapter 2, 46 of 48 for chapter 3, 70 of 72 for chapter 4, 94 of 96 for chapter 5, 118 of 120 for
-#: chapter 6 - and two is less than the three an arena is worth, so no arena can be left unbeaten on the
-#: way: what may be missed is two accuracy or time stars, across everything behind you.  It does not shrink
-#: as the chapters go on, because at nought a single star a player cannot win - The Last Word's time star,
-#: say - would shut every chapter after it for good.  It was 12, 26 and 40 at first, which let a player into
-#: a chapter with a third of the one before unplayed.
+#: chapter 6, 142 of 144 for the Finale - and two is less than the three an arena is worth, so no arena can
+#: be left unbeaten on the way: what may be missed is two accuracy or time stars, across everything behind
+#: you.  It does not shrink as the chapters go on, because at nought a single star a player cannot win - The
+#: Last Word's time star, say - would shut every chapter after it for good.  It was 12, 26 and 40 at first,
+#: which let a player into a chapter with a third of the one before unplayed.
 SPARE_STARS = 2
 
 #: Every arena of the port's, in the order they are played.  What `go_to_challenge_list_for` and the
