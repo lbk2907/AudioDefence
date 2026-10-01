@@ -2184,8 +2184,12 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   challenges talk through Dr. Bastard's recordings (`Sounds`), which no arena of the port's has; a story in
   text needs no recordings and can be translated, so `tools/verify_localization.py` offers a wave's
   `Story` to translators as it offers an arena's title.  Each part is told once a game: a wave fought again
-  after a revive does not tell it twice.  Checked headless: two waves each told their part before
-  anything moved, the wave's clock stood still for the three seconds the text was up, and both played on.
+  after a revive does not tell it twice.  An arena's `Epilogue` is told once its last wave is won and the
+  last death heard out, before the completed screen (`go_to_score_screen` 0x1000db588) - where the
+  original's challenges play their closing lines, as a last wave of nothing but recordings.  Checked
+  headless: two waves each told their part before anything moved, the wave's clock stood still for the
+  three seconds the text was up, and both played on; an epilogue came between the last wave and the
+  completed screen.  The story itself, The Long Way Home, is `additions.STORY` and `EPILOGUES`.
 * PORT ADDITION: a challenge that names several melees makes only the last.  `initWithChallengeWeaponArray:`
   0x1000a80f4 makes each and keeps the last, releasing the one before as it is replaced - and the playlist
   the released one deactivates has not finished the activation it asked for a moment earlier, so that

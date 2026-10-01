@@ -483,9 +483,10 @@ class StoryController:
     that carries it (`Story`) begins.  The game is paused under it (`pause_game`, as the pause menu pauses
     it), the screen reader reads it, and Continue plays on from the start of the wave."""
 
-    def __init__(self, gameplay, text: str):
+    def __init__(self, gameplay, text: str, after=None):
         self.gameplay_view_controller = gameplay          # weak
         self.text = text
+        self.after = after                                # what Continue does instead of playing on
 
     def continue_pressed(self) -> None:
         gvc, self.gameplay_view_controller = self.gameplay_view_controller, None
@@ -494,7 +495,10 @@ class StoryController:
         if gvc.host is not None:
             gvc.host.dismiss_story()
         gvc.story_view = None
-        gvc.resume_game()
+        if self.after is not None:
+            self.after()
+        else:
+            gvc.resume_game()
 
 
 # ======================================================================================= controller
@@ -946,6 +950,7 @@ class ChallengeGameplayController(GameplayController):
         self.check_skip_button_counter = 0
         self.stories_told = set()                         # PORT ADDITION: see tell_story_if_due
         self.story_view = None
+        self.epilogue_told = False                        # PORT ADDITION: see go_to_score_screen
 
     def view_did_load(self) -> None:                      # 0x1000da420
         self.init_challenge_modifiers()                   # PORT ADDITION: see below
@@ -1140,6 +1145,15 @@ class ChallengeGameplayController(GameplayController):
         App.delegate().go_to_challenge_failed_with_dictionary(self.challenge_dictionary)
 
     def go_to_score_screen(self) -> None:                 # 0x1000db588
+        # PORT ADDITION (user request, 2026-10-01): an arena of the Extra mode whose story ends with it
+        # (`Epilogue`) tells that end once the last wave is won, before the completed screen.
+        text = (self.challenge_dictionary or {}).get('Epilogue')
+        if text and self.host is not None and not self.epilogue_told:
+            self.epilogue_told = True
+            self.pause_game()
+            self.story_view = StoryController(self, text, after=self.go_to_score_screen)
+            self.host.present_story(self.story_view)
+            return
         InGameStats.singleton().force_complete_accuracy()
         self.go_to_challenge_completed_screen()
 
