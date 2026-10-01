@@ -3,10 +3,10 @@ compiler offers.
 
     py tools\\android_keys.py
 
-It lists the keys in C:\\Android\\keys and says which is the default - the one AD_KEYSTORE names, which the
+It lists the keys in C:\\Android\\Keys and says which is the default - the one AD_KEYSTORE names, which the
 compiler offers when it asks where the key is - then offers:
 
-1. Make a new key.  It asks for a name (Enter alone for "release") and makes C:\\Android\\keys\\<name>.p12
+1. Make a new key.  It asks for a name (Enter alone for "release") and makes C:\\Android\\Keys\\<name>.p12
    with the JDK's keytool, with the store type, alias and passwords android/app/build.gradle signs with when
    nothing else is given (read from it).  It never overwrites a file.  With no default key, the new one
    becomes it.
@@ -54,8 +54,6 @@ def advice(path: str) -> None:
         'the project.' % path)
     say('Every release has to be signed with this same key, or phones will not install it over the one they '
         'have.')
-    say("Phones that have Erick's earlier builds can only update with his key: ask him for it and choose it "
-        'here, or install yours fresh on them.')
 
 
 def make() -> int:

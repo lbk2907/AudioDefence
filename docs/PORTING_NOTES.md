@@ -192,7 +192,7 @@ they were.
   `android/.gradle/fetch-needed` so that the setup tool builds online again and fetches it (user request,
   2026-10-01).  The platform and build tools the setup fetches and the compiler checks for are read from
   `compileSdk` and `buildToolsVersion` in `android/app/build.gradle`, as `appPython` is, so trying another
-  is a change to one line (user request, 2026-10-01).  `tools/android_keys.py` makes the signing keys in `C:\Android\keys`, with the store type and
+  is a change to one line (user request, 2026-10-01).  `tools/android_keys.py` makes the signing keys in `C:\Android\Keys`, with the store type and
   the default alias and passwords it reads from `build.gradle`, never overwriting one, and chooses which
   `AD_KEYSTORE` names; the compiler asks where the key is before any build that makes the APK, offering that
   one, so anybody can build with their own key, and `build.gradle` takes another key's alias and passwords

@@ -579,7 +579,7 @@ again whenever you like: it skips what is done.
 
     py tools\android_keys.py
 
-lists the keys in `C:\Android\keys`, makes a new one — it asks for a name,
+lists the keys in `C:\Android\Keys`, makes a new one — it asks for a name,
 **release** if you just press Enter — and chooses the one the compiler
 offers. See [A release](#a-release) for keeping it safe.
 
@@ -611,13 +611,12 @@ build, signed with a key Android makes for each computer instead: it cannot
 install over a release, nor a release over it.
 
 Keep the key safe: back it up somewhere private, never in the repository, and
-hand it on with the project. Every release has to be signed with it. Phones
-that already have Erick's builds can only update with his key: ask him for it
-and choose it with `py tools\android_keys.py`, or install yours fresh.
+hand it on with the project. Every release has to be signed with it, or
+phones will not install it over the one they have.
 
 The compiler asks where the key is whenever its choice makes the APK — Enter
 takes the one `AD_KEYSTORE` names, which `android_keys.py` sets, or the only
-key in `C:\Android\keys` — and typed out, `--key` and the path does the same.
+key in `C:\Android\Keys` — and typed out, `--key` and the path does the same.
 A key made some other way, with its own alias and passwords, needs them in
 `AD_KEY_ALIAS`, `AD_KEYSTORE_PASSWORD` and `AD_KEY_PASSWORD` as well.
 
@@ -698,7 +697,7 @@ Each folder, and the one file in it that shows it is right:
 - `C:\Android\build-tools\35.0.0`, with `aapt2.exe`
 - `C:\Android\platform-tools`, with `adb.exe`, only for `--phone`
 - `C:\Android\licenses`, with `android-sdk-license`
-- `C:\Android\keys`, with your key from step 6, `release.p12` unless you
+- `C:\Android\Keys`, with your key from step 6, `release.p12` unless you
   named it otherwise
 - `%USERPROFILE%\.gradle\caches\modules-2\files-2.1\com.chaquo.python`, a
   folder the first build leaves: while it is there, the compiler builds
@@ -1634,7 +1633,7 @@ is no cross-compiling to another system.
 | `--dry-run` | print what would happen, build nothing — including every file that would land beside the executable |
 | `--no-package` | do not make the zip. A build otherwise ends by packing `dist\AudioDefence` into `dist\AudioDefence-Win-<version>.zip`, which is what a release's asset is and what the updater reads, warning first if `VERSION` is missing or `changelog.txt` still starts with `unrelease:` |
 | `--android` | build the Android app alone, and leave the changelog as it is: `dist\AudioDefence-Android-<version>.apk`, signed with the key `--key` or `AD_KEYSTORE` names, or `...-TEST.apk` without one. The other options are the desktop build's and do not apply |
-| `--key PATH` | sign the Android app with the key at PATH, rather than the one `AD_KEYSTORE` names or the only one in `C:\Android\keys` |
+| `--key PATH` | sign the Android app with the key at PATH, rather than the one `AD_KEYSTORE` names or the only one in `C:\Android\Keys` |
 
 ### Cutting a release
 

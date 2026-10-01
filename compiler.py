@@ -31,7 +31,7 @@ keyboard (from a script), it is the release build straight away, without the men
 The release build ends by building the Android app from the same VERSION, with Gradle in android\\, and
 puts it in dist as AudioDefence-Android-<VERSION>.apk, the name the app's updater looks for on a release.
 It is signed with a release key: the one --key names, or else the one AD_KEYSTORE names, or else the only
-key in C:\\Android\\keys (tools\\android_keys.py makes them, and chooses which AD_KEYSTORE names).  From the
+key in C:\\Android\\Keys (tools\\android_keys.py makes them, and chooses which AD_KEYSTORE names).  From the
 menu the compiler asks where the key is, offering that one.  With no key, or with the Android tools missing,
 the release build makes no APK and says why, and the game's own build is unaffected.  --android builds the
 app alone, with the same key, or without one as a test build: dist\\AudioDefence-Android-<VERSION>-TEST.apk,
@@ -634,7 +634,7 @@ ANDROID_BUILD_TOOLS = _app_setting(r"""^\s*buildToolsVersion\s*=?\s*['"](\d+(?:\
 JAVA_RANGE = (17, 23)
 #: where the README has the Android SDK and Gradle unzipped, and where tools/android_keys.py keeps the keys
 ANDROID_TOOLS = r'C:\Android' if host.WINDOWS else os.path.expanduser('~/Android')
-KEYS = os.path.join(ANDROID_TOOLS, 'keys')
+KEYS = os.path.join(ANDROID_TOOLS, 'Keys')
 #: the two tools that ready a computer, which the messages below send you to: the setup (ANDROID_HOME, the
 #: SDK's parts, the first build's fetch) and the signing keys
 SETUP, KEY_TOOL = (('py tools\\android_setup.py', 'py tools\\android_keys.py') if host.WINDOWS else
@@ -723,7 +723,7 @@ FETCH_NEEDED = os.path.join(ANDROID, '.gradle', 'fetch-needed')
 
 
 def remembered_key() -> tuple[str, str]:
-    """The release key to offer: the file AD_KEYSTORE names, or else the only key in C:\\Android\\keys; or ''
+    """The release key to offer: the file AD_KEYSTORE names, or else the only key in C:\\Android\\Keys; or ''
     and why there is none."""
     path = os.environ.get('AD_KEYSTORE', '').strip()
     if path:
