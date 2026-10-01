@@ -1580,40 +1580,64 @@ rather than copying it. Check that screen's frames with
 ## Credits
 
 *Audio Defence: Zombie Arena* was made by **Somethin' Else**, and everything
-worth hearing in this port is theirs. The Papa Engine that carries it announces
-itself as "Somethin' Else Papa Engine" when it starts, and the source paths
-still inside the binary point at Papa Sangre, which is a nice thing to find at
-two in the morning.
+worth hearing in this port is theirs. Their Papa Engine still introduces itself
+as "Somethin' Else Papa Engine" every time it starts, and the source paths left
+inside the binary point at Papa Sangre, which is a lovely thing to find at two
+in the morning and a slightly alarming one at four.
 
-The game's own Credits screen, under Info, says so too: the nib lists everyone
-who made it but never names the studio, so the port puts **Audio Defence:
-Zombie Arena, by Somethin' Else** above that list, and adds the port's own
-credits and this repository's address in a section after it.
+The game's own Credits screen, under Info, lists everyone who made it and,
+through some oversight in the nib, never names the studio. The port puts
+**Audio Defence: Zombie Arena, by Somethin' Else** at the top of that list,
+where it belongs, and adds its own credits and this repository's address after
+it.
 
-This port, on the other hand:
+The port's cast, in roughly the order they turned up:
 
-**Claude — Opus 5, highest effort.** Wrote every line of the port. Read the
-disassembly, ported it method by method, argued about tail calls, and was wrong
-twice in one evening about an ambience loop before a human with working ears
-put it right. Without it this would have stayed an idea. Occasionally
-over-confident, reliably apologetic.
+**Muhammad Hajjar** — *the one who started it.* Worked out that you can point
+an AI at a shipped iOS binary and get a Windows game back out of it, which
+sounds like a joke right up until it works. The concept is his; everything
+after it is bookkeeping. He now directs the port as well, with the same Claude
+at the same highest effort, so there are two people giving orders and two sets
+of commits, which is how most good projects and most sitcoms begin.
 
-**Loh Boon Keat** — the prompter. Directed the whole thing, made every
-judgement call about what to fix and what to leave alone, held the line on
-"compare it with the original, don't rely on your memory" until it stuck, and
-play-tested a game he was building at the same time.
+**Loh Boon Keat** — *the director.* Made every judgement call about what to fix
+and what to leave alone, and held the line on "compare it with the original,
+don't rely on your memory" until it stuck. Play-tested a game he was building
+at the same time, then asked for forty-nine new arenas designed to kill him
+and, unwisely, played every one of them.
 
-**Wong Wee Xiang** — the tester, and the reason this list of fixes is as long as
-it is. Found the Tactical Rifle cutting itself off, the death screen that would
+**Claude** — *the typist (Opus 5, then 5.5, at the highest effort).* Wrote
+every line of the port. Read the disassembly, ported it method by method,
+argued about tail calls, and was wrong twice in one evening about an ambience
+loop before a human with working ears put it right. Built a robot that plays
+arenas a thousand times an hour to prove they were fair, then shipped a cow
+that kept mooing after the game had ended. Occasionally over-confident,
+reliably apologetic.
+
+**Wong Wee Xiang** — *quality assurance, and the reason the changelog is so
+long.* Found the Tactical Rifle cutting itself off, the death screen that would
 not let go, the Chainsaw ambience that outlived the game, the rewards paid
-twice, and the quiet round after pressing Try again. If you enjoy a bug being
-fixed before you meet it, thank him.
+twice, and the quiet round after pressing Try again. If a bug was fixed before
+you met it, there is a good chance he met it first, so that you did not have
+to.
 
-**Muhammad Hajjar** — who inspired the project and worked out how to point an AI
-at a shipped iOS binary and get a Windows game back out of it. The concept is
-his; the rest is bookkeeping. He now writes the port as well, with the same
-Claude Opus 5 at the same highest effort, so from here there are two people
-directing it and two sets of commits.
+**Flameborn** — *the Mac version.* Proved that a game which left the iPhone for
+Windows could find its way back to an Apple machine and still recognise the
+furniture. Talked VoiceOver and the system voice into sharing the work, and is
+the reason "it works on my machine" now covers two operating systems.
+
+**Erick** — *the Android version.* Took a game that had only ever known a
+keyboard and taught it to live in a pocket: wrote a sound mixer from scratch so
+that the zombies still stand where they should, turned the arrow keys into
+swipes and Enter into a double tap, and asked TalkBack, politely, to wait
+outside while the game does the talking. Wrote all of it before the game had
+ever run on a phone, which is how bridges get designed and very rarely how
+games do.
+
+**Also appearing** — the cows, who wandered into every swing and asked for
+nothing in return; Dr. Bastard, as himself; and every zombie in this
+repository, none of whom were harmed in the making of this port, because they
+were already dead.
 
 ## Licence
 
