@@ -15,6 +15,25 @@ def _sa_get(spawn_after, key):
     return spawn_after.get(key) if isinstance(spawn_after, dict) else None
 
 
+def _due(now: float, dt: float, when: float) -> bool:
+    """Whether this tick is the one that crosses `when`, counting from the wave starting.
+
+    PORT DIVERGENCE (user request, 2026-10-01): `update:` 0x1000a0ed0 asks `(now - dt) < when and now >=
+    when`, which can never be true for a `when` of nought.  `time_in_brick` is nought before the first tick
+    and `dt` after it, so the first time this is asked `now - dt` is nought as well, and `0 < 0` is false -
+    the moment is behind it before it is ever looked for, and the drop simply never comes.
+
+    None of the game's own waves notices.  All 37 `PowerUp` times in its data were read and every one is
+    above nought, the smallest being the 0.01 of `tutorial_4_brick_4` - which is that same first tick
+    written as a number that works.  A wave somebody builds here does notice: the editor's own ladder starts
+    at "0 seconds in", meaning as the wave starts, and a player found two of their waves handing out
+    nothing at all.  So nought is read as what it says: due on the first tick.
+    """
+    if when <= 0.0:
+        return now - dt <= 0.0                            # the first tick of the wave, and only that one
+    return (now - dt) < when <= now
+
+
 class Brick:
     # -[ADBrick initBrickWithName:] 0x10009ea80
     def __init__(self, name: str, tag: int = 0):
@@ -185,13 +204,16 @@ class Brick:
         if pud.get('spawn_time') is None and pud.get('force_spawn_time') is None:
             return
         t = self.time_in_brick
-        st = ns_float_value(pud.get('spawn_time'))
-        if (t - dt) < st and t >= st:
-            BrickManager.shared().try_to_pop_power_up_container()
-            return
-        ft = ns_float_value(pud.get('force_spawn_time'))
-        if (t - dt) < ft and t >= ft:
-            BrickManager.shared().force_to_pop_power_up_container_with_type(pud.get('type'))
+        # Each asked only when the wave says it, rather than both always: `ns_float_value` reads a missing
+        # key as nought, and nought is a time that happens now - so a wave asking only for a forced drop
+        # would have asked for the waiting kind on its first tick as well.
+        if pud.get('spawn_time') is not None:
+            if _due(t, dt, ns_float_value(pud.get('spawn_time'))):
+                BrickManager.shared().try_to_pop_power_up_container()
+                return
+        if pud.get('force_spawn_time') is not None:
+            if _due(t, dt, ns_float_value(pud.get('force_spawn_time'))):
+                BrickManager.shared().force_to_pop_power_up_container_with_type(pud.get('type'))
 
     def stop_all_enemies_after_player_death(self) -> None:    # 0x1000a1384
         for e in self.enemies:
@@ -201,6 +223,19 @@ class Brick:
         from .ambient import AmbientManager
         if self.ambiant_name is not None:
             AmbientManager.shared().brick_with_ambiant_cleared(self.ambiant_name)
+
+    def is_empty(self) -> bool:
+        """PORT ADDITION (user request, 2026-09-30): nothing to kill and nothing to hear.
+
+        Asked of the wave's *dictionary* rather than of what has been built from it, so it is the same answer
+        before and after `initSounds`'s callback lands - a wave that is supposed to have sounds is not empty
+        just because they are a tick away (see `brick_is_cleared`).  Passers-by are not content: a cow does
+        not hold a wave open, and `brickIsCleared` 0x1000a1658 never looks at one.  Diamonds are, though
+        they are not the brick's: a wave asking for them is a wave meant to be spent collecting them, and
+        letting it by as empty would take them away before they could be reached.
+        """
+        return not (self.brick_dictionary.get('Enemies') or self.brick_dictionary.get('Sounds')
+                    or self.brick_dictionary.get('Diamonds'))
 
     def brick_is_cleared(self) -> bool:                       # 0x1000a1658
         for e in self.enemies:
