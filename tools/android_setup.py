@@ -55,21 +55,9 @@ README = 'Building the app, under On Android in the README'
 
 
 def saved(name: str) -> str:
-    """A variable as this user has it.  One set with setx since this command prompt opened is not in its
-    environment yet, and is still the one to go by: so it is read from the user's settings too, and taken
-    into this run's environment, where compiler.py's checks look."""
-    value = os.environ.get(name, '').strip()
-    if value or not host.WINDOWS:
-        return value
-    import winreg
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, 'Environment') as key:
-            value = winreg.ExpandEnvironmentStrings(str(winreg.QueryValueEx(key, name)[0])).strip()
-    except OSError:
-        return ''
-    if value:
-        os.environ[name] = value
-    return value
+    """A variable as this user has it now, not as this command prompt was given it when it opened: one set
+    since - with setx, or with tools/android_keys.py - counts (compiler.user_setting)."""
+    return compiler.user_setting(name)
 
 
 def remember(name: str, value: str) -> None:

@@ -722,10 +722,31 @@ OFFLINE_MISSING = re.compile(r'No cached version|offline mode|Could not resolve|
 FETCH_NEEDED = os.path.join(ANDROID, '.gradle', 'fetch-needed')
 
 
+def user_setting(name: str) -> str:
+    """A variable as it stands for this user now.  A command prompt keeps the environment it was opened with,
+    so a variable changed since - by setx, by tools/android_keys.py, or by hand - still has its old value in
+    it: the key tool said the default key "is not there" after the user had renamed it and pointed
+    AD_KEYSTORE at the new name.  On Windows, when this prompt's value names nothing that exists, the user's
+    own setting is read instead, and taken into this run's environment for Gradle and the checks."""
+    value = os.environ.get(name, '').strip()
+    if not host.WINDOWS or (value and os.path.exists(value)):
+        return value
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, 'Environment') as key:
+            saved = winreg.ExpandEnvironmentStrings(str(winreg.QueryValueEx(key, name)[0])).strip()
+    except OSError:
+        return value
+    if saved:
+        os.environ[name] = saved
+        return saved
+    return value
+
+
 def remembered_key() -> tuple[str, str]:
     """The release key to offer: the file AD_KEYSTORE names, or else the only key in C:\\Android\\Keys; or ''
     and why there is none."""
-    path = os.environ.get('AD_KEYSTORE', '').strip()
+    path = user_setting('AD_KEYSTORE')
     if path:
         return (path, '') if os.path.isfile(path) else ('', 'AD_KEYSTORE names %s, which is not there' % path)
     keys = sorted(glob.glob(os.path.join(KEYS, '*.p12')))
@@ -779,7 +800,7 @@ def android_plan(release: bool, given: str = '') -> tuple[list, list, str, str]:
         elif major > JAVA_RANGE[1]:
             doubts.append('Java %d is newer than Gradle 8.13 runs on, so the build will most likely fail: '
                           'set JAVA_HOME to a JDK %d to %d' % ((major,) + JAVA_RANGE))
-    sdk = os.environ.get('ANDROID_HOME', '').strip()
+    sdk = user_setting('ANDROID_HOME')
     if not sdk:
         found.append('ANDROID_HOME is not set: it names the Android SDK, and %s sets it' % SETUP)
     else:
