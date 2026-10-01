@@ -149,17 +149,15 @@ class MainMenuScreen(ViewControllerScreen):
         # check is silent when there is nothing to report, and a player who hears nothing cannot tell that
         # from a thing that is not working.  Its hint is the version, which is the other thing a player
         # asking about updates wants to know.  Run from source there is nothing to update from - a
-        # checkout moves with git - so the button is replaced by a line that says so.
+        # checkout moves with git - so the button is replaced by a line that says so.  The Android app is
+        # not frozen but updates all the same, by handing a newer app to Android (platform/updater_android.py).
         from .. import paths
         from ..platform import host as host_platform
         from ..platform import version
-        if paths.FROZEN:
+        if paths.FROZEN or host_platform.ANDROID:
             updates = Button('Check for updates', (426, 330, 117, 41), parent=v,
                              actions=[self.check_for_updates], name='Check for updates (port)')
             updates.hint = 'Current version is %s.' % version.text()
-        elif host_platform.ANDROID:
-            View('Version %s. Install a newer app to update.' % version.text(),
-                 (426, 330, 117, 41), parent=v, name='No updates (port)')
         else:
             View('Updating is not available here. This is the source version, so it updates with git '
                  'rather than from a release.', (426, 330, 117, 41), parent=v, name='No updates (port)')

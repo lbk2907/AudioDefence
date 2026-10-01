@@ -181,7 +181,10 @@ they were.
   `macspeech`, `remotezip`, `speech_audio`, `speech_stream`) are left out of the APK.
   It is built by hand on a computer, with Gradle 8.13: `gradle assembleDebug` for a test build, or
   `assembleRelease` with `AD_KEYSTORE` naming the project's permanent key for a release.  There is no
-  Gradle wrapper, and no GitHub workflow: builds are made by hand (user's choice, 2026-10-01).
+  Gradle wrapper, and no GitHub workflow: builds are made by hand (user's choice, 2026-10-01).  The app's
+  version is read from `VERSION` as the build is set up: `versionName` is the tag and `versionCode` its
+  digits as one number, yymmddNN (`26.10.01-1` is 26100101, 99123199 at the most), so each release is
+  newer to Android than the last.  The first builds were fixed at version code 11.
 * **Starting.**  `MainActivity` unpacks the assets into the app's own files folder the first time and after
   every install or update, then calls `android_main.run`, the phone's main loop - `__main__` with pygame's
   events replaced by the touches the Java side collects (`TouchView`, `Bridge`).
@@ -194,10 +197,34 @@ they were.
 * **Speech, controllers, updates, vibration.**  `platform/__init__.py` gives the phone `speech_android`,
   `pad_android`, `updater_android` and `haptics_android` in place of the desktop's four modules: the
   phone's own text-to-speech, driven by the Speech tab's voice, rate, pitch and volume rows, with the hints'
-  keys named as the touches that do the same; and, not supported yet, game controllers, vibration and
-  updating from inside the app (a newer APK is installed over the old one, progress kept).  The main menu
-  says the version in place of Check for updates.  TalkBack has to be off: the game speaks for itself, and
-  says so if TalkBack is on.
+  keys named as the touches that do the same; updating, below; and, not supported yet, game controllers and
+  vibration.  TalkBack has to be off: the game speaks for itself, and says so if TalkBack is on.
+* **Updating** (user request, 2026-10-01).  The desktop's updater and its screens, as far as Android allows.
+  `updater_android` checks the same repository's latest release at the same moments - quietly when the main
+  menu opens, with Check for updates on the main menu, which the phone now has too - and compares it with
+  `VERSION` the same way.  What it takes from the release is `AudioDefence-Android-<version>.apk`; the
+  desktop's updater only looks at zips, so neither takes the other's file.  The offer, Skip this version and
+  the download screen with its per cents are ui/updates.py's own.  Where it differs:
+  * The network is Java's (`Bridge.fetchText`, `Bridge.download`): HttpURLConnection trusts the phone's own
+    certificates, which the Python inside the app may have no copy of.  `REPOSITORY` is repeated in
+    `updater_android`, since the phone cannot import the desktop's updater (it needs `remotezip`, which the
+    APK leaves out).
+  * An APK cannot be patched, so the whole app comes down, to `updates/<version>` in the save folder with a
+    `ready.json` beside it, as a desktop download waits.  In place of the restart, `InstallScreen` hands it
+    to Android: when the app is not yet allowed to install apps (`canRequestPackageInstalls`) it says so and
+    opens Install unknown apps for it, and carries on when the player comes back with it allowed.  Then a
+    PackageInstaller session takes the APK, and Android asks the player to confirm and replaces the app,
+    closing the game.  A session rather than a file handed to the installer by `content://` URI, because
+    that would need a FileProvider, and with it the AndroidX library, which the project has never used; the
+    session also reports back, so the game can say when the player answered no.  The manifest asks for
+    `INTERNET` and `REQUEST_INSTALL_PACKAGES`.
+  * Android's two screens are not the game's and are not read out by it, so what the game says before each
+    is what the player needs to get through it, TalkBack included.  Progress is kept: the saves are in the
+    app's files folder, which an update leaves alone.  Not yet, a no on Android's screen, or Android closing
+    the app when it is allowed to install (some versions do) all leave the download, and the next start
+    offers it again without fetching it.
+  * Files gone missing are not looked for: the phone unpacks the game's data from the APK at every install,
+    and a release holds no zip for the phone to take single files from.
 * **Controls.**  The phone is held sideways and the whole screen is the touch area.  In the menus a swipe
   is an arrow key, a double tap Enter, touch and hold Shift plus Enter, a two-finger tap (or the Back
   button) Escape, and a two-finger swipe up or down the first or last item.  In a game a tap fires once and

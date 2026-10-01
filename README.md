@@ -292,8 +292,8 @@ changed — see [Updates](#updates) below.
 `AudioDefenceMac-<version>.zip` on the same release — see
 [On the Mac](#on-the-mac).
 
-**On Android** it is an app, `AudioDefence.apk`, built from this same
-repository — see [On Android](#on-android).
+**On Android** it is an app, `AudioDefence-Android-<version>.apk` on the same
+release, built from this same repository — see [On Android](#on-android).
 
 **From source** is everything below: the repository as it stands, run with the
 Python you have. That is the one to take if you want to read the code, change
@@ -476,7 +476,7 @@ in `android/` and in the `_android` modules beside their desktop ones:
 | sound | OpenAL Soft, with the game's own HRTF | a small mixer of the app's own, in Java, with the same HRTF |
 | speech | the screen reader, or the system voice | the phone's own text-to-speech; TalkBack has to be off |
 | controls | the keyboard, or a game controller | touch and gestures; no game controllers yet |
-| updates | from inside the game | install a newer `AudioDefence.apk` over the old one |
+| updates | from inside the game, only the files that changed | from inside the game, the whole app, installed by Android |
 
 It has not yet been played on a real phone: everything that does not need one
 was tested on a computer, with the phone's parts stood in for. Tell us what you
@@ -484,10 +484,13 @@ hear.
 
 ### Installing it
 
-Copy `AudioDefence.apk` to the phone and open it; Android asks to allow
-installing from that source the first time, and Play Protect may warn that the
-app is not from the Play Store — install it anyway. It needs a 64-bit phone
-(arm64) with Android 8 or later.
+Copy `AudioDefence-Android-<version>.apk` from the latest release to the phone
+and open it; Android asks to allow installing from that source the first time,
+and Play Protect may warn that the app is not from the Play Store — install it
+anyway. It needs a 64-bit phone (arm64) with Android 8 or later.
+
+From then on the game updates itself, as it does on a computer — see
+[Updates](#updates).
 
 **Turn TalkBack off before you open the game.** The game speaks for itself, and
 TalkBack would take the touches for its own; if it is on, the game says so.
@@ -597,8 +600,13 @@ build a release:
     set AD_KEYSTORE=C:\path\to\audiodefence.p12
     gradle assembleRelease
 
-which leaves `android\app\build\outputs\apk\release\app-release.apk` — give it
-to players as `AudioDefence.apk`.
+which leaves `android\app\build\outputs\apk\release\app-release.apk`. Rename it
+`AudioDefence-Android-<version>.apk`, the version being the one in `VERSION`,
+and attach it to the GitHub release beside the Windows and Mac zips: that is
+the file the app looks for when it updates itself. The app's version comes from
+`VERSION` as it is built — its name is the tag, and the number Android compares
+is the same digits run together, `26.10.01-1` being 26100101 — so every release
+is newer to Android than the one before.
 
 ## Controls
 
@@ -845,6 +853,19 @@ new files in place and starts itself again afterwards. **Your progress is never
 at risk**: saves, settings and key bindings live in `%APPDATA%\AudioDefence`
 (`~/Library/Application Support/AudioDefence` on the Mac), and an update only
 ever replaces the game's own program files.
+
+**On Android** the check, the button and the three answers are the same, and so
+is the download, said as it goes. An app cannot be changed a file at a time, so
+the whole app comes down, and in place of the restart the game hands it to
+Android, which asks on a screen of its own whether to update the app. The first
+time, Android also has to be told that the game may install apps: the game
+says so and opens that setting, **Allow from this source**, and carries on when
+you come back with it on. Neither of those screens is the game's, so it cannot
+read them out — turn TalkBack on for them if you need it. Android closes the
+game while it installs; start it again afterwards. Your progress is kept, since
+an update never touches the app's saves — only uninstalling the app does. If you
+say no on Android's screen, or answer **Not yet**, the download is kept and the
+next start offers to install it.
 
 **An update downloads only what changed.** The release is around 155 MB, and
 nearly all of it is the game's audio, which is the same in every build. The
@@ -1466,6 +1487,11 @@ In order:
   if it had to make one. Every build ends by saying whether there is anything
   to commit.
 - tag the release `26.09.21-1` and upload `dist\AudioDefence-Win-26.09.21-1.zip`
+- for the Android app, build the release APK with `gradle assembleRelease` (see
+  *A release*, under [On Android](#on-android)), rename it
+  `AudioDefence-Android-26.09.21-1.apk` and upload it to the same release, beside
+  the Windows and Mac zips. Sign every release APK with the same key, or phones
+  will not install it over the one they have.
 
 The release build — choice 1, or `py compiler.py` with no options from a
 script — does three things to the repository before it copies anything:

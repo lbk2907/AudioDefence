@@ -15,6 +15,9 @@ The engine is in ``platform/updater.py``; this is the part the player meets.  Th
 * ``offer_restore`` and ``RestoreScreen`` - the same for files of this build that have gone missing
   (user request, 2026-09-29): asked about when the game starts, and offered by Check for updates when there
   is nothing newer, then put back from the release of the version the player already has.
+* ``ask_to_install`` and ``InstallScreen`` - the Android app's last step in place of the restart: the
+  downloaded app is handed to Android, which installs it (platform/updater_android.py).  Everything before
+  it - the checks, the offer, the download - is the desktop's, on the phone as on a computer.
 
 Nothing here blocks the game: the check is a single call to GitHub, and a player who never opens this
 screen never waits for it.
@@ -26,6 +29,7 @@ import threading
 
 from ..game.parameters import GameParameters
 from ..platform import updater, version
+from ..platform.host import ANDROID
 from ..platform.runloop import RunLoop
 from ..platform.updater import UpdateError
 from .host import AlertScreen
@@ -229,7 +233,11 @@ class DownloadScreen(MenuScreen):
         self.back_action = self._stop
 
     def on_present(self) -> None:
-        self.speak('Downloading update %s. Working out what has changed.' % version.text(self.release.tag))
+        if ANDROID:                                       # the whole app, every time: nothing to work out
+            self.speak('Downloading update %s, %s.' % (version.text(self.release.tag),
+                                                       updater.size_text(self.release.asset_size)))
+        else:
+            self.speak('Downloading update %s. Working out what has changed.' % version.text(self.release.tag))
         started = UpdateService.shared().install(self.release, self._progress, self._done)
         if not started:
             self.speak('Another update job is already running.')
@@ -259,6 +267,11 @@ class DownloadScreen(MenuScreen):
         self._ask_to_restart(plan)
 
     def _ask_to_restart(self, plan) -> None:
+        if ANDROID:
+            ask_to_install(self.host, plan.staging, self.release.tag, message=
+                           'Version %s downloaded. Android installs it on a screen of its own, which asks '
+                           'you to confirm. Your progress is kept. Install now?' % version.text(self.release.tag))
+            return
         message = ('%s downloaded. The game has to close to put the new files in place, and it will '
                    'start again by itself. Your progress is kept. Restart now?'
                    % updater.size_text(plan.download_size or 0))
@@ -379,6 +392,110 @@ def ask_to_restart(host, staging: str, remove, message: str) -> None:
                                   [('Restart now', yes), ('Not yet', later)]))
 
 
+# ================================================================ handing the app to Android (Android build)
+def ask_to_install(host, apk: str, tag: str, message: str) -> None:
+    """PORT ADDITION (Android build): the phone's ask_to_restart.  "Not yet" keeps the download, and the next
+    start offers it again, as on the desktop."""
+
+    def yes():
+        host.push_overlay(InstallScreen(host, apk, tag))
+
+    def later():
+        Screen.speak('The update is ready. It will be offered again the next time you start the game.')
+
+    host.push_overlay(AlertScreen(host, 'Update ready', message, [('Install now', yes), ('Not yet', later)]))
+
+
+class InstallScreen(MenuScreen):
+    """PORT ADDITION (Android build): what is on screen while Android installs the app.  One row: leave.
+
+    Android installs nothing from an app until the player has allowed that app once, in its settings.  When
+    that is still to do, the setting is opened, and the screen waits for the player to come back to the game
+    with it on.  Then the app goes to Android's PackageInstaller, which asks the player on a screen of its
+    own and closes the game to replace it.  Neither of Android's screens is the game's, so the game cannot
+    read them out; what is said before each is what the player needs to get through it.  Some versions of
+    Android close the app when it is allowed to install, and then the next start offers the download again
+    (``check_on_start``)."""
+
+    #: how often Android is asked whether anything has changed
+    POLL = 0.5
+
+    def __init__(self, host, apk: str, tag: str):
+        super().__init__(host, title='Installing update')
+        self.apk, self.tag = apk, tag
+        self.state = ''                                   # 'allowing', then 'installing'; '' once it is over
+        self.left = False                                 # whether the player has gone to Android's settings
+        self._last_asked = 0.0
+        self.items = [MenuItem('Leave', self._leave, hint='Press Enter to leave the update for now. It is '
+                                                          'offered again the next time you start the game.')]
+        self.back_action = self._leave
+
+    def on_present(self) -> None:
+        if updater.allowed_to_install():
+            self._hand_over()
+            return
+        self.state = 'allowing'
+        self.speak("Android has to allow this app to install updates, once. Opening that setting now. Turn on "
+                   "Allow from this source, then go back to the game. The game cannot read Android's settings "
+                   "out, so use TalkBack there if you need it, and turn it off again when you come back.")
+        if not updater.open_install_settings():
+            self._finish(title='Update not installed',
+                         message="The setting could not be opened. In Android's settings, find Install unknown "
+                                 'apps, allow Audio Defence there, and start the game again.')
+
+    def frame(self) -> None:
+        if not self.state:
+            return
+        now = RunLoop.main().now()
+        if now - self._last_asked < self.POLL:
+            return
+        self._last_asked = now
+        if self.state == 'allowing':
+            if not updater.in_foreground():
+                self.left = True
+            elif updater.allowed_to_install():
+                self._hand_over()
+            elif self.left:
+                self._finish(title='Update not installed',
+                             message='This app is still not allowed to install updates, so the update was not '
+                                     'installed. It is offered again the next time you start the game.')
+            return
+        state, status, said = updater.installer_state()
+        if state == 'aborted':
+            self._finish(title='Update not installed',
+                         message='The update was not installed. It is offered again the next time you start the '
+                                 'game.')
+        elif state == 'done':
+            self._finish(title='Update installed', message='The update is installed. Start the game again to use it.')
+        elif state == 'failed':
+            self._finish(title='Update failed', message=(
+                'There is not enough free space on the phone for the update.'
+                if status == updater.STATUS_FAILURE_STORAGE else
+                'Android would not put the update over the app on this phone, which was most likely signed with a '
+                'different key.' if status == updater.STATUS_FAILURE_CONFLICT else
+                'Android could not install the update: %s.' % (said or status)))
+
+    def _hand_over(self) -> None:
+        self.state = 'installing'
+        self.speak('Handing the update to Android. In a moment Android asks on a screen of its own whether to '
+                   'update the app, which the game cannot read out: use TalkBack to press Update if you need '
+                   'it. The game closes while Android installs it, and your progress is kept. When it is done, '
+                   'start the game again.')
+        updater.hand_to_installer(self.apk)
+
+    def _finish(self, title: str, message: str) -> None:
+        self.state = ''
+        if self.host.top() is self:
+            self.host.pop_overlay()
+        self.host.push_overlay(AlertScreen(self.host, title, message, [('OK', None)]))
+
+    def _leave(self) -> None:
+        self.state = ''
+        if self.host.top() is self:
+            self.host.pop_overlay()
+        Screen.speak('The update is ready. It will be offered again the next time you start the game.')
+
+
 def check_now(host, speak) -> None:
     """A check the player asked for, with the main menu's Check for updates button.
 
@@ -421,6 +538,11 @@ def check_on_start(host, screen) -> None:
     # GitHub anything.  This runs whether or not the startup check is switched on, because the player
     # has already said yes to this one.
     waiting, tag, remove = updater.pending_update()
+    if waiting is not None and ANDROID:
+        ask_to_install(host, waiting, tag, message=
+                       'Version %s was downloaded and is waiting. Android installs it on a screen of its '
+                       'own, which asks you to confirm. Your progress is kept. Install now?' % version.text(tag))
+        return
     if waiting is not None:
         allowed, _why_not = updater.can_update()
         if allowed:

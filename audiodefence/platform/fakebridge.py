@@ -166,6 +166,17 @@ class FakeBridge:
         self.events = []
         self.quit_at = None
         self.started = time.perf_counter()
+        # updating: what the "network" holds - {url: (status, text)} and {url: bytes} - and Android's answers
+        self.pages = {}
+        self.files = {}
+        self.fetched = []
+        self.progress = [0, 0]
+        self.cancelled = False
+        self.install_allowed = True
+        self.foreground = True
+        self.settings_opened = 0
+        self.handed = []
+        self.install_state = ''
 
     # --- decoding -------------------------------------------------------------------------------------
     def decode(self, path):
@@ -234,3 +245,48 @@ class FakeBridge:
 
     def gameEnded(self):
         pass
+
+    # --- updating -------------------------------------------------------------------------------------
+    def fetchText(self, url, accept, user_agent, timeout_ms):
+        self.fetched.append(url)
+        status, text = self.pages.get(url, (0, 'no network in the fake bridge'))
+        return '%d\n%s' % (status, text)
+
+    def download(self, url, path, user_agent, timeout_ms):
+        if url not in self.files:
+            return 'http 404'
+        data = self.files[url]
+        self.progress = [0, len(data)]
+        self.cancelled = False
+        with open(path, 'wb') as fh:
+            for at in range(0, len(data), 4096):
+                if self.cancelled:
+                    return 'cancelled'
+                fh.write(data[at:at + 4096])
+                self.progress[0] = min(len(data), at + 4096)
+                time.sleep(0.01)
+        return ''
+
+    def cancelDownload(self):
+        self.cancelled = True
+
+    def downloadProgress(self):
+        return list(self.progress)
+
+    def canInstallPackages(self):
+        return self.install_allowed
+
+    def openInstallSettings(self):
+        self.settings_opened += 1
+        self.foreground = False
+        return True
+
+    def inForeground(self):
+        return self.foreground
+
+    def installApk(self, path):
+        self.handed.append(path)
+        self.install_state = 'confirm'
+
+    def installState(self):
+        return self.install_state

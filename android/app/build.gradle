@@ -3,6 +3,29 @@ plugins {
     id 'com.chaquo.python'
 }
 
+// The app's version is the repository's VERSION, the release tag (26.10.01-1: year, month, day, build), read
+// as the build is set up.  versionName is the tag itself.  versionCode is the same digits as one number,
+// yymmddNN - 26100101 - which grows with every release, so Android takes each one as newer than the last and
+// installs it over it, and stays far below Android's ceiling of 2100000000 (99123199 at the most).  A
+// checkout with no VERSION is today's first release, as the game run from source makes it
+// (platform/version.py).
+def releaseTag = { ->
+    def f = rootProject.file('../VERSION')
+    def line = f.exists() ? f.readLines().find { it.trim() } : null
+    return line ? line.trim() : new java.text.SimpleDateFormat('yy.MM.dd').format(new Date()) + '-1'
+}()
+def releaseCode = { String tag ->
+    def parts = (tag =~ /\d+/).collect { it as int }
+    if (parts.size() < 3) {
+        throw new GradleException("VERSION should be like 26.10.01-1, not '${tag}'")
+    }
+    def build = parts.size() > 3 ? parts[3] : 0
+    if (parts[0] > 99 || parts[1] > 12 || parts[2] > 31 || build > 99) {
+        throw new GradleException("VERSION ${tag} does not fit a version code (yymmddNN)")
+    }
+    return ((parts[0] * 100 + parts[1]) * 100 + parts[2]) * 100 + build
+}(releaseTag)
+
 android {
     namespace 'com.audiodefence'
     compileSdk 35
@@ -11,8 +34,8 @@ android {
         applicationId "com.audiodefence.android"
         minSdk 26
         targetSdk 34
-        versionCode 11
-        versionName "1.0"
+        versionCode releaseCode
+        versionName releaseTag
 
         // Python 3.13 on Android has no 32-bit build; every phone of the last several years is arm64
         ndk {

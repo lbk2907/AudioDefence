@@ -37,6 +37,7 @@ public final class MainActivity extends Activity {
         setContentView(new TouchView(this));
         hideSystemBars();
         bridge = Bridge.init(this);
+        bridge.setActivity(this);                        // Android's settings and installer open over it
         bridge.setOnEnded(() -> runOnUiThread(() -> {
             bridge.shutdown();
             finishAndRemoveTask();
@@ -68,6 +69,14 @@ public final class MainActivity extends Activity {
         if (hasFocus) {
             hideSystemBars();
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (bridge != null) {
+            bridge.setActivity(null);
+        }
+        super.onDestroy();
     }
 
     @Override

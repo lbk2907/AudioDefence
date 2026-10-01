@@ -80,7 +80,8 @@ file, **at the end of that block** - it reads in the order things were done.
 ## Two things that break quietly
 
 * `audiodefence/platform/updater.py` holds `REPOSITORY`, the repository the game updates itself from.  It
-  belongs to the repository the build is made in.
+  belongs to the repository the build is made in.  The Android app's `platform/updater_android.py` repeats
+  it, since the phone cannot import the desktop's updater: change both together.
 * The release zips' names decide which one an older build downloads: `AudioDefence-Win-<version>.zip` must
   sort before `AudioDefenceMac-<version>.zip`, because builds from before the Mac port take the first zip
   they find.  Let the compiler name them.
