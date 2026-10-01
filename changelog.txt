@@ -23,6 +23,7 @@ The language files are in a localization folder next to the game, where you can 
 If some of the game's files have gone missing, it asks when it starts whether to download them again, and puts them back without waiting for a new version. Check for updates offers them too.
 If you change your sound output while the game is running, the game's sound moves to it, as the speech already did.
 In Tilt mode, turning left and right no longer goes the wrong way.
+A challenge with no stars yet says 0 stars unlocked, not 0 star.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.

@@ -2546,6 +2546,9 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   which turned the listener left, so under Tilt the right key and a stick pushed right turned left, against
   Gyro and Swipe.  It gives the right key the negative angle now.  Checked a step at a time: the right key
   lowers the heading under all three schemes (Swipe through `touchesMoveDetected:`, which flips the drag).
+* A challenge with no stars reads "0 stars unlocked" (user request, 2026-10-01, found in the Android
+  version).  `statusForChallengeWithDict:` 0x100054960 adds the s only above one star, so the original said
+  "0 star unlocked"; the port adds it for every count but one.
 
 
 ## Original quirks kept on purpose

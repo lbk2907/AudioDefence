@@ -284,7 +284,7 @@ class AccessibleChallengeSelectorScreen(ViewControllerScreen):
         stars = (1 if cd.has_completed_challenge_with_name(cid) else 0) \
             + (1 if cd.has_accuracy_star_for_challenge_with_name(cid) else 0) \
             + (1 if cd.has_time_limit_star_for_challenge_with_name(cid) else 0)
-        return '%i star%s unlocked' % (stars, 's' if stars > 1 else '')
+        return '%i star%s unlocked' % (stars, '' if stars == 1 else 's')   # FIX: "0 stars", not "0 star"
 
     def did_select_row(self, row: int) -> None:           # tableView:didSelectRowAtIndexPath: 0x100054f8c
         # PORT ADDITION: the original plays nothing here - its buttons click (ADButtonWithFont playSound
