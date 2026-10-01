@@ -193,6 +193,18 @@ class BrickManager:
             before = self.bricks[-2]
             self.deactivation_list |= self.bricks[-1].activate_playlists_not_in_set(before.playlists or set())
         notify_stats('RESET_BRICK_TIME', None)
+        # PORT ADDITION (user request, 2026-10-01): the diamonds a wave of a player's own asks for
+        # (`custom.WAVE_DIAMONDS`).  `addDiamond` 0x1000c7748 is the original's own and is used unchanged;
+        # what is new is anything but Endless ever calling it, since the timer above this only runs there.
+        wanted = 0
+        try:
+            wanted = max(0, min(8, int(brick.brick_dictionary.get('Diamonds') or 0)))
+        except (TypeError, ValueError):
+            wanted = 0
+        for _ in range(wanted):
+            self.add_diamond()
+        if wanted:
+            log.info('%s put %i diamond(s) in the arena', name, wanted)
         if prev is not None and prev.ambiant_name is not None:
             prev.stop_brick_ambiant()
         if brick.ambiant_name is not None:
@@ -284,6 +296,30 @@ class BrickManager:
                 self.add_diamond()
             elif not self.player_is_dead:
                 self.next_diamond_time -= dt
+        # PORT ADDITION (user request, 2026-09-30): a wave with nothing in it finishes itself.
+        #
+        # Nothing in the game ever asks whether a wave is over except something in it ending:
+        # `soundOrEnemyWithNameWasDeactivated:` 0x1000c6bb0 is the only caller of `currentBrickIsCleared`
+        # 0x1000c6ca0.  A wave holding neither enemies nor sounds has nothing that can end, so it is never
+        # asked, and the game stops there for good - no enemy to kill, no line to hear, and nothing to do
+        # but quit.  A player building a challenge starts from empty waves now (`game/custom.py`), so this
+        # has to be the one thing it cannot be: a dead end.
+        #
+        # Nothing of the game's own changes.  All 341 bricks were read - 194 of the original's and 147 of
+        # the port's - and not one is empty.  It does catch two of the original's own loose ends, where a
+        # challenge names a brick that is not in the bundle at all (`Endless_Level2_a` asks for
+        # level2_brick_21 and `demo.plist` for level4_brick_12): a missing plist is an empty dictionary, so
+        # those waves would hang exactly like this, and now they pass instead.
+        #
+        # Once per brick, and here rather than in `load_brick_with_name`: advancing inside the load would
+        # have `currentBrickIsCleared` calling `loadNextBrick` calling the load again, a wave deep per empty
+        # wave.  One pass of the loop lets one empty wave by, which at sixty of them a second is heard as
+        # the wave simply not being there.
+        empty = self.current_brick()
+        if empty is not None and empty.is_empty() and not getattr(empty, 'passed_empty', False):
+            empty.passed_empty = True
+            log.info('%s has nothing in it; going straight on', empty.name)
+            self.current_brick_is_cleared()
         self.minimum_squared_distance = float('inf')
         b = self.current_brick()
         for e in (b.enemies if b is not None else []):
