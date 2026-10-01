@@ -117,6 +117,7 @@ class ControlSchemePanel:
         self.pad_capturing_replaces = False
         self.pad_capturing_model = None                   # and the controller whose profile it goes to
         self.sapi_shown = False                           # Speech: whether SAPI 5's rows are listed
+        self._engine_settled = 0                          # Android: the engine start the rows were made after
         self.choosing = None                              # a row's choices, shown as a list of their own
         self._trigger_sample = None                       # the Trigger feel being tried on the pad
         self._speech_due = 0.0
@@ -520,8 +521,9 @@ class ControlSchemePanel:
         params.set_tutorial_text_mode(params.DEFAULT_TUTORIAL_TEXT)
         params.set_menu_axis(params.DEFAULT_MENU_AXIS)
         params.set_remember_focus(params.DEFAULT_REMEMBER_FOCUS)
-        if system.ANDROID:                                # PORT ADDITION: the phone's own setting
+        if system.ANDROID:                                # PORT ADDITION: the phone's own settings
             params.set_shake_sensitivity(params.DEFAULT_SHAKE_SENSITIVITY)
+            params.set_speech_engine(None)
         params.set_check_updates(params.DEFAULT_CHECK_UPDATES)
         params.set_menu_music_volume(params.DEFAULT_MENU_MUSIC_VOLUME)
         params.set_vibration_level(params.DEFAULT_VIBRATION)
@@ -661,9 +663,21 @@ class ControlSchemePanel:
         if now < self._speech_due:
             return
         self._speech_due = now + self.SPEECH_CHECK_EVERY
-        if self.sapi_speaking() != self.sapi_shown:
+        if self.sapi_speaking() != self.sapi_shown or self.engine_settled():
             self.reload_data()
-    CONTROL_PANEL_VOICE = 'System default' if system.MAC else 'Control Panel default'
+
+    def engine_settled(self) -> bool:
+        """PORT ADDITION (Android): an engine chosen in the engine row has started since the rows were made, so
+        the voice row names one of its voices, or its own once the old engine's has been put back."""
+        if not system.ANDROID or not self.sapi_shown:
+            return False
+        from ..platform.speech import Speech
+        return Speech.shared().sapi.settled != self._engine_settled
+
+    #: what the voice row says with no voice chosen: the engine's own on the phone, where there is no Control
+    #: Panel (PORT ADDITION, Android)
+    CONTROL_PANEL_VOICE = ('Engine default' if system.ANDROID else
+                           'System default' if system.MAC else 'Control Panel default')
 
     def sapi_rows(self, t, params) -> None:
         """SAPI 5's voice, rate, rate boost (for a voice that has one), pitch and volume - the system voice's,
@@ -675,10 +689,23 @@ class ControlSchemePanel:
             return
         config = params.sapi_config()
         names = dict(sapi.voices())
-        t.cell(VOICE_NAME + ' voice', names.get(config['voice'], self.CONTROL_PANEL_VOICE),
-               hint='The voice %s speaks with: %s, or any installed voice. ' % (VOICE_NAME, VOICE_DEFAULT_HINT)
-                    + 'Press Enter for the list.',
-               action=self.choose_sapi_voice, shift_action=self.choose_sapi_voice)
+        if system.ANDROID:                                # PORT ADDITION (user request): the engine first
+            self._engine_settled = sapi.settled
+            engine = params.speech_engine()
+            t.cell('Android speech engine',
+                   dict(sapi.engines()).get(engine, engine) if engine else 'Phone default',
+                   hint="Which text-to-speech engine speaks the game: Phone default, the one set in the phone's "
+                        'settings, or any engine installed on the phone. Press Enter for the list.',
+                   action=self.choose_speech_engine, shift_action=self.choose_speech_engine)
+            t.cell(VOICE_NAME + ' voice', names.get(config['voice']) or 'Engine default',
+                   hint="The voice the engine speaks with: Engine default, the engine's own choice, or any of its "
+                        'voices. Press Enter for the list.',
+                   action=self.choose_sapi_voice, shift_action=self.choose_sapi_voice)
+        else:
+            t.cell(VOICE_NAME + ' voice', names.get(config['voice'], self.CONTROL_PANEL_VOICE),
+                   hint='The voice %s speaks with: %s, or any installed voice. '
+                        % (VOICE_NAME, VOICE_DEFAULT_HINT) + 'Press Enter for the list.',
+                   action=self.choose_sapi_voice, shift_action=self.choose_sapi_voice)
         t.cell(VOICE_NAME + ' rate', str(sapi.rate()), hint='How fast %s speaks, from -10 to 10. ' % VOICE_NAME + self.SAPI_STEP_HINT,
                action=self.step_sapi_rate, shift_action=self.step_sapi_rate_back)
         if sapi.boost_supported(config['voice'] if config['voice'] in names else None):
@@ -725,6 +752,23 @@ class ControlSchemePanel:
         GameParameters.shared().set_sapi(voice=voice_id)
         names = dict(Speech.shared().sapi.voices())
         self._sapi_say('%s voice: %s' % (VOICE_NAME, names.get(voice_id, self.CONTROL_PANEL_VOICE)))
+
+    def choose_speech_engine(self) -> None:
+        """PORT ADDITION (Android, user request): the phone's text-to-speech engines as a list, the one set in
+        the phone's settings first."""
+        from ..platform.speech import Speech
+        engines = [(None, 'Phone default')] + list(Speech.shared().sapi.engines())
+        self.open_choices('Android speech engine', engines, GameParameters.shared().speech_engine(),
+                          self.take_speech_engine)
+
+    def take_speech_engine(self, package) -> None:
+        """The chosen engine.  The speech starts again with it and what is said meanwhile waits for it, so this
+        is heard in the new engine.  Its voices are listed once it has started (follow_speech), and a voice
+        it has not got goes back to its own (GameParameters.settle_speech_engine)."""
+        from ..platform.speech import Speech
+        GameParameters.shared().set_speech_engine(package)
+        names = dict(Speech.shared().sapi.engines())
+        self.announce('Android speech engine: %s' % (names.get(package, package) if package else 'Phone default'))
 
     def step_sapi_rate(self, step: int = 1) -> None:
         from ..platform.speech import Speech

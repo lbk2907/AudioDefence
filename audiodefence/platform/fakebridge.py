@@ -163,6 +163,14 @@ class FakeBridge:
         self.sounds = {}
         self.by_path = {}
         self.spoken = []
+        self.speech_config = None
+        self.speech_ready = True
+        self.starts_at_once = True
+        self.broken = set()
+        self.engine_asked = ''
+        self.engine_starting = ''
+        self.engine_in_use = ''
+        self.engines_asked = []
         self.events = []
         self.quit_at = None
         self.started = time.perf_counter()
@@ -201,6 +209,14 @@ class FakeBridge:
         return 0.0
 
     # --- speech ---------------------------------------------------------------------------------------
+    # Two engines, each with voices of its own.  An engine starts as soon as it is asked for, unless a test
+    # sets `starts_at_once` False and calls finish_start(); one in `broken` falls back to the phone's default,
+    # as one that is not installed does.
+    ENGINES = {'com.example.fake': 'Fake speech', 'com.example.other': 'Other speech'}
+    VOICES = {'com.example.fake': 'v1\tEnglish (United States), v1\n',
+              'com.example.other': 'o1\tEnglish (United Kingdom), o1\no2\tRussian (Russia), o2\n'}
+    DEFAULT_ENGINE = 'com.example.fake'
+
     def speak(self, text, interrupt):
         self.spoken.append(text)
         return True
@@ -209,10 +225,43 @@ class FakeBridge:
         pass
 
     def voiceList(self):
-        return 'v1\tFake voice'
+        if not self.speech_ready:
+            return ''
+        return self.VOICES[self.engine_in_use or self.DEFAULT_ENGINE]
+
+    def hasVoice(self, name):
+        return self.speech_ready and ('%s\t' % name) in self.voiceList()
 
     def configureSpeech(self, voice, rate, pitch, volume):
-        pass
+        self.speech_config = (voice, rate, pitch, volume)
+
+    def speechReady(self):
+        return self.speech_ready
+
+    def engineList(self):
+        return ''.join('%s\t%s\n' % (p, n) for p, n in sorted(self.ENGINES.items(), key=lambda e: e[1]))
+
+    def setSpeechEngine(self, engine):
+        self.engines_asked.append(engine)
+        if engine == self.engine_asked:
+            return
+        self.engine_asked = engine
+        self.speech_ready = False
+        self.engine_starting = engine
+        if self.starts_at_once:
+            self.finish_start()
+
+    def finish_start(self):
+        engine = self.engine_starting
+        if engine and (engine not in self.ENGINES or engine in self.broken):
+            if self.engine_asked == engine:
+                self.engine_asked = ''
+            engine = ''
+        self.engine_in_use = engine
+        self.speech_ready = True
+
+    def speechEngine(self):
+        return self.engine_in_use
 
     # --- input / lifecycle ----------------------------------------------------------------------------
     def pollEvents(self):

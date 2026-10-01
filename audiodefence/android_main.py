@@ -453,9 +453,11 @@ def run(home: str, fake: bool = False) -> int:
         b.setShakeSensitivity(int(GameParameters.shared().shake_sensitivity()))
     except Exception:
         log.exception('could not set the shake sensitivity')
+    params = GameParameters.shared()
     GameParameters.screen_reader_running = Speech.shared().screen_reader_running()
-    Speech.shared().choice = GameParameters.shared().speech_output()
-    Speech.shared().configure_sapi(**GameParameters.shared().sapi_config())
+    Speech.shared().choice = params.speech_output()
+    Speech.shared().configure_sapi(**params.sapi_config())
+    Speech.shared().set_engine(params.speech_engine())   # PORT ADDITION (user request): Settings > Speech
 
     host = ScreenManager()
     running = [True]
@@ -485,6 +487,9 @@ def run(home: str, fake: bool = False) -> int:
             loop.run_once()
             engine.pump()
             host.frame()
+            if 'engine' in params.settle_speech_engine():  # PORT ADDITION: the speech engine has started
+                Speech.shared().speak("The speech engine chosen in Settings could not be started, so the phone's "
+                                      'default engine speaks instead.', False)
             top = host.top()
             from .ui.gameplay_screen import GameplayScreen
             if isinstance(top, GameplayScreen) and top is not motion_screen[0]:

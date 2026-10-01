@@ -5,6 +5,10 @@ Where the desktop port speaks through NVDA, Prism or SAPI 5, the phone has one v
 engine of the device - and it takes the place of SAPI 5 (and of the Mac's system voice): the Speech tab's
 voice, rate, pitch and volume rows drive it, in the same units (rate and pitch -10 to 10, volume 0 to 100).
 TalkBack is not used: the game speaks for itself, so TalkBack has to be off while it is played.
+
+PORT ADDITION (user request): the engine is the one set in the phone's settings unless the Speech tab's
+engine row names another installed one.  Changing it starts the speech again with that engine, and its
+voices are the ones listed; an engine that is gone or will not start gives way to the phone's default.
 """
 from __future__ import annotations
 
@@ -59,23 +63,86 @@ class _NoReaders:
         pass
 
 
+def _pairs(text) -> list:
+    """The Bridge's lists - "id\\tname" per line - as (id, name)."""
+    return [(str(i), str(n)) for i, n in (line.split('\t', 1) for line in str(text).split('\n') if '\t' in line)]
+
+
 class AndroidVoice:
-    """TextToSpeech with the player's voice, rate, pitch and volume: the phone's SAPI 5."""
+    """TextToSpeech with the player's engine, voice, rate, pitch and volume: the phone's SAPI 5."""
 
     def __init__(self):
         self.voice = True                                 # settings asks: is there a voice at all?
         self.thread = None
         self.config = dict(SAPI_DEFAULTS)
+        self.engine = None                                # the engine asked for, by package; None the phone's
+        self.settling = True                              # an engine is starting, to be checked once it has
+        self.settled = 0                                  # how many times one has (Settings reads its rows again)
         self._voices = None
 
+    def engines(self) -> list:
+        """(package, name) for each text-to-speech engine on the phone, by name."""
+        try:
+            return _pairs(bridge().engineList())
+        except Exception:
+            log.exception('could not list the speech engines')
+            return []
+
+    def set_engine(self, package) -> None:
+        """Speak with this engine (None: the one set in the phone's settings).  The Bridge starts it, and what
+        is said meanwhile waits for it; settle() says when it has started."""
+        package = package or None
+        if package == self.engine:
+            return
+        self.engine = package
+        self._voices = None
+        self.settling = True
+        try:
+            bridge().setSpeechEngine(package or '')
+        except Exception:
+            log.exception('could not change the speech engine')
+
+    def engine_in_use(self):
+        """The package of the engine speaking, or None for the phone's default - which is also what speaks when
+        the one asked for is not installed or would not start."""
+        try:
+            return str(bridge().speechEngine()) or None
+        except Exception:
+            return None
+
+    def ready(self) -> bool:
+        try:
+            return bool(bridge().speechReady())
+        except Exception:
+            return False
+
+    def settle(self) -> bool:
+        """True once after the engine asked for has started, or the phone's default has taken its place."""
+        if not self.settling or not self.ready():
+            return False
+        self.settling = False
+        self.settled += 1
+        self._voices = None                               # the voices are the new engine's
+        return True
+
+    def has_voice(self, voice_id) -> bool:
+        """Whether the engine speaking has this voice."""
+        try:
+            return bool(bridge().hasVoice(str(voice_id)))
+        except Exception:
+            return False
+
     def voices(self) -> list:
+        """(id, name) for the engine's voices; none while it is starting, and asked again once it has."""
         if self._voices is None:
             try:
-                self._voices = [(str(i), str(n)) for i, n in
-                                (line.split('\t', 1) for line in str(bridge().voiceList()).split('\n') if '\t' in line)]
+                voices = _pairs(bridge().voiceList())
             except Exception:
                 log.exception('could not list the voices')
-                self._voices = []
+                voices = []
+            if not voices and not self.ready():
+                return []
+            self._voices = voices
         return self._voices
 
     def configure(self, voice=None, rate=None, boost=False, pitch=0, volume=None) -> None:
@@ -144,6 +211,10 @@ class Speech:
     def configure_sapi(self, **config) -> None:
         self.sapi_config = dict(SAPI_DEFAULTS, **config)
         self._sapi.configure(**self.sapi_config)
+
+    def set_engine(self, package) -> None:
+        """PORT ADDITION: Settings -> Speech -> Android speech engine (see AndroidVoice.set_engine)."""
+        self._sapi.set_engine(package)
 
     def screen_reader_running(self) -> bool:
         return True                                       # the accessible screens are the only ones there are

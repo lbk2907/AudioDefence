@@ -494,6 +494,11 @@ TalkBack would take the touches for its own; if it is on, the game says so.
 The first start unpacks the game's data, saying how far it has got; that takes
 a minute or two, and later starts are quick.
 
+The game speaks with the text-to-speech engine set in the phone's settings. To
+use another engine installed on the phone, choose it in the Android speech
+engine row of the Speech tab in Settings; the voice, rate, pitch and volume
+rows below it then work with that engine.
+
 ### Controls on the phone
 
 Hold the phone sideways; the whole screen is the touch area. The touches are

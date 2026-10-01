@@ -412,6 +412,41 @@ class GameParameters:
         self.defaults.synchronize()
         Speech.shared().configure_sapi(**self.sapi_config())
 
+    #: PORT ADDITION (Android, user request): Settings -> Speech -> Android speech engine: the package of the
+    #: text-to-speech engine the phone speaks with (platform/speech_android.py).  Nothing stored is the one
+    #: set in the phone's settings.  Kept apart from SAPI_KEYS, which the desktop's voices are given.
+    SPEECH_ENGINE_KEY = 'sapiEngine'
+
+    def speech_engine(self):
+        value = self.defaults.object(self.SPEECH_ENGINE_KEY)
+        return value if isinstance(value, str) and value else None
+
+    def set_speech_engine(self, package) -> None:
+        from ..platform.speech import Speech
+        self.defaults.set_object(package or None, self.SPEECH_ENGINE_KEY)
+        self.defaults.synchronize()
+        Speech.shared().set_engine(self.speech_engine())
+
+    def settle_speech_engine(self) -> list:
+        """PORT ADDITION (Android): once the engine asked for has started, what is saved is made to agree with
+        what speaks.  An engine that is gone or would not start has given way to the phone's default, and the
+        setting goes back to that, as a language whose file has gone goes back to English; a voice the engine
+        has not got - one of the engine before - goes back to the engine's own.  What was put back, 'engine'
+        and 'voice', or nothing: also while the engine is still starting, which this waits for."""
+        from ..platform.speech import Speech
+        sapi = Speech.shared().sapi
+        if not sapi.settle():
+            return []
+        put_back = []
+        if self.speech_engine() is not None and sapi.engine_in_use() != self.speech_engine():
+            self.set_speech_engine(None)
+            put_back.append('engine')
+        voice = self.sapi_config()['voice']
+        if voice is not None and not sapi.has_voice(voice):
+            self.set_sapi(voice=None)
+            put_back.append('voice')
+        return put_back
+
     def names_controller(self):
         """The connected controller whose buttons the lines name, by the name it gives itself - the one
         chosen when several kinds are connected, else the one connected last - or None to name keys."""

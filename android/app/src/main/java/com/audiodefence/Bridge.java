@@ -9,6 +9,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInstaller;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -16,6 +18,8 @@ import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.Voice;
@@ -37,11 +41,15 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.Collator;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.MissingResourceException;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -63,15 +71,30 @@ public final class Bridge implements SensorEventListener {
     private volatile boolean quit;
     private volatile Runnable onEnded;
 
-    // speech
+    // speech.  spokenBeforeReady is also the lock for tts, ttsReady and the engine fields below.
     private TextToSpeech tts;
     private volatile boolean ttsReady;
     private final List<Object[]> spokenBeforeReady = new ArrayList<>();
-    private String wantedVoice = "";
-    private int rateSetting = 0;
-    private int pitchSetting = 0;
-    private int volumeSetting = 100;
+    private volatile String wantedVoice = "";
+    private volatile int rateSetting = 0;
+    private volatile int pitchSetting = 0;
+    private volatile int volumeSetting = 100;
     private int utterance;
+    // PORT ADDITION (Settings > Speech > Android speech engine, user request): the engine Python asked for, by
+    // package ("" is the one set in the phone's settings), and the one started for it - "" too when the one
+    // asked for is not installed or would not start.  Each start of the speech is numbered, so that a late
+    // answer from an engine already replaced is ignored.  The starts are made on the main thread.
+    private String engineAsked = "";
+    private volatile String engineInUse = "";
+    private int speechStart;
+    private int readyStart;
+    // the voice last put on an engine, and which engine (voiceLock)
+    private final Object voiceLock = new Object();
+    private TextToSpeech voiceOn;
+    private String voiceApplied;
+    private final Handler main = new Handler(Looper.getMainLooper());
+    /** How long a chosen engine has to start before the phone's default takes its place. */
+    private static final long ENGINE_START_LIMIT_MS = 10000;
 
     // screen and sensors
     private volatile float widthDp = 800f;
@@ -128,7 +151,7 @@ public final class Bridge implements SensorEventListener {
         this.al = mixer;
         this.audio = new AudioOut(mixer);
         audio.start(ctx);
-        startSpeech();
+        startSpeech("");
         startSensors();
     }
 
@@ -189,9 +212,17 @@ public final class Bridge implements SensorEventListener {
     public void shutdown() {
         quit = true;
         audio.stop();
-        if (tts != null) {
-            tts.stop();
-            tts.shutdown();
+        main.removeCallbacksAndMessages(null);          // no engine start or time limit left to run
+        TextToSpeech t;
+        synchronized (spokenBeforeReady) {
+            t = tts;
+            tts = null;
+            ttsReady = false;
+            speechStart++;
+        }
+        if (t != null) {
+            t.stop();
+            t.shutdown();
         }
         if (sensors != null) {
             sensors.unregisterListener(this);
@@ -269,94 +300,272 @@ public final class Bridge implements SensorEventListener {
     }
 
     // ------------------------------------------------------------------------------------ speech
-    private void startSpeech() {
-        tts = new TextToSpeech(context, status -> {
-            if (status != TextToSpeech.SUCCESS) {
-                Log.e(TAG, "text-to-speech could not start: " + status);
+    /**
+     * Start the text-to-speech engine with this package, or the phone's default for "" - on the main thread.
+     * Until it has started, what the game says waits in spokenBeforeReady, as it always did at start-up.
+     */
+    private void startSpeech(String engine) {
+        if (!engine.isEmpty() && !engineInstalled(engine)) {
+            Log.w(TAG, "speech engine " + engine + " is not installed; the phone's default speaks instead");
+            forgetEngine(engine);
+            engine = "";
+        }
+        TextToSpeech old;
+        final int start;
+        synchronized (spokenBeforeReady) {
+            ttsReady = false;
+            old = tts;
+            tts = null;
+            start = ++speechStart;
+        }
+        if (old != null) {
+            try {
+                old.stop();
+                old.shutdown();
+            } catch (RuntimeException e) {
+                Log.w(TAG, "the last speech engine would not shut down", e);
+            }
+        }
+        engineInUse = engine;
+        final String using = engine;
+        // Its answer is handled on the next pass of the main thread, after the constructor has returned: a
+        // TextToSpeech that cannot bind to anything answers from inside its constructor.
+        TextToSpeech.OnInitListener listener = status -> main.post(() -> speechStarted(start, using, status));
+        TextToSpeech made = null;
+        try {
+            // With a package, Android itself falls back to the default engine when that one cannot be bound.
+            made = engine.isEmpty() ? new TextToSpeech(context, listener)
+                    : new TextToSpeech(context, listener, engine);
+        } catch (RuntimeException e) {
+            Log.e(TAG, "text-to-speech could not be made for " + (engine.isEmpty() ? "the default" : engine), e);
+        }
+        synchronized (spokenBeforeReady) {
+            if (start == speechStart) {
+                tts = made;
+            } else if (made != null) {
+                made.shutdown();                        // replaced while it was being made
+            }
+        }
+        if (!using.isEmpty()) {
+            main.postDelayed(() -> {
+                boolean waiting;
+                synchronized (spokenBeforeReady) {
+                    waiting = start == speechStart && readyStart != start;
+                }
+                if (waiting) {
+                    Log.w(TAG, "speech engine " + using + " did not start in time");
+                    engineFailed(using);
+                }
+            }, ENGINE_START_LIMIT_MS);
+        } else if (made == null) {
+            Log.e(TAG, "text-to-speech could not start");
+        }
+    }
+
+    /** The answer of the engine of one start, on the main thread. */
+    private void speechStarted(int start, String engine, int status) {
+        TextToSpeech t;
+        synchronized (spokenBeforeReady) {
+            if (start != speechStart) {
+                return;                                 // a later start has replaced this engine
+            }
+            t = tts;
+        }
+        if (status != TextToSpeech.SUCCESS || t == null) {
+            Log.e(TAG, "text-to-speech could not start: " + status + (engine.isEmpty() ? "" : " (" + engine + ")"));
+            if (!engine.isEmpty()) {
+                engineFailed(engine);
+            }
+            return;
+        }
+        speakTheLanguage(t);
+        List<Object[]> waiting;
+        synchronized (spokenBeforeReady) {
+            if (start != speechStart) {
                 return;
             }
-            int r = tts.setLanguage(Locale.getDefault());
-            if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
-                tts.setLanguage(Locale.US);
+            readyStart = start;
+            ttsReady = true;
+            waiting = new ArrayList<>(spokenBeforeReady);
+            spokenBeforeReady.clear();
+        }
+        applySpeechSettings();
+        for (Object[] w : waiting) {
+            speak((String) w[0], (Boolean) w[1]);
+        }
+    }
+
+    /** A chosen engine that would not start: the phone's default takes its place, so the game keeps speaking. */
+    private void engineFailed(String engine) {
+        forgetEngine(engine);
+        startSpeech("");
+    }
+
+    /** The engine asked for could not be had: what is asked for is now what speaks, the phone's default. */
+    private void forgetEngine(String engine) {
+        synchronized (spokenBeforeReady) {
+            if (engine.equals(engineAsked)) {
+                engineAsked = "";
             }
-            applySpeechSettings();
-            List<Object[]> waiting;
-            synchronized (spokenBeforeReady) {
-                ttsReady = true;
-                waiting = new ArrayList<>(spokenBeforeReady);
-                spokenBeforeReady.clear();
-            }
-            for (Object[] w : waiting) {
-                speak((String) w[0], (Boolean) w[1]);
-            }
-        });
+        }
+    }
+
+    /** The phone's language, or US English when the engine has not got it: the engine's own voice for it. */
+    private static void speakTheLanguage(TextToSpeech t) {
+        int r = t.setLanguage(Locale.getDefault());
+        if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
+            t.setLanguage(Locale.US);
+        }
     }
 
     private void applySpeechSettings() {
-        if (tts == null) {
-            return;
+        TextToSpeech t;
+        synchronized (spokenBeforeReady) {
+            if (!ttsReady || tts == null) {
+                return;
+            }
+            t = tts;
         }
-        tts.setSpeechRate((float) Math.pow(1.12, rateSetting));
-        tts.setPitch((float) Math.pow(1.05, pitchSetting));
-        if (wantedVoice != null && !wantedVoice.isEmpty()) {
+        synchronized (voiceLock) {
             try {
-                for (Voice v : tts.getVoices()) {
-                    if (v.getName().equals(wantedVoice)) {
-                        tts.setVoice(v);
-                        break;
+                t.setSpeechRate((float) Math.pow(1.12, rateSetting));
+                t.setPitch((float) Math.pow(1.05, pitchSetting));
+                String wanted = wantedVoice == null ? "" : wantedVoice;
+                String before = voiceOn == t ? voiceApplied : null;     // null: a new engine
+                if (wanted.equals(before)) {
+                    return;                             // a rate, pitch or volume change: the voice is set
+                }
+                voiceOn = t;
+                voiceApplied = wanted;
+                Voice v = wanted.isEmpty() ? null : findVoice(t, wanted);
+                if (v != null) {
+                    t.setVoice(v);
+                } else {
+                    if (!wanted.isEmpty()) {
+                        Log.w(TAG, "this engine has no voice " + wanted + "; its own speaks");
+                    }
+                    if (before != null && !before.isEmpty()) {
+                        speakTheLanguage(t);            // back from a chosen voice to the engine's own
                     }
                 }
-            } catch (Exception e) {
-                Log.w(TAG, "could not choose voice " + wantedVoice, e);
+            } catch (RuntimeException e) {
+                Log.w(TAG, "could not apply the speech settings", e);
             }
         }
+    }
+
+    private static Voice findVoice(TextToSpeech t, String name) {
+        Set<Voice> voices = t.getVoices();
+        if (voices != null) {
+            for (Voice v : voices) {
+                if (v.getName().equals(name)) {
+                    return v;
+                }
+            }
+        }
+        return null;
     }
 
     public boolean speak(String text, boolean interrupt) {
         if (text == null || text.isEmpty()) {
             return false;
         }
+        TextToSpeech t;
         synchronized (spokenBeforeReady) {
-            if (!ttsReady) {
+            if (!ttsReady || tts == null) {
                 spokenBeforeReady.add(new Object[]{text, interrupt});
                 return true;
             }
+            t = tts;
         }
         Bundle params = new Bundle();
         params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, Math.max(0f, Math.min(1f, volumeSetting / 100f)));
         int mode = interrupt ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD;
-        return tts.speak(text, mode, params, "ad" + (utterance++)) == TextToSpeech.SUCCESS;
+        return t.speak(text, mode, params, "ad" + (utterance++)) == TextToSpeech.SUCCESS;
     }
 
     public void stopSpeech() {
+        TextToSpeech t;
         synchronized (spokenBeforeReady) {
             spokenBeforeReady.clear();
+            t = ttsReady ? tts : null;
         }
-        if (tts != null && ttsReady) {
-            tts.stop();
+        if (t != null) {
+            t.stop();
         }
     }
 
-    /** Python: "id\tname" per line, for the voices in the phone's language. */
+    /**
+     * Python: "id\tname" per line, for the voices of the engine speaking that are on the phone (none that
+     * needs the network or is not yet downloaded).  The name is the voice's language as the phone names it,
+     * then the voice's own name: "English (United States), en-us-x-iol-local".  Those in the phone's
+     * language come first, then the rest, each by language and then by name.  "" until the engine has started.
+     */
     public String voiceList() {
-        StringBuilder sb = new StringBuilder();
-        if (tts == null || !ttsReady) {
-            return "";
-        }
-        try {
-            String lang = Locale.getDefault().getLanguage();
-            List<Voice> list = new ArrayList<>(tts.getVoices());
-            java.util.Collections.sort(list, (a, b) -> a.getName().compareTo(b.getName()));
-            for (Voice v : list) {
-                if (v.getLocale().getLanguage().equals(lang) && !v.isNetworkConnectionRequired()) {
-                    sb.append(v.getName()).append('\t').append(v.getName()).append(" (")
-                            .append(v.getLocale().getDisplayName()).append(")\n");
-                }
+        TextToSpeech t;
+        synchronized (spokenBeforeReady) {
+            if (!ttsReady || tts == null) {
+                return "";
             }
-        } catch (Exception e) {
+            t = tts;
+        }
+        StringBuilder sb = new StringBuilder();
+        try {
+            Set<Voice> all = t.getVoices();
+            if (all == null) {
+                return "";
+            }
+            List<Voice> list = new ArrayList<>();
+            for (Voice v : all) {
+                Set<String> features = v.getFeatures();
+                if (v.isNetworkConnectionRequired()
+                        || (features != null && features.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED))) {
+                    continue;
+                }
+                list.add(v);
+            }
+            // ISO 639-2 on both sides: some engines give their voices three-letter languages ("rus"), which
+            // the phone's own two-letter one ("ru") would never equal
+            final String home = language3(Locale.getDefault());
+            final Collator collator = Collator.getInstance();
+            Collections.sort(list, (a, b) -> {
+                boolean aHome = home.equals(language3(a.getLocale()));
+                boolean bHome = home.equals(language3(b.getLocale()));
+                if (aHome != bHome) {
+                    return aHome ? -1 : 1;
+                }
+                int c = collator.compare(a.getLocale().getDisplayName(), b.getLocale().getDisplayName());
+                return c != 0 ? c : collator.compare(a.getName(), b.getName());
+            });
+            for (Voice v : list) {
+                String language = oneLine(v.getLocale().getDisplayName());
+                sb.append(oneLine(v.getName())).append('\t');
+                if (!language.isEmpty()) {
+                    sb.append(language).append(", ");
+                }
+                sb.append(oneLine(v.getName())).append('\n');
+            }
+        } catch (RuntimeException e) {
             Log.w(TAG, "voice list failed", e);
         }
         return sb.toString();
+    }
+
+    /** Python: whether the engine speaking has a voice by this name.  False until it has started. */
+    public boolean hasVoice(String name) {
+        TextToSpeech t;
+        synchronized (spokenBeforeReady) {
+            if (!ttsReady || tts == null) {
+                return false;
+            }
+            t = tts;
+        }
+        try {
+            return name != null && findVoice(t, name) != null;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "could not look for voice " + name, e);
+            return false;
+        }
     }
 
     public void configureSpeech(String voice, int rate, int pitch, int volume) {
@@ -371,6 +580,100 @@ public final class Bridge implements SensorEventListener {
 
     public boolean speechReady() {
         return ttsReady;
+    }
+
+    /**
+     * Python: "package\tname" per line, for the phone's text-to-speech engines (TextToSpeech.getEngines),
+     * by name.
+     */
+    public String engineList() {
+        StringBuilder sb = new StringBuilder();
+        try {
+            List<String[]> list = installedEngines();
+            final Collator collator = Collator.getInstance();
+            Collections.sort(list, (a, b) -> collator.compare(a[1], b[1]));
+            for (String[] e : list) {
+                sb.append(e[0]).append('\t').append(e[1]).append('\n');
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "engine list failed", e);
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Python: speak with the engine of this package from now on, or with the one set in the phone's settings
+     * for "".  The engine in use is shut down and the new one started; until it has, what is said waits for
+     * it.  One that is not installed, does not start or takes too long gives way to the phone's default.
+     */
+    public void setSpeechEngine(String engine) {
+        final String want = engine == null ? "" : engine;
+        synchronized (spokenBeforeReady) {
+            if (want.equals(engineAsked)) {
+                return;
+            }
+            engineAsked = want;
+            ttsReady = false;                           // from now on what is said waits for the new engine
+        }
+        main.post(() -> startSpeech(want));
+    }
+
+    /** Python: the package of the engine started for what was asked, or "" for the phone's default. */
+    public String speechEngine() {
+        return engineInUse;
+    }
+
+    /** {package, name} of each text-to-speech engine on the phone. */
+    private List<String[]> installedEngines() {
+        List<String[]> out = new ArrayList<>();
+        TextToSpeech t;
+        synchronized (spokenBeforeReady) {
+            t = tts;
+        }
+        if (t != null) {
+            for (TextToSpeech.EngineInfo e : t.getEngines()) {
+                out.add(new String[]{e.name, oneLine(e.label == null || e.label.isEmpty() ? e.name : e.label)});
+            }
+            return out;
+        }
+        // between two engines, or when none could be made: ask Android as getEngines does
+        PackageManager pm = context.getPackageManager();
+        Intent intent = new Intent(TextToSpeech.Engine.INTENT_ACTION_TTS_SERVICE);
+        for (ResolveInfo ri : pm.queryIntentServices(intent, PackageManager.MATCH_DEFAULT_ONLY)) {
+            if (ri.serviceInfo != null) {
+                CharSequence label = ri.loadLabel(pm);
+                String name = ri.serviceInfo.packageName;
+                out.add(new String[]{name, oneLine(label == null || label.length() == 0 ? name : label.toString())});
+            }
+        }
+        return out;
+    }
+
+    private boolean engineInstalled(String engine) {
+        try {
+            for (String[] e : installedEngines()) {
+                if (e[0].equals(engine)) {
+                    return true;
+                }
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "could not list the speech engines", e);
+            return true;                                // let TextToSpeech find out
+        }
+        return false;
+    }
+
+    private static String language3(Locale l) {
+        try {
+            return l.getISO3Language();
+        } catch (MissingResourceException e) {
+            return l.getLanguage();
+        }
+    }
+
+    /** A name as one field of a line: no tab or line break in it. */
+    private static String oneLine(String s) {
+        return s == null ? "" : s.replace('\t', ' ').replace('\n', ' ').replace('\r', ' ').trim();
     }
 
     // ------------------------------------------------------------------------------------ updating

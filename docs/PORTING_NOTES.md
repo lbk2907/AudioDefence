@@ -215,6 +215,23 @@ they were.
   phone's own text-to-speech, driven by the Speech tab's voice, rate, pitch and volume rows, with the hints'
   keys named as the touches that do the same; updating, below; and, not supported yet, game controllers and
   vibration.  TalkBack has to be off: the game speaks for itself, and says so if TalkBack is on.
+  * **The speech engine** (user request, 2026-10-01).  The Speech tab has an Android speech engine row above
+    the voice: Phone default - the engine set in the phone's settings, which is all the first builds used -
+    then every engine `TextToSpeech.getEngines` lists, by name.  It is saved as `sapiEngine` beside the SAPI
+    keys, though not in `SAPI_KEYS`, which are handed to the desktop's voices too.  Choosing one shuts the
+    old TextToSpeech down and starts `new TextToSpeech(context, listener, package)` (`Bridge.setSpeechEngine`,
+    on the main thread); what is said meanwhile waits, as it always did at start-up, and the start's
+    language fallback is kept.  An engine that is not installed, answers with an error or has not started
+    in ten seconds gives way to the phone's default.  Once an engine has started,
+    `GameParameters.settle_speech_engine` makes the settings agree with it: an engine that gave way goes back
+    to Phone default, with a line saying so, as a language whose file has gone goes back to English, and a
+    voice the engine has not got - one of the engine before - goes back to the engine's own, which the voice
+    row calls Engine default on the phone rather than Control Panel's.  The voice list is the engine's voices
+    that need no network and are downloaded, named by their language and then their own name ("English
+    (United States), en-us-x-iol-local"), the phone's language first.  It used to hold the phone's language
+    alone, compared by two-letter code, which left out every voice of an engine that gives three-letter ones
+    ("rus").  Choosing Engine default after a voice now puts the engine's own back at once, not at the next
+    start.
 * **Updating** (user request, 2026-10-01).  The desktop's updater and its screens, as far as Android allows.
   `updater_android` checks the same repository's latest release at the same moments - quietly when the main
   menu opens, with Check for updates on the main menu, which the phone now has too - and compares it with
