@@ -148,15 +148,15 @@ class ControlSchemePanel:
                    hint='Press Enter for the next value, Shift plus Enter for the previous.',
                    action=self.step_sensitivity, shift_action=self.step_sensitivity_back)
         elif self.category == 'controls':                 # cellForControlAtIndex: 0x1000b5d64
-            # PORT CHOICE (user request): Button mode is gone on the phone; Gesture is the only way to play
-            for title, button in (r for r in CONTROL_ROWS if not (system.ANDROID and r[1])):
+            for title, button in CONTROL_ROWS:
                 cell = t.cell(title, control_description(button), hint=SELECT_HINT,
                               action=lambda b=button: self.select_button_mode(b))
                 cell.selected = bool(params.button_mode) == button
             if system.ANDROID:                            # PORT ADDITION (user request)
                 row = t.cell('Shake sensitivity', self.shake_text(),
-                             hint='How easily shaking the phone swings your melee weapon, from 1, a hard '
-                                  'shake, to 10, a light one; all the way down is Off. %s. Shake the phone on '
+                             hint='How easily shaking the phone swings your melee weapon in Gesture mode, '
+                                  'from 1, a hard shake, to 10, a light one; all the way down is Off. %s. '
+                                  'Shake the phone on '
                                   'this screen to try it: the game says Shake when it feels one.'
                                   % self.slider_words())
                 row.adjust = self.adjust_shake            # a slider: the swipes across adjust it

@@ -61,14 +61,10 @@ class GameParameters:
     # --- button mode -----------------------------------------------------------------------------
     @property
     def button_mode(self) -> bool:
-        from ..platform import host
-        if host.ANDROID:                                  # PORT CHOICE (user request): no Button mode on the
-            return False                                  # phone - it is always played with gestures
         return self._button_mode
 
     def set_button_mode(self, value: bool) -> None:        # 0x1000a3a50
-        from ..platform import host
-        self._button_mode = False if host.ANDROID else bool(value)
+        self._button_mode = bool(value)
         self.defaults.set_bool(self._button_mode, 'buttonMode')
         self.defaults.synchronize()
 
