@@ -26,6 +26,29 @@ def releaseCode = { String tag ->
     return ((parts[0] * 100 + parts[1]) * 100 + parts[2]) * 100 + build
 }(releaseTag)
 
+// The Python the app runs (Chaquopy's `version`), and that same version's python.exe on this computer, which
+// Chaquopy needs to build the app's Python with.  Chaquopy's own search did not find it from inside Gradle
+// ("Couldn't find Python 3.13") though `py -3.13` ran it from a command prompt, so the exact python.exe is
+// given when it is known: a -PbuildPython=... (or AUDIODEFENCE_BUILD_PYTHON) if one is passed, or else
+// where Python's installers put it - the Python install manager (pythoncore-3.13-64) or python.org's
+// installer, for one user or for everyone.  Found nowhere, Chaquopy is left to search as it does.
+def appPython = '3.13'
+def buildPythonExe = { ->
+    def given = findProperty('buildPython') ?: System.getenv('AUDIODEFENCE_BUILD_PYTHON')
+    if (given) {
+        return given
+    }
+    def nodot = appPython.replace('.', '')
+    def local = System.getenv('LOCALAPPDATA')
+    def places = []
+    if (local) {
+        places << "${local}/Python/pythoncore-${appPython}-64/python.exe"
+        places << "${local}/Programs/Python/Python${nodot}/python.exe"
+    }
+    places << "C:/Program Files/Python${nodot}/python.exe"
+    return places.find { new File(it).isFile() }
+}()
+
 android {
     namespace 'com.audiodefence'
     compileSdk 35
@@ -42,7 +65,10 @@ android {
             abiFilters "arm64-v8a"
         }
         python {
-            version "3.13"
+            version appPython
+            if (buildPythonExe) {
+                buildPython buildPythonExe
+            }
             pip {
                 install "numpy"
             }
