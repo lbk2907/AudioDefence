@@ -1622,10 +1622,10 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   own Back goes the same way for the same reason.  Since 2026-09-29 (user request) a chapter is walked as a
   world is: Next challenge opens the arena after it in its chapter (`additions.arena_after`), or the
   chapter's list when that one wants a gun not bought, as the original falls back to its challenge list;
-  and the last arena of a chapter says "Chapter selection" - named for where it leads, as Challenge
-  selection is (it said "next chapter" for an hour, until the user asked) - and goes to the Extra screen,
-  as the last of a world says "next arena" and goes to the world list (`App.go_to_challenge_after`
-  0x100081c70).  Copy results on
+  and the last arena of a chapter says "next arena" and goes to its campaign's chapters, as the last of a
+  world says it and goes to the world list (`App.go_to_challenge_after` 0x100081c70) - the original's own
+  words, so the two modes match (user request, 2026-10-01; it said "next chapter" for an hour, then
+  "Chapter selection").  Copy results on
   an Extra arena's completed or failed screen opens "Audio Defence Extra Challenge Statistics" (user
   request, the same day), so a paste of one is not taken for one of the original's challenges.
 
