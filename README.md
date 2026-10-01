@@ -632,7 +632,8 @@ install over a release, nor a release over it.
 
 Keep the key safe: back it up somewhere private, never in the repository, and
 hand it on with the project. Every release has to be signed with it, or
-phones will not install it over the one they have.
+phones will not install it over the one they have. Git leaves out any key
+file put in the repository by mistake (`.p12`, `.jks` and `.keystore`).
 
 The compiler asks where the key is whenever its choice makes the APK — Enter
 takes the one `AD_KEYSTORE` names, which `android_keys.py` sets, or the only
