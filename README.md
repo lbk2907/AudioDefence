@@ -625,6 +625,18 @@ to Android than the one before. Without the compiler, `gradle assembleDebug`
 — or `assembleRelease`, with `AD_KEYSTORE` set — in the `android` folder
 leaves the app under `android\app\build\outputs\apk`.
 
+#### A newer Python for the app
+
+The app runs Python 3.13, set by one line in `android/app/build.gradle`:
+`def appPython = '3.13'`. The compiler and the setup tool read it from there.
+It cannot be 3.14 yet only because the app needs numpy, and nobody has built
+numpy for Android on 3.14. To see whether that has changed, look on
+[Chaquopy's numpy page](https://chaquo.com/pypi-13.1/numpy/) for a file with
+both `cp314` and `arm64_v8a` in its name. Or simply try it: change the line to
+`'3.14'`, install Python 3.14 if you have not, and build the Android app. If
+numpy is still missing, the build stops at installing it and says so; put the
+line back. If it builds, play it on a phone before making a release with it.
+
 ## Controls
 
 In the menus, the port stands in for VoiceOver: it reads the elements of a

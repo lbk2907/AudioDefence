@@ -612,9 +612,21 @@ def test_build(exe: str) -> int:
 # (ASSET_PREFIX in audiodefence/platform/updater_android.py).
 
 ANDROID = os.path.join(HERE, 'android')
-#: what android/app/build.gradle compiles against, and the Python Chaquopy builds the app's own with
+#: what android/app/build.gradle compiles against, and the Python Chaquopy builds the app's own with - read
+#: from build.gradle's `def appPython = '3.13'`, so that trying another Python is a change to that one line
 ANDROID_PLATFORM = 'android-35'
-ANDROID_PYTHON = '3.13'
+
+
+def _app_python(default: str = '3.13') -> str:
+    try:
+        with open(os.path.join(ANDROID, 'app', 'build.gradle'), encoding='utf-8') as fh:
+            match = re.search(r"""^\s*def\s+appPython\s*=\s*['"](\d+\.\d+)['"]""", fh.read(), re.M)
+    except OSError:
+        return default
+    return match.group(1) if match else default
+
+
+ANDROID_PYTHON = _app_python()
 #: the Android plugin runs on nothing older than Java 17, and Gradle 8.13 on nothing newer than 23
 JAVA_RANGE = (17, 23)
 #: where the README has the Android SDK and Gradle unzipped, and where tools/android_keys.py keeps the keys
