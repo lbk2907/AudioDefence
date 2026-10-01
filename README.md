@@ -557,10 +557,10 @@ it makes, `cmdline-tools`, to `latest` — so that
 `C:\Android\cmdline-tools\latest\bin\sdkmanager.bat` exists.
 
 **4. Gradle 8.13.** From [gradle.org/releases](https://gradle.org/releases/),
-download **v8.13, binary-only**, and unzip it into `C:\Android`, beside the
-command-line tools. The zip holds one folder, `gradle-8.13`, which keeps its
-name, so that `C:\Android\gradle-8.13\bin\gradle.bat` exists.
-(Gradle unzipped into `C:\Gradle`, or on your Path, is found as well.)
+download **v8.13, binary-only**. Make the folder `C:\Android\Gradle` and unzip
+it there. The zip holds one folder, `gradle-8.13`, which keeps its name, so
+that `C:\Android\Gradle\gradle-8.13\bin\gradle.bat` exists. (Gradle unzipped
+into `C:\Gradle`, or on your Path, is found as well.)
 
 **5. The rest of the setup.** In a new command prompt, in the repository's
 folder:
@@ -693,7 +693,7 @@ on.
 Each folder, and the one file in it that shows it is right:
 
 - `C:\Android\cmdline-tools\latest`, with `bin\sdkmanager.bat`
-- `C:\Android\gradle-8.13`, with `bin\gradle.bat`
+- `C:\Android\Gradle\gradle-8.13`, with `bin\gradle.bat`
 - `C:\Android\platforms\android-35`, with `android.jar`
 - `C:\Android\build-tools\35.0.0`, with `aapt2.exe`
 - `C:\Android\platform-tools`, with `adb.exe`, only for `--phone`
@@ -733,9 +733,9 @@ newer than Java 23. Java 24 needs Gradle 8.14 or later, and Java 25 Gradle
 the newer JDK, point `JAVA_HOME` at it, raise the 23, and unzip a Gradle that
 runs on it. To go back, point `JAVA_HOME` at Java 21 again.
 
-**Gradle.** Whichever is unzipped in `C:\Android`: the tools take the newest
-`gradle-` folder there. Unzip the newer one beside `gradle-8.13`; to go back,
-delete it. The limit is the Android Gradle plugin: each version names the
+**Gradle.** Whichever is unzipped in `C:\Android\Gradle`: the tools take the
+newest `gradle-` folder there. Unzip the newer one beside `gradle-8.13`; to go
+back, delete it. The limit is the Android Gradle plugin: each version names the
 oldest Gradle it runs on, 8.13 for plugin 8.13, and a much newer Gradle may
 need a newer plugin.
 

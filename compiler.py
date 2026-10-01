@@ -648,9 +648,9 @@ def apk_name(version: str, signed: bool) -> str:
 
 
 def find_gradle() -> str:
-    """Gradle: unzipped into C:\\Android as the README says, or else into C:\\Gradle, where the README once
-    had it (the newest in either), or else on the PATH."""
-    places = [os.path.join(ANDROID_TOOLS, 'gradle-*', 'bin', 'gradle.bat' if host.WINDOWS else 'gradle')]
+    """Gradle: unzipped into C:\\Android\\Gradle as the README says, or else into C:\\Gradle, where the README
+    once had it (the newest in either), or else on the PATH."""
+    places = [os.path.join(ANDROID_TOOLS, 'Gradle', 'gradle-*', 'bin', 'gradle.bat' if host.WINDOWS else 'gradle')]
     if host.WINDOWS:
         places.append(r'C:\Gradle\gradle-*\bin\gradle.bat')
     for place in places:
