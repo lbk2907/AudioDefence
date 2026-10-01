@@ -260,7 +260,12 @@ class ExtraMenuScreen(ViewControllerScreen):
     def view_did_load(self) -> None:
         super().view_did_load()
         sb = self.status_bar_view_controller
-        sb.set_armory_button_visibility(False)
+        # PORT ADDITION (user request, 2026-10-01): the status bar's Armory, on this screen and the two
+        # under it, as the tarot screen and the challenge overview show it: the armory opens over the
+        # screen (`go_to_armory`, the status bar's delegate) and closes back onto it.  It is read where it
+        # is on theirs, in the top row after Back and the coins and diamonds, before the first row below,
+        # which is where the cursor starts.
+        sb.set_armory_button_visibility(True)
         sb.set_currencies_visibility(False)
         sb.back_button.set_title('Play')
 
@@ -322,7 +327,7 @@ class ExtraCampaignScreen(ViewControllerScreen):
     def view_did_load(self) -> None:
         super().view_did_load()
         sb = self.status_bar_view_controller
-        sb.set_armory_button_visibility(False)
+        sb.set_armory_button_visibility(True)             # PORT ADDITION: see ExtraMenuScreen
         sb.set_currencies_visibility(False)
         sb.back_button.set_title('Extra')
 
@@ -386,7 +391,7 @@ class ExtraChapterScreen(ViewControllerScreen):
     def view_did_load(self) -> None:
         super().view_did_load()
         sb = self.status_bar_view_controller
-        sb.set_armory_button_visibility(False)
+        sb.set_armory_button_visibility(True)             # PORT ADDITION: see ExtraMenuScreen
         sb.set_currencies_visibility(False)
         # Back names where it goes, as every Back does: the campaign this chapter is in
         from ..game.additions import campaign_of

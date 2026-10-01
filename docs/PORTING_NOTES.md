@@ -2205,6 +2205,12 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   out 0, 22, 46, 70, 94, 118 and 142 as before, and with 22 stars in chapter 1 chapter 2 opened and chapter
   3 asked for 46; a second campaign added for the test read "0 of 9 stars", opened its first chapter at
   nought and its second only on stars of its own, six won in The Long Way Home counting for nothing there.
+
+  The campaigns, a campaign's chapters and a chapter's arenas each show the status bar's Armory (user
+  request), as the tarot screen and the challenge overview do (`setArmoryButtonVisibilty:` 0x10001d514): the
+  armory opens over the screen and closes back onto it.  It is read in the top row after Back and the coins
+  and diamonds, just before the first row, where the cursor starts.  Checked headless: on each of the three
+  it came straight before the first row and pressing it presented the armory over that screen.
 * PORT ADDITION: a challenge that names several melees makes only the last.  `initWithChallengeWeaponArray:`
   0x1000a80f4 makes each and keeps the last, releasing the one before as it is replaced - and the playlist
   the released one deactivates has not finished the activation it asked for a moment earlier, so that
