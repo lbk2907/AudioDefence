@@ -645,9 +645,9 @@ class AccessibleChallengeCompletedScreen(AccessibleGameOverEndlessScreen):
         if chapter_of(cid) is not None:
             # PORT ADDITION (user request, 2026-09-29): a chapter is to Extra what a world is to the
             # challenges.  Next challenge opens the arena after this one in its chapter
-            # (App.go_to_challenge_after), and the last of a chapter says "Chapter selection" and goes to the
-            # Extra screen, as the last of a world says "next arena" and goes to the world list.  It used to
-            # say "back to Chapter N" and go back to the chapter it came from.
+            # (App.go_to_challenge_after), and the last of a chapter says "Chapter selection" and goes to its
+            # campaign's chapters, as the last of a world says "next arena" and goes to the world list.  It
+            # used to say "back to Chapter N" and go back to the chapter it came from.
             if arena_after(cid) is None:
                 self.next_challenge_button.label = 'Chapter selection'
                 self.next_challenge_button.set_title('Chapter selection')

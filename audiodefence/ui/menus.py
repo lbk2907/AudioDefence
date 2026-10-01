@@ -229,27 +229,75 @@ class MainMenuScreen(ViewControllerScreen):
 # =========================================================================================== extra
 @register('Port_ExtraMenuViewController')
 class ExtraMenuScreen(ViewControllerScreen):
-    """PORT ADDITION (user request): the chapters of arenas the port wrote, which the original has no
-    screen for.
+    """PORT ADDITION (user request, 2026-10-01): the campaigns of arenas the port wrote, which the original
+    has no screen for.  Extra is to hold more than one collection of arenas in time, so it opens on a list
+    of them (`additions.CAMPAIGNS`), even while there is one; each opens its chapters.
 
-    It is built like the play menu rather than like their world list, which is a table of worlds read out
-    of `challenges_index` - and these are deliberately not worlds in that file, because `totalStarsUnlocked`
-    0x10001ecd4 sums every world in it and gates theirs on the answer (`additions.CHAPTERS` says why).  One
-    button a chapter, Back to the play menu.
-
-    A chapter opens on stars, the way one of their worlds does, and the row says where a player stands:
-    "Chapter 1, 3 of 21 stars", or "Chapter 2, You need 19 stars to play this level".  A locked button does
-    nothing and says nothing when pressed, which is what their selector's locked rows do.
+    One button a campaign, Back to the play menu.  A campaign is always open, and its row says where a
+    player stands with it as a chapter's row does: "The Long Way Home, 30 of 147 stars".
     """
     page_title = 'Extra'
 
     def load_view(self) -> None:
-        from ..game.additions import CHAPTERS, chapter_stars_required
+        from ..game.additions import CAMPAIGNS
         from ..game.challenge_data import ChallengeData
         cd = ChallengeData.shared()
         v = self.view = View('', (0, 0, 568, 320), accessible=False, name='extraMenu')
         self.buttons = []
-        for i, (chapter, _arenas) in enumerate(CHAPTERS):
+        for i, (campaign, _chapters) in enumerate(CAMPAIGNS):
+            b = Button(campaign, (192, 34 + i * 38, 187, 34), parent=v,
+                       actions=[lambda c=campaign: self.campaign_chosen(c)], name='extra %s' % campaign)
+            # Handed to `translate` so the localization tools offer the two lines: they read calls, not
+            # assignments.
+            b.label = localization.translate('%s, %i of %i stars' % (
+                campaign, cd.stars_unlocked_for_campaign(campaign), cd.stars_available_in_campaign(campaign)))
+            b.hint = localization.translate('Press Enter to open this campaign.')
+            self.buttons.append(b)
+        if self.buttons:
+            self.first_accessible_element = self.buttons[0]
+        self.roots = [v]
+
+    def view_did_load(self) -> None:
+        super().view_did_load()
+        sb = self.status_bar_view_controller
+        sb.set_armory_button_visibility(False)
+        sb.set_currencies_visibility(False)
+        sb.back_button.set_title('Play')
+
+    @staticmethod
+    def campaign_chosen(campaign: str) -> None:
+        App.delegate().go_to_extra_campaign(campaign)
+
+    def back_button_pressed(self) -> None:
+        App.delegate().go_to_play_menu()
+
+
+@register('Port_ExtraCampaignViewController')
+class ExtraCampaignScreen(ViewControllerScreen):
+    """PORT ADDITION (user request): the chapters of one campaign.
+
+    It is built like the play menu rather than like their world list, which is a table of worlds read out
+    of `challenges_index` - and these are deliberately not worlds in that file, because `totalStarsUnlocked`
+    0x10001ecd4 sums every world in it and gates theirs on the answer (`additions.CHAPTERS` says why).  One
+    button a chapter, Back to the campaigns.
+
+    A chapter opens on stars won in its own campaign, the way one of their worlds does, and the row says
+    where a player stands: "Chapter 1, 3 of 21 stars", or "Chapter 2, You need 19 stars to play this level".
+    A locked button does nothing and says nothing when pressed, which is what their selector's locked rows
+    do.
+    """
+    def __init__(self, host, campaign: str = ''):
+        super().__init__(host)
+        self.campaign = campaign
+        self.page_title = campaign or 'Extra'
+
+    def load_view(self) -> None:
+        from ..game.additions import campaign_chapters, chapter_stars_required
+        from ..game.challenge_data import ChallengeData
+        cd = ChallengeData.shared()
+        v = self.view = View('', (0, 0, 568, 320), accessible=False, name='extraCampaign')
+        self.buttons = []
+        for i, (chapter, _arenas) in enumerate(campaign_chapters(self.campaign)):
             open_now = cd.chapter_is_open(chapter)
             b = Button(chapter, (192, 34 + i * 38, 187, 34), parent=v, font_button=open_now,
                        actions=[lambda c=chapter: self.chapter_chosen(c)] if open_now else (),
@@ -276,14 +324,14 @@ class ExtraMenuScreen(ViewControllerScreen):
         sb = self.status_bar_view_controller
         sb.set_armory_button_visibility(False)
         sb.set_currencies_visibility(False)
-        sb.back_button.set_title('Play')
+        sb.back_button.set_title('Extra')
 
     @staticmethod
     def chapter_chosen(chapter: str) -> None:
         App.delegate().go_to_extra_chapter(chapter)
 
     def back_button_pressed(self) -> None:
-        App.delegate().go_to_play_menu()
+        App.delegate().go_to_extra_menu()
 
 
 @register('Port_ExtraChapterViewController')
@@ -340,7 +388,9 @@ class ExtraChapterScreen(ViewControllerScreen):
         sb = self.status_bar_view_controller
         sb.set_armory_button_visibility(False)
         sb.set_currencies_visibility(False)
-        sb.back_button.set_title('Extra')
+        # Back names where it goes, as every Back does: the campaign this chapter is in
+        from ..game.additions import campaign_of
+        sb.back_button.set_title(campaign_of(self.chapter) or 'Extra')
 
     def challenge_chosen(self, name: str) -> None:
         """PORT ADDITION (user request): what the selector's `tableView:didSelectRowAtIndexPath:` 0x100054f8c
@@ -375,7 +425,12 @@ class ExtraChapterScreen(ViewControllerScreen):
         App.delegate().go_to_accessible_challenge_overview_with_dictionary(d)
 
     def back_button_pressed(self) -> None:
-        App.delegate().go_to_extra_menu()
+        from ..game.additions import campaign_of
+        campaign = campaign_of(self.chapter)
+        if campaign is None:
+            App.delegate().go_to_extra_menu()
+        else:
+            App.delegate().go_to_extra_campaign(campaign)
 
 
 # =========================================================================================== play menu

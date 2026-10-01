@@ -3616,7 +3616,10 @@ for _name, _text in EPILOGUES.items():
 #: stars and Maya Ruin at 40 - so twenty-one stars' worth of arenas of ours would have opened their worlds
 #: early, for a player who had not touched them.  Counting on this side costs a screen and a few lines and
 #: leaves their progression exactly as they shipped it.
-CHAPTERS = (
+#:
+#: These are the chapters of one campaign, The Long Way Home (`CAMPAIGNS`), and the stars that open them are
+#: counted inside it.
+LONG_WAY_HOME = (
     #: The guns a player already owns, and the Banjo, which at 1500 coins is the first most will buy: in the
     #: order the tool measures, 15.7 seconds of slack down to 2.2, with the second round's placed round it.
     ('Chapter 1', ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets', 'port_scrap',
@@ -3643,6 +3646,20 @@ CHAPTERS = (
     #: request), on its own after the last chapter rather than a ninth in it, so the chapters stay at eight.
     ('Finale', ('port_remix',)),
 )
+
+#: The collections of arenas Extra holds, each `(name, its chapters)` and each a list on the Extra screen
+#: of its own (user request, 2026-10-01): Extra is to hold more than one in time, so a campaign is the level
+#: above a chapter, and the first is named after the story its arenas tell.  A campaign counts its own
+#: stars - a chapter's gate is the chapters before it in the same campaign, so a campaign added later
+#: starts at nought - and the save is untouched, since stars are kept by arena (`ChallengeData`).
+CAMPAIGNS = (
+    ('The Long Way Home', LONG_WAY_HOME),
+)
+
+#: Every chapter of every campaign, in order.  A chapter is found by its name everywhere - the arena list,
+#: Back, Next challenge - so no two campaigns may give one the same name.
+CHAPTERS = tuple(chapter for _name, chapters in CAMPAIGNS for chapter in chapters)
+assert len({name for name, _a in CHAPTERS}) == len(CHAPTERS), 'two chapters share a name'
 
 #: How many of the stars in the chapters before it a chapter may be opened without (user request): two.
 #: Every chapter asks for all the stars the chapters before it hold but these - 22 of chapter 1's 24 for
@@ -3705,10 +3722,26 @@ def arena_after(challenge_id: str):
     return None
 
 
+def campaign_of(chapter: str):
+    """The campaign a chapter belongs to, or None for a name that is not one of ours."""
+    for name, chapters in CAMPAIGNS:
+        if any(c == chapter for c, _a in chapters):
+            return name
+    return None
+
+
+def campaign_chapters(campaign: str) -> tuple:
+    for name, chapters in CAMPAIGNS:
+        if name == campaign:
+            return chapters
+    return ()
+
+
 def chapter_stars_required(chapter: str) -> int:
-    """Every star the chapters before this one hold, less `SPARE_STARS`; the first chapter is open."""
+    """Every star the chapters before this one in its campaign hold, less `SPARE_STARS`; the first chapter
+    of a campaign is open."""
     before = 0
-    for name, arenas in CHAPTERS:
+    for name, arenas in campaign_chapters(campaign_of(chapter)):
         if name == chapter:
             return max(0, 3 * before - SPARE_STARS)
         before += len(arenas)

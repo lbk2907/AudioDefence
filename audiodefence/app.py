@@ -181,10 +181,12 @@ class App:
             # PORT ADDITION (user request, 2026-09-29): the same walk through a chapter of Extra.  The arena
             # after this one in its chapter, opened as its row in the chapter opens it, or - wanting a gun
             # not bought - the chapter's list, which says so, as the original falls back to the challenge
-            # list; after the last of a chapter, the Extra screen, as the original goes to the world list.
+            # list; after the last of a chapter, its campaign's chapters, as the original goes to the world
+            # list.
             nxt = arena_after(challenge)
             if nxt is None:
-                self.go_to_extra_menu()
+                from .game.additions import campaign_of
+                self.go_to_extra_campaign(campaign_of(chapter))
             elif cd.has_weapon_for_challenge_with_name(nxt):
                 self.go_to_accessible_challenge_overview_with_dictionary(self.dictionary_for_challenge_with_name(nxt))
             else:
@@ -232,9 +234,13 @@ class App:
         self.start_menu_music('main_menu_theme')
         self.load_view_controller_named('ADMainMenuViewController')
 
-    def go_to_extra_menu(self) -> None:                   # PORT ADDITION: the port's own chapters
+    def go_to_extra_menu(self) -> None:                   # PORT ADDITION: the port's own campaigns
         self.start_menu_music('main_menu_theme')
         self.load_view_controller_named('Port_ExtraMenuViewController')
+
+    def go_to_extra_campaign(self, campaign) -> None:     # PORT ADDITION: the chapters of one campaign
+        self.start_menu_music('main_menu_theme')
+        self.load_view_controller_named('Port_ExtraCampaignViewController', campaign=campaign)
 
     def go_to_extra_chapter(self, chapter) -> None:       # PORT ADDITION: the arenas of one chapter
         self.start_menu_music('main_menu_theme')

@@ -117,19 +117,24 @@ class ChallengeData:
         from .additions import chapter_arenas
         return 3 * len(chapter_arenas(chapter))
 
-    def total_stars_unlocked_for_chapters(self) -> int:
-        from .additions import CHAPTERS
-        return sum(self.stars_unlocked_for_chapter(name) for name, _a in CHAPTERS)
+    def stars_unlocked_for_campaign(self, campaign) -> int:
+        from .additions import campaign_chapters
+        return sum(self.stars_unlocked_for_chapter(name) for name, _a in campaign_chapters(campaign))
+
+    def stars_available_in_campaign(self, campaign) -> int:
+        from .additions import campaign_chapters
+        return sum(self.stars_available_in_chapter(name) for name, _a in campaign_chapters(campaign))
 
     def chapter_is_open(self, chapter) -> bool:
         """On stars and nothing else, as one of their worlds opens (user request): every star won in the
-        port's arenas, whichever chapter it was won in, against what the chapter asks for.
+        chapter's campaign, whichever chapter of it it was won in, against what the chapter asks for.  A
+        campaign counts its own (user request, 2026-10-01): stars won in another open nothing here.
 
         Until 2026-09-28 it also wanted every arena of the chapters before it beaten (user request), and it
         was taken out at the user's request, to open as theirs do: their worlds ask for stars and only stars
         (`starsRequirementForWorld:` 0x10001eefc)."""
-        from .additions import chapter_stars_required
-        return self.total_stars_unlocked_for_chapters() >= chapter_stars_required(chapter)
+        from .additions import campaign_of, chapter_stars_required
+        return self.stars_unlocked_for_campaign(campaign_of(chapter)) >= chapter_stars_required(chapter)
 
     def has_challenge_after(self, challenge, world) -> bool:   # 0x10001f230
         # PORT ADDITION: a challenge of the port's own (Play, Extra) belongs to no world, so nothing

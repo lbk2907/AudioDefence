@@ -2190,6 +2190,21 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   headless: two waves each told their part before anything moved, the wave's clock stood still for the
   three seconds the text was up, and both played on; an epilogue came between the last wave and the
   completed screen.  The story itself, The Long Way Home, is `additions.STORY` and `EPILOGUES`.
+* PORT ADDITION: Extra holds campaigns, and a campaign holds chapters (user request, 2026-10-01).  Play,
+  Extra opens on a list of campaigns (`additions.CAMPAIGNS`, `ExtraMenuScreen`), each row its name and the
+  stars won of the stars it holds - "The Long Way Home, 30 of 147 stars" - and each opening its chapters
+  (`ExtraCampaignScreen`), which open their arenas as before.  There is one so far, named after the story
+  its arenas tell, and the list is shown anyway so that the next has somewhere to go.  A campaign counts
+  its own stars: a chapter asks for those of the chapters before it in its campaign less `SPARE_STARS`
+  (`chapter_stars_required`, `ChallengeData.chapter_is_open`), so a campaign added later starts at nought,
+  where the original's worlds all count towards each other (`totalStarsUnlocked` 0x10001ecd4).  With one
+  campaign that is what the chapters asked before.  Arena ids and the save are untouched, stars being kept
+  by arena.  Back from a campaign's chapters goes to the campaigns, Back from a chapter's arenas to its
+  campaign, and Next challenge after the last of a chapter to its campaign's chapters
+  (`App.go_to_extra_campaign`), as the original's goes to the world list.  Checked headless: the gates came
+  out 0, 22, 46, 70, 94, 118 and 142 as before, and with 22 stars in chapter 1 chapter 2 opened and chapter
+  3 asked for 46; a second campaign added for the test read "0 of 9 stars", opened its first chapter at
+  nought and its second only on stars of its own, six won in The Long Way Home counting for nothing there.
 * PORT ADDITION: a challenge that names several melees makes only the last.  `initWithChallengeWeaponArray:`
   0x1000a80f4 makes each and keeps the last, releasing the one before as it is replaced - and the playlist
   the released one deactivates has not finished the activation it asked for a moment earlier, so that

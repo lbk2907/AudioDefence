@@ -772,7 +772,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **169 divergences** and **15 original quirks kept on purpose** in the notes, of which 78 are
+There are **170 divergences** and **15 original quirks kept on purpose** in the notes, of which 78 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -954,7 +954,8 @@ replacing them.
   and on the pause screen, the keys do nothing and the game's music and ambience are untouched.
 - **Settings → Miscellaneous → Reset all settings** puts every setting back to its default, except your key
   bindings.
-- **Play → Extra**, forty-eight arenas written for this port rather than ported, in six chapters of eight.
+- **Play → Extra**, forty-eight arenas written for this port rather than ported, in six chapters of eight,
+  gathered in a list of campaigns of which they are the first.
   An arena opens when the one before it is beaten, and a chapter on the stars won in the chapters before
   it. Each is read out first on the game's own challenge screen — objective, tip and stars — as the
   selector does for the original's, and none of them says how it is beaten. Between them they use every
