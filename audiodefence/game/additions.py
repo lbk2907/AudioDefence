@@ -3390,6 +3390,196 @@ PLISTS['port_remix'] = {
     'accuracy_star': {'reward': 800, 'objective': 55},
 }
 
+# ========================================================================================== the story
+#: The Long Way Home, the Extra mode's story (user request, 2026-10-01): one survivor's road from a barn to
+#: the coast, where a boat is said to leave at dawn.  It is told in text, between waves - a wave's `Story`
+#: is read as the wave begins (`ChallengeGameplayController.tell_story_if_due`), and an arena's `Epilogue`
+#: once its last wave is won - so it needs no recordings and can be translated.  Every arena opens with a
+#: part of it, each chapter's last arena has a word in its last wave and an end of its own, and Reprise one
+#: for each of its acts.
+#:
+#: The voice on the radio is Dr. Bastard's, as the arenas' own objectives already have it (Big Game, Rust):
+#: it is only the voice until the end of chapter 5, and the doctor after.  Nothing here says how an arena
+#: is won; that is the tips' business, and they only hint.
+STORY = {
+    # Chapter 1: the farm
+    'port_barnyard_1': "You wake in a barn with a revolver, a wok and a hand radio, and no memory of "
+                       "choosing any of them. The radio is talking. A boat leaves the coast at dawn, it "
+                       "says, for anyone who can reach it. Outside, the cows are restless, and not "
+                       "everything in the yard is a cow.",
+    'port_wall_1': "The farmhouse has a wall round its yard and a gate that no longer shuts. The voice on "
+                   "the radio suggests you hold the gate. It does not say with what.",
+    'port_clockwork_1': "In the farmhouse kitchen a clock is still ticking, and the things outside have "
+                        "begun to come in time with it. The voice on the radio finds this very funny.",
+    'port_three_bullets_1': "Three rounds in a kitchen drawer, and three figures standing out in the field, "
+                            "perfectly still. Scarecrows, you think, until one of them turns its head.",
+    'port_scrap_1': "Beyond the farm is a scrapyard, cars stacked three high, some with their alarms still "
+                    "wired to dying batteries. The voice says the road to the coast runs straight through "
+                    "it. It says it like a dare.",
+    'port_nowake_1': "Something enormous is asleep in the yard behind the scrapyard. The voice on the radio "
+                     "drops to a whisper, which is somehow worse.",
+    'port_busker_1': "At the crossroads a man sits on an upturned bucket, playing a banjo to nobody. He "
+                     "sells it to you for everything in your pockets and walks away humming. The crowd he "
+                     "was playing for has not left.",
+    'port_survivor_1': "A woman calls to you from the roof of the last farm before the road. She has been "
+                       "up there since it started, she says, and she has heard the radio too. She does not "
+                       "believe in the boat. She asks you to stay until morning anyway.",
+    'port_survivor_3': "From the roof, the woman says she can see the road. Then she says she can see what "
+                       "is on it.",
+    # Chapter 2: the road
+    'port_longwalk_1': "The road out of the valley is long and straight, and you are not alone on it. "
+                       "Something very large is walking the same way, a little way behind, and it is in no "
+                       "hurry at all.",
+    'port_stampede_1': "A town, or what is left of one. The voice on the radio says the town is empty. It "
+                       "says it twice, which is once too often.",
+    'port_sidestep_1': "The high street is narrow, and some of what lives in it has learned to step aside. "
+                       "The voice calls them the dancers.",
+    'port_fore_1': "The road crosses a golf course. In the clubhouse you find one good club, and a "
+                   "scorecard with a single line written across it in red: play it as it lies.",
+    'port_company_1': "Past the course the road fills with walkers again, and some of them smell very wrong "
+                      "indeed. The voice on the radio has an opinion about the bloated ones, and for once "
+                      "it keeps it to itself.",
+    'port_keg_ring_1': "A quarry, still stacked with blasting powder. The voice says the quarrymen left in "
+                       "a hurry. From the look of it, so did everything they were blasting.",
+    'port_hydra_1': "In the ravine below the quarry, everything you put down seems to bring more up behind "
+                    "it. The voice calls it a garden.",
+    'port_biggame_1': "A hunting lodge at the edge of the forest, a rifle over the fireplace and a note "
+                      "pinned under it: you will need this. The handwriting matches the scorecard from the "
+                      "golf course.",
+    'port_biggame_3': "Something is coming out of the forest, and it is what the rifle was left here for.",
+    # Chapter 3: the storm
+    'port_ironsights_1': "The forest road climbs into rain. Someone has been at the sights of your revolver "
+                         "while you slept. The voice on the radio insists, at some length, that it was not "
+                         "responsible.",
+    'port_cattlecall_1': "Cattle have broken out of a farm and wandered into the woods, and something "
+                         "quieter has wandered in with them. A cattle prod hangs on the fence post, still "
+                         "charged.",
+    'port_thunder_1': "The storm arrives properly. The voice on the radio is all crackle now, and so is "
+                      "everything else.",
+    'port_rust_1': "You shelter in a gun shop with its shutters down. The revolver is worse than ever. "
+                   "Someone has been at it again, and you are nearly certain it was not the rain.",
+    'port_frontline_1': "Beyond the woods is the old front line, where the army held out for a week. Their "
+                        "rifles are still in the trenches. So are the soldiers, more or less, shields and "
+                        "all.",
+    'port_drop_1': "A plane passes over in the dark, low and slow, and something falls from it on a "
+                   "parachute. The voice on the radio says nothing at all. It is the first time it has had "
+                   "nothing to say.",
+    'port_carousel_1': "A fairground on the hill, the carousel still turning with nobody to run it. The "
+                       "music is cheerful. Nothing else is.",
+    'port_last_1': "The storm breaks over a ruined chapel. The voice on the radio says it has something "
+                   "important to tell you about the boat, and that it will tell you after this.",
+    'port_last_3': "The radio clears its throat. About the boat, it begins, and the chapel roof comes down "
+                   "on the rest of the sentence.",
+    # Chapter 4: the depot
+    'port_pointblank_1': "An army supply depot, fenced and floodlit, its gates wide open. The radio is "
+                         "still silent. The first thing you find is a sawn-off shotgun in the guard hut. "
+                         "The second thing is everyone else.",
+    'port_bonfire_1': "Somebody has lit a bonfire in the vehicle yard and stacked crates beside it. "
+                      "Fireworks, by the labels. You have never been less in the mood for a party.",
+    'port_oneswing_1': "In the officers' mess a great sword hangs over the fireplace, polished and sharp. "
+                       "Somebody has cleared the room around it, as though for a performance.",
+    'port_fuse_1': "The armoury is open: a grenade launcher, crates of grenades, and a sign on the wall "
+                   "that says mind the fuse. The radio comes back on, just for a moment, to laugh.",
+    'port_shortgame_1': "Behind the depot, of all things, a driving range. You still have the golf club. "
+                        "The voice is back for good, and it would like to see your swing.",
+    'port_collateral_1': "A parade ground, and in the middle of every crowd on it something you would "
+                         "rather not disturb. The voice says the show must go on. It is the first time it "
+                         "has called it a show.",
+    'port_crossfire_1': "Two gates, either side of the depot, both open, both busy. The voice offers no "
+                        "advice. It has started taking bets.",
+    'port_armory_1': "The depot's last store holds everything you have carried this far. The voice says it "
+                     "is proud of you. It sounds as though it means it, which is the worst thing about it.",
+    'port_armory_3': "The voice on the radio begins to count down. It does not say to what.",
+    # Chapter 5: the city's edge
+    'port_riot_1': "The outskirts of the city, where the riot police made their stand. Their shotguns are "
+                   "still in the vans. Their lines are still standing, too.",
+    'port_chain_1': "A street of burnt-out shops, where everything that walks is carrying something that "
+                    "goes off. The voice hopes you enjoy the fireworks. It has said that before.",
+    'port_encore_1': "A bandstand in the park, and on it a banjo, left as though someone expected you. The "
+                     "voice asks for an encore. You did not know you had played.",
+    'port_artillery_1': "Up on the ridge above the city, an abandoned battery and a single launcher. From "
+                        "up here you can see the coast, and on it, the lights of a boat.",
+    'port_blowback_1': "The wind comes off the sea in gusts, and the streets below the ridge funnel it. The "
+                       "voice says it ordered the wind specially. You are no longer sure it is joking.",
+    'port_titans_1': "In the stadium, two of the biggest things you have ever seen are waiting, and they "
+                     "are not waiting alone. There is a sound like applause on the radio, and then the "
+                     "voice, apologising for it.",
+    'port_scarecrows_1': "The fields beyond the stadium are full of figures standing in rows, propped up on "
+                         "poles. Somebody put every one of them there, carefully, by hand, and you are "
+                         "beginning to suspect who.",
+    'port_riotact_1': "The bridge into the harbour district, and everything the city has left between you "
+                      "and it. The voice reads you the riot act, word for word. It has clearly been looking "
+                      "forward to this.",
+    'port_riotact_3': "Halfway across the bridge, the lamps along it come on one by one, as though someone "
+                      "had been waiting for the moment.",
+    # Chapter 6: the docks
+    'port_beltfed_1': "The docks are one long factory, and the factory is still running. On a workbench by "
+                      "the gate there is a machine gun, a belt of ammunition, and a label with your name on "
+                      "it, spelt correctly.",
+    'port_coldsteel_1': "The machine gun is loud and the night is long. On the next bench someone has left "
+                        "a blade, in case the gun needs a rest. Dr. Bastard thinks of everything.",
+    'port_juggernaut_1': "The loading bay doors open by themselves. What comes through them was built, not "
+                         "born, and Dr. Bastard is very proud of it.",
+    'port_racket_1': "The foundry floor: a jukebox on every landing and the furnaces roaring. The doctor "
+                     "says he likes a bit of atmosphere. Somewhere underneath it all, things are walking.",
+    'port_heavyweights_1': "The heavy plant shed, where nothing is small and everything is easily upset. "
+                           "The doctor asks you to mind the merchandise.",
+    'port_lightningrod_1': "A laboratory at the top of the foundry, a coil humming in the corner and crates "
+                           "stacked ready. The doctor says he has always wanted to see what it does to "
+                           "something really big.",
+    'port_tempo_1': "In the doctor's own workshop, on a stand of its own, is a gun that fires sound. He "
+                    "says it is his finest work, and that it only ever needs one of anything, on the beat.",
+    'port_closingtime_1': "The last hour before dawn. Everything the doctor has left, he sends at once. "
+                          "Through the windows you can see the harbour, and the boat, and its lights coming "
+                          "on.",
+    'port_closingtime_3': "The first grey light is in the sky. The doctor says this is his favourite part.",
+    # The Finale: Reprise
+    'port_remix_1': "By popular demand, says the doctor. The harbour lights go out and the night begins "
+                    "again from the start: the barn, the farmhouse, the figures standing in the field. "
+                    "Everything is exactly where you left it.",
+    'port_remix_3': "The long road again, the golf course and the lodge. The doctor is reading out the "
+                    "scores now.",
+    'port_remix_5': "The front line, the cattle in the woods, a crate falling out of the dark. You know "
+                    "this part. So does everything else.",
+    'port_remix_7': "The depot, the shotgun, the launcher and the sword. The doctor calls it the interval, "
+                    "and does not stop.",
+    'port_remix_9': "The city's edge: the launcher on the ridge, the titans in the stadium, the scarecrows "
+                    "in their rows.",
+    'port_remix_11': "The foundry, the coil, the machine gun and the doctor's finest work. Over the "
+                     "harbour, the sky is going grey.",
+}
+
+#: The end of each chapter, and of the story, read once the last wave of the arena that ends it is won,
+#: before the completed screen - where the original's challenges play their closing lines.
+EPILOGUES = {
+    'port_survivor': "Morning comes. The woman does not come down from the roof, and you do not climb up to "
+                     "see why. The radio says the road is clear, for now, and wishes you luck in a voice "
+                     "that has never needed any.",
+    'port_biggame': "The lodge burns behind you. On the radio the voice is pleased: the coast is closer "
+                    "than it was, it says, and the weather is turning. It says the weather is turning as "
+                    "though it had arranged it.",
+    'port_last': "The rain stops. The radio does not start again. Whatever the last word was going to be, "
+                 "you did not hear it, and the road to the coast goes on without it.",
+    'port_armory': "You leave the depot by the back gate. There is music on the radio now, and between the "
+                   "songs the voice reads out your name as though it were a score. The city is on the "
+                   "horizon. The coast is beyond it.",
+    'port_riotact': "You cross the bridge. Behind you the city falls quiet, and ahead the docks are dark. "
+                    "The voice says there is one more night to go, and that it has saved the best for last. "
+                    "For the first time, it signs off with a name: Dr. Bastard.",
+    'port_closingtime': "The doors open onto the harbour. The boat is there, engines running, with nobody "
+                        "aboard. On the radio, Dr. Bastard thanks you for a wonderful season and promises a "
+                        "repeat performance. The boat does not leave. It is waiting, he says, for the "
+                        "encore.",
+    'port_remix': "Dawn. The radio stops in the middle of a sentence, and this time it stays stopped. The "
+                  "boat's engines are running and the gangway is down. You walk aboard with whatever you "
+                  "are still carrying, and the boat leaves the coast behind, exactly as promised.",
+}
+
+for _name, _text in STORY.items():
+    PLISTS[_name]['Story'] = _text
+for _name, _text in EPILOGUES.items():
+    PLISTS[_name]['Epilogue'] = _text
+
 
 #: The port's own arenas, gathered into chapters (user request).
 #:

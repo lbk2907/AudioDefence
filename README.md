@@ -959,7 +959,10 @@ replacing them.
   it. Each is read out first on the game's own challenge screen — objective, tip and stars — as the
   selector does for the original's, and none of them says how it is beaten. Between them they use every
   weapon in the armory, every power-up a crate can hold and every kind of zombie; from chapter 4 on some
-  want guns upgraded with diamonds, so a player may have to play Endless before going on.
+  want guns upgraded with diamonds, so a player may have to play Endless before going on. They tell a
+  story, *The Long Way Home*, in text between waves, and end with **Reprise**, every chapter again in one
+  long arena with the weapons changing hands between acts. A death offers a revive for diamonds, which
+  plays the wave again, or a skip to the next wave for ten times as much.
 - **Game controllers**: a DualSense, DualShock, Xbox, Switch Pro or most other pads, in the menus and in
   play, with a stick that turns as fast as it is pushed, vibration for the heartbeat, hits, kills,
   explosions and your death, the phone's shake, and a DualSense's triggers that feel like a gun, each at

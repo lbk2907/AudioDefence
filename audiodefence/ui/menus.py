@@ -525,7 +525,11 @@ class InfoScreen(ViewControllerScreen):
             self.info_text_view.label = localization.translate(
                 'These arenas are not from the original game. They were made for this version, and '
                 'Dr. Bastard has had a long time to think about them.\n \nNone of them tells you how it is '
-                'won. Survive one and the next opens. Earn enough stars, and another chapter is waiting.')
+                'won. Survive one and the next opens. Earn enough stars, and another chapter is waiting.\n \n'
+                'They tell a story, The Long Way Home, in text: now and then a wave waits while a part of it '
+                'is read, and goes on when you do.\n \nA death need not be the end of an arena. Diamonds buy '
+                'a revive, which plays the wave again, or, for ten times as much, a skip to the next wave, '
+                'though never past the last.')
         # [[self view] bringSubviewToFront:statusBar view] does not change the reading order
 
     def continue_button_pressed(self) -> None:            # continueButtonPressed: 0x100039f94
