@@ -60,7 +60,21 @@ class ADSound:
         self.started_main_menu_music = False
         self.sound_was_playing = False
         self.sound = None
-        self.set_state(1 if self.spawn_time != 0.0 else 0)
+        # PORT DIVERGENCE: `initWithDictionary:` 0x1000b2d68 is `set_state(1 if spawn_time != 0 else 0)`,
+        # and asks the wrong question of a line a player wrote.  State 1 is "its clock is running" and state
+        # 0 is "parked until something triggers it" - `checkSpawnOnStart:` 0x1000a19fc and
+        # `checkEnemiesSpawnAfterKill:` 0x1000a20ac move a sound out of 0, `update` 0x1000b3914 has no
+        # branch for it at all, and `ignoreIfSkipped` parks a sound by putting it back there.  So a sound
+        # at 0 seconds with nothing to wait for is parked for ever, and a blocker that never plays holds
+        # its wave for ever with it.
+        #
+        # In the original's own data the two questions are the same question, so this is not a bug there:
+        # all 131 scripted sounds in the game's plists were counted, and every one of them either names a
+        # `spawn_after` and has no `spawn_time` (30 of them) or has a non-zero `spawn_time` and nothing to
+        # wait for (101).  None is in the gap, so this changes the state of none of them.  A player's
+        # cutscene *is* in the gap - "at the start" is what a line usually wants, and `game/custom.py`
+        # writes `at: 0` for it - so the question asked here is the one that was meant.
+        self.set_state(0 if self.spawn_after is not None else 1)
         self.init_sound()
 
     @property
