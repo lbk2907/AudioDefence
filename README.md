@@ -443,7 +443,7 @@ three, `pyobjc-framework-cocoa` takes the place of `comtypes` and
     uv run compiler.py
 
 or double-click `compiler.command`. It is the same compiler with the same
-menu and flags, less the one-file build, which on a Mac would unpack itself
+menu and flags, less the one-file builds, which on a Mac would unpack itself
 on every launch. It leaves `dist/AudioDefence` holding `AudioDefence.app`,
 readme.html, changelog.txt and license.txt, and zips it into
 `dist/AudioDefenceMac-<version>.zip`, keeping the app's links and execute
@@ -1447,14 +1447,14 @@ Then **double-click `compiler.py`** in Explorer, or type `py compiler.py` on
 its own. It asks which build you want:
 
     1. Release build: file the changelog under the version, build, zip, then build the Android app
-    2. Test build: build, zip, then run it for ten seconds and check its log
+    2. Android build: the Android app alone, leaving the changelog as it is
     3. Build without the zip
-    4. Clean build: empty PyInstaller's cache first, for when a build behaves oddly
-    5. Build with a console window, to see why the game will not start
-    6. One-file build: a single executable instead of a folder
-    7. Build without the game's data
-    8. Show what a release build would do, without building anything
-    9. Android build: the Android app alone, leaving the changelog as it is
+    4. One-file build, zipped, as a release: the changelog filed, then the Android app too
+    5. One-file build without the zip
+    6. Build without the game's data
+    7. Show what a release build would do, without building anything
+    8. Clean build: empty PyInstaller's cache first, for when a build behaves oddly
+    9. Build with a console window, to see why the game will not start
     0. Quit
 
 Type the number and press Enter. A choice that makes the Android app asks
@@ -1473,14 +1473,14 @@ alone, with nothing beside it and in no zip. It needs the tools listed under
 *Building the app* in [On Android](#on-android), and the app's key
 (*A release*, there). If any of them is missing, the game is
 still built and zipped, and the build ends by saying the APK was not made and
-why. Choice 9, *Android build*, makes the APK alone, without touching the
+why. Choice 2, *Android build*, makes the APK alone, without touching the
 changelog; with no key it makes a test build,
 `dist\AudioDefence-Android-<version>-TEST.apk`, which cannot install over a
 release.
 
-Each choice is one of the options in the table below, and they still work typed
-out — `py compiler.py --test` builds straight away with no menu. `--key` is
-typed only: the menu asks for it. Run with no
+Each choice is one or two of the options in the table below, and they still
+work typed out — `py compiler.py --no-package` builds straight away with no
+menu. Two are typed only: `--test`, and `--key`, which the menu asks for. Run with no
 options and nothing to type into — from a script — it goes straight to the
 release build.
 
@@ -1495,7 +1495,7 @@ is no cross-compiling to another system.
 
 | option | what it does |
 |---|---|
-| `--onefile` | one executable instead of one folder — see below before you reach for it. |
+| `--onefile` | one executable instead of one folder — see below before you reach for it. On its own it is a release, as the plain build is: the changelog filed, zipped, and the Android app too |
 | `--no-game` | do not copy the game's data; the build then needs `--game PATH` to find it |
 | `--console` | keep a console window beside the game, where a failed start-up prints its traceback |
 | `--clean` | empty both of PyInstaller's working places first — this project's `build\` folder and the shared cache in `%LOCALAPPDATA%\pyinstaller` — when a rebuild behaves oddly. `dist\` is untouched, and so is everything in the repository |
@@ -1530,7 +1530,7 @@ In order:
   have.
 
 The release build — choice 1, or `py compiler.py` with no options from a
-script — does three things to the repository before it copies anything:
+script, and the one-file release, choice 4 — does three things to the repository before it copies anything:
 
 - the lines under `unrelease:` move to the entry headed exactly as `VERSION`
   says, build number and all: `26.09.21-1:`. If that entry is already there —
@@ -1549,12 +1549,12 @@ Nothing under `unrelease:` means nothing is moved and the repository's
 changelog is not touched. Building twice without committing is harmless: the
 second build finds `unrelease:` already empty.
 
-**Every other choice** — the test build, the clean build, the build without
-the zip and the rest, or any of their options typed out — leaves the changelog
+**Every other choice** — the clean build, the build without the zip and the
+rest, and the test build typed out, or any of their options typed out — leaves the changelog
 exactly as it is, because those builds are for trying something, not for
 releasing it, and they end by saying there is no need to commit. If such a
 build is zipped, it says so: its changelog still opens with `unrelease:`.
-Choice 8, *Show what a release build would do*, reads out what the release
+Choice 7, *Show what a release build would do*, reads out what the release
 build would do to the changelog without writing anything.
 
 `VERSION` is **`YY.MM.DD-XX`**: last two digits of the year, month, day, and

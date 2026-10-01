@@ -2,16 +2,17 @@
 
 Double-click this file, or run py compiler.py with nothing after it, and it offers a numbered menu of
 builds, then waits for Enter at the end so you can hear how it went.  Its first choice is the release
-build.  Every other choice is one of these flags, which still work typed out:
+build.  Every other choice is one of these flags, or two of them, and they still work typed out:
 
-    py compiler.py --test         build, then start the result and check its log
+    py compiler.py --android      the Android app alone, leaving the changelog as it is
     py compiler.py --no-package   the folder alone, without the release zip
-    py compiler.py --clean        empty PyInstaller's cache first
-    py compiler.py --console      keep a console window, to see why the game will not start
-    py compiler.py --onefile      a single executable instead (unpacks itself at every launch)
+    py compiler.py --onefile      a single executable instead (unpacks itself at every launch); on its own
+                                  it is a release, as the plain build is
     py compiler.py --no-game      leave the game's data out
     py compiler.py --dry-run      say what a build would do, build nothing
-    py compiler.py --android      the Android app alone, leaving the changelog as it is
+    py compiler.py --clean        empty PyInstaller's cache first
+    py compiler.py --console      keep a console window, to see why the game will not start
+    py compiler.py --test         build, then start the result and check its log (typed only: not in the menu)
     py compiler.py --key PATH     sign the Android app with the key at PATH (typed only: the menu asks)
 
 A build makes one folder, dist\\AudioDefence, with the game's data copied in, and ends by zipping it into
@@ -869,8 +870,9 @@ def main(argv=None) -> int:
         say('--onefile is not offered on the Mac: a one-file app unpacks itself at every launch, which costs '
             'tens of seconds there, and an .app is one thing to double-click already.')
         return 2
-    # a plain build is a release: only then is the changelog filed under the version
-    flagged = any((args.onefile, args.no_game, args.console, args.clean, args.test, args.no_package))
+    # a plain build is a release, as is a one-file build zipped: only then is the changelog filed under the
+    # version (user request, 2026-10-01: one-file was a try-out build until then)
+    flagged = any((args.no_game, args.console, args.clean, args.test, args.no_package))
     plain = not flagged and not args.dry_run
 
     found = problems_now()
@@ -994,16 +996,16 @@ def commit_notice(changed: list) -> str:
 # the flags.  Each choice is exactly one of the command lines below, so the two can never disagree; the
 # flags still work as they always have for anyone typing them.
 
-MENU = (
+MENU = (                                                # in this order at the user's request, 2026-10-01
     ('Release build: file the changelog under the version, build, zip, then build the Android app', []),
-    ('Test build: build, zip, then run it for ten seconds and check its log', ['--test']),
+    ('Android build: the Android app alone, leaving the changelog as it is', ['--android']),
     ('Build without the zip', ['--no-package']),
-    ("Clean build: empty PyInstaller's cache first, for when a build behaves oddly", ['--clean']),
-    ("Build with a console window, to see why the game will not start", ['--console']),
-    ('One-file build: a single executable instead of a folder', ['--onefile']),
+    ('One-file build, zipped, as a release: the changelog filed, then the Android app too', ['--onefile']),
+    ('One-file build without the zip', ['--onefile', '--no-package']),
     ("Build without the game's data", ['--no-game']),
     ('Show what a release build would do, without building anything', ['--dry-run']),
-    ('Android build: the Android app alone, leaving the changelog as it is', ['--android']),
+    ("Clean build: empty PyInstaller's cache first, for when a build behaves oddly", ['--clean']),
+    ('Build with a console window, to see why the game will not start', ['--console']),
 )
 if host.MAC:                                            # not offered there: see main()
     MENU = tuple(choice for choice in MENU if '--onefile' not in choice[1])
