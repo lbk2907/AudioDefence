@@ -3107,7 +3107,7 @@ PLISTS['port_closingtime'] = {
 #: the list the overview checks; the first wave's set replaces it before anything is heard.
 #:
 #: It is long - ten to twelve minutes - and one enemy reaching the player ends it, so every act is a little
-#: gentler than the chapter it remembers, and a death offers the revive (`Revive`) and fights the wave again.
+#: gentler than the chapter it remembers, and a death offers the revive, as in every arena of the mode.
 #: It is measured as if there were none.  Nothing here can use a modifier or a second ambience (both are the
 #: challenge's, not a wave's), and nothing that stays is left behind: cows walk off, so they are used, and
 #: no jukebox or machine is, because a passer-by stays for every wave after the one it came in.
@@ -3386,7 +3386,6 @@ PLISTS['port_remix'] = {
                 {'name': 'banjo'}, {'name': 'prod'}, {'name': 'claymore'}, {'name': 'wok'}, {'name': 'golf'}],
     'bricks': ['port_remix_%d' % i for i in range(1, 13)],
     'ambient': {'ambientPlaylist': 'ambient_arena', 'gain': 0.5},
-    'Revive': True,
     'time_limit_star': {'reward': 800, 'objective': 840},
     'accuracy_star': {'reward': 800, 'objective': 55},
 }

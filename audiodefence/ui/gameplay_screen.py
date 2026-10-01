@@ -308,11 +308,18 @@ class ReviveScreen(AccessibleScreen):
         v = View('', (0, 0, 568, 320), accessible=False, name='#113')
         box = View('', (0, 0, 568, 320), accessible=False, parent=v, name='#15/#44')
         tip = self.revive.tip or ''                       # tipTextView (ADChallengeDescription #25)
-        self.tip_view = View(tip, (105, 137, 359, 104), parent=box, name='#25')
+        frame = (105, 87, 359, 104) if self.revive.skip_cost is not None else (105, 137, 359, 104)   # Skip
+        self.tip_view = View(tip, frame, parent=box, name='#25')
         self.tip_view.hidden = not tip
         self.revive_button = Button(self.revive.revive_label, (99, 251, 164, 50), parent=box,
                                     actions=[self._revive], name='#8')
         self.revive_button.enabled = self.revive.revive_enabled       # viewWillAppear: setEnabled:NO
+        if self.revive.skip_cost is not None:
+            # PORT ADDITION: the Extra mode's dearer choice (ReviveController.skip_button_pressed), between
+            # the two the original has, which keep their places.
+            self.skip_button = Button('Skip this wave for %i diamonds' % self.revive.skip_cost,
+                                      (99, 195, 372, 50), parent=box, actions=[self._skip], name='skip')
+            self.skip_button.enabled = self.revive.skip_enabled
         Button('Game over', (306, 251, 165, 50), parent=box, actions=[self.revive.game_over_button_pressed],
                name='#80')
         self.roots = [v]
@@ -320,5 +327,9 @@ class ReviveScreen(AccessibleScreen):
     def _revive(self) -> None:
         if not self.revive.revive_button_pressed():
             self.host.show_no_diamonds_alert()            # -[ADNoBarViewController showNoDiamondsAlert] 0x100019990
+
+    def _skip(self) -> None:
+        if not self.revive.skip_button_pressed():
+            self.host.show_no_diamonds_alert()
 
     # REMOVED (user request): the magic tap 0x100021cb4 pressed Game over, ending the run.

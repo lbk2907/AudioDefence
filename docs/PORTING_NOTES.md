@@ -2161,19 +2161,22 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   not immediate: the old gun releases only the playlists nothing new is using.  Checked headless with a
   two-wave arena: the second wave's guns in hand and fired, the revolver carried across still heard, the
   wok's playlist released.
-* PORT ADDITION: a challenge may offer a revive (user request, 2026-10-01).  With `Revive` on the challenge
-  dictionary, a death offers what Endless offers - the revive for diamonds, twice the price each time
-  (`show_revive_view` 0x10005ba78), or the failed screen, which is starting over - where
-  `-[ADEnemy afterAttackSound]` 0x1000605f4 sends every challenge to `gameOver` at once.  The revive is not
-  Endless's, though: `revive` 0x1000c7558 clears the wave and loads the next, which in a challenge is a skip
-  bought with diamonds - past the hardest wave, and from the last one past `challengeIsOver` to wave one
-  again, since the scenario wraps (0x1000c28d8).  A challenge's revive loads the wave died in again from its
-  beginning (`BrickManager.retry_current_brick`), with the weapons it was begun with, fresh: its own
-  `Weapons`, the last set handed over before it, or the challenge's.  It is for the Extra mode's long remix,
-  where one mistake in the last minute should not cost all of it; the original's challenges have no such key
-  and end at the first death as they always did.  Checked headless: three deaths in the second wave of a
-  two-wave arena offered 1, 2 and 4 diamonds, each revive brought the same wave back with the first wave's
-  guns full and read out, and the third, refused, went to the failed screen with 7 of 10 diamonds left.
+* PORT ADDITION: an arena of the Extra mode offers a revive (user request, 2026-10-01).  A death there
+  offers what Endless offers - the revive for diamonds, twice the price each time (`show_revive_view`
+  0x10005ba78), or the failed screen, which is starting over - where `-[ADEnemy afterAttackSound]`
+  0x1000605f4 sends every challenge to `gameOver` at once.  Every arena in `additions.CHAPTERS` has it, so a
+  chapter added later does too; the original's challenges end at the first death as they always did.  The
+  revive is not Endless's, though: `revive` 0x1000c7558 clears the wave and loads the next, which in a
+  challenge is a skip bought with diamonds - past the hardest wave, and from the last one past
+  `challengeIsOver` to wave one again, since the scenario wraps (0x1000c28d8).  Here the revive loads the
+  wave died in again from its beginning (`BrickManager.retry_current_brick`), and the skip is a choice of
+  its own on the same screen, "Skip this wave", at ten times the price and only while a wave follows
+  (`revive_skip_cost`), so a win is never bought.  Either way the wave is fought with the weapons it was
+  begun with, fresh: its own `Weapons`, the last set handed over before it, or the challenge's.  Checked
+  headless with a three-wave arena: a death in the second wave offered a revive for 1 diamond or a skip for
+  10, and the skip went on to the third with the first wave's guns full and read out; deaths in the third
+  offered no skip and revives for 2 and 4, the second refused to the failed screen with 8 of 20 diamonds
+  left; and an arena outside the Extra mode went to the failed screen at the first death, as before.
 * PORT ADDITION: a challenge that names several melees makes only the last.  `initWithChallengeWeaponArray:`
   0x1000a80f4 makes each and keeps the last, releasing the one before as it is replaced - and the playlist
   the released one deactivates has not finished the activation it asked for a moment earlier, so that

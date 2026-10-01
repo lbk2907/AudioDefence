@@ -408,8 +408,10 @@ class WeaponTouchArea(ButtonWithSwipe):
 class ReviveController:
     """ADReviveViewController."""
 
-    def __init__(self, cost: int):                        # -initWithCost: 0x100021168
+    def __init__(self, cost: int, skip_cost=None):        # -initWithCost: 0x100021168
         self.cost = int(cost)
+        self.skip_cost = None if skip_cost is None else int(skip_cost)   # PORT ADDITION: see
+        self.skip_enabled = True                                         # skip_button_pressed
         self.gameplay_view_controller = None              # weak
         self.revive_stand_by_sound = None
         self.revive_playlist = S3DEngine.engine().play_list_with_name('revive')
@@ -434,15 +436,20 @@ class ReviveController:
         from .inventory import Inventory
         if Inventory.shared().diamonds <= 0:
             self.revive_enabled = False                   # alpha 0.4, setEnabled:NO
+            self.skip_enabled = False
 
-    def revive_button_pressed(self) -> bool:              # 0x1000218a8; False: "no diamonds" alert shown
+    def revive_button_pressed(self, skip: bool = False) -> bool:   # 0x1000218a8; False: "no diamonds" alert
         from .inventory import Inventory
         inv = Inventory.shared()
-        if not inv.diamonds >= self.cost:
+        cost = self.skip_cost if skip else self.cost
+        if not inv.diamonds >= cost:
             return False
-        self.gameplay_view_controller.revive()
-        inv.set_diamonds(inv.diamonds - self.cost)
-        Tracker.shared().revive_used_with_cost(self.cost)
+        if skip:
+            self.gameplay_view_controller.revive(skip=True)
+        else:
+            self.gameplay_view_controller.revive()
+        inv.set_diamonds(inv.diamonds - cost)
+        Tracker.shared().revive_used_with_cost(cost)
         notify_stats('RESET_BRICK_TIME', None)
         if self.revive_stand_by_sound is not None:
             self.revive_stand_by_sound.stop()
@@ -452,6 +459,13 @@ class ReviveController:
             pl = self.revive_playlist
             yes.add_3d_sound_end_callback(lambda _s: pl.deactivate())
         return True
+
+    def skip_button_pressed(self) -> bool:
+        """PORT ADDITION (user request, 2026-10-01): in an arena of the Extra mode the revive replays the wave
+        died in, and this, for `ChallengeGameplayController.REVIVE_SKIP_FACTOR` times its price, goes on to
+        the next wave instead - offered only while there is a next wave, so a win is never bought.  It is
+        the revive in every other way: the same sounds, the same price doubling after it."""
+        return self.revive_button_pressed(skip=True)
 
     def game_over_button_pressed(self) -> None:           # 0x100021b3c
         Tracker.shared().game_over_button_pressed()
@@ -738,7 +752,7 @@ class GameplayController:
         AmbientManager.shared().stop_ambient()
         free = GameModifiers.shared().times('freeRevive')   # PORT DIVERGENCE: one a card, not one a hand
         cost = int(math.ldexp(1.0, self.nb_revives - free))
-        self.revive_view_controller = ReviveController(cost)
+        self.revive_view_controller = ReviveController(cost, self.revive_skip_cost(cost))
         self.revive_view_controller.gameplay_view_controller = self
         self.revive_view_controller.view_did_load()
         self.revive_view_controller.view_will_appear()
@@ -746,7 +760,12 @@ class GameplayController:
             self.host.present_revive(self.revive_view_controller)
         self.nb_revives = self.nb_revives + 1
 
-    def revive(self) -> None:                             # 0x10005bec0
+    def revive_skip_cost(self, cost: int):
+        """PORT ADDITION: what skipping the wave costs instead of replaying it, or None where it is not
+        offered - Endless, which goes on to the next wave whatever (see the challenge's)."""
+        return None
+
+    def revive(self, skip: bool = False) -> None:         # 0x10005bec0
         InGameStats.singleton().set_combo(10)
         self.update_score_view_with_animation(False)
         self.death_overlay_visible = False
@@ -754,7 +773,7 @@ class GameplayController:
             self.host.dismiss_revive()
         self.revive_view_controller = None
         self.paused = False
-        BrickManager.shared().revive()
+        BrickManager.shared().revive(skip)
         self.init_ambiant_manager()
 
     def game_over(self) -> None:                          # 0x10005c10c
@@ -981,13 +1000,27 @@ class ChallengeGameplayController(GameplayController):
         self.weapon_manager = WeaponManager.with_challenge_weapon_array(self.challenge_dictionary.get('weapons'))
         self._attach_touch_objects()
 
+    #: PORT ADDITION: how many times a revive's price skipping the wave costs instead (user request, "5X or
+    #: 10X" - ten, so that a skip stays the exception it is meant to be)
+    REVIVE_SKIP_FACTOR = 10
+
     def allows_revive(self) -> bool:
-        """PORT ADDITION (user request, 2026-10-01): a challenge with `Revive` offers the revive that Endless
+        """PORT ADDITION (user request, 2026-10-01): an arena of the Extra mode offers the revive that Endless
         offers when the player dies - for diamonds, twice the price each time (`show_revive_view`) - or the
-        failed screen, which is starting over.  The original's challenges have no such key and end at the
-        first death, as they always did.  It is for an arena long enough that one mistake in its last minute
-        should not cost all of it; the wave died in is fought again (`BrickManager.retry_current_brick`)."""
-        return bool((self.challenge_dictionary or {}).get('Revive'))
+        failed screen, which is starting over.  The original's challenges end at the first death, as they
+        always did.  The revive replays the wave died in (`BrickManager.retry_current_brick`); skipping it
+        instead costs more (`revive_skip_cost`).  Every arena in `additions.CHAPTERS` is the Extra mode's, so
+        a chapter added later has it too."""
+        from .additions import chapter_of
+        return chapter_of(self.get_challenge_id()) is not None
+
+    def revive_skip_cost(self, cost: int):
+        """PORT ADDITION: skipping the wave died in costs REVIVE_SKIP_FACTOR revives, and is offered only
+        while a wave follows it - from the last, a skip would be the win itself, bought."""
+        bm = BrickManager.shared()
+        if not self.allows_revive() or bm.current_wave >= len(bm.brick_scenario or []):
+            return None
+        return cost * self.REVIVE_SKIP_FACTOR
 
     def hand_over_weapons(self, entries: list, announce: bool = True) -> None:
         """PORT ADDITION (user request): a wave of a challenge that carries its own `Weapons` - a list in the
