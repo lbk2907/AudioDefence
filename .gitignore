@@ -34,12 +34,11 @@ vendor/build-openal/
 # A language being written: tools/make_language.py writes it, its author renames it when it is ready
 localization/template.json
 
-# Android (android/): Gradle's and Android Studio's own files (its build/ folders are build/ above), the APKs
-# android/ci/build.sh leaves in out/, and what android/app/build.gradle copies in before each build from the
-# repository's own audiodefence, game, assets/hrtf, localization and VERSION - never committed, one copy each
+# Android (android/): Gradle's and Android Studio's own files (its build/ folders are build/ above), any APK,
+# and what android/app/build.gradle copies in before each build from the repository's own audiodefence,
+# game, assets/hrtf, localization and VERSION - never committed, one copy each
 android/.gradle/
 android/local.properties
-android/out/
 android/**/*.apk
 android/app/src/main/python/
 android/app/src/main/assets/

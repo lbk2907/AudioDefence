@@ -35,10 +35,10 @@ android {
         ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
     }
 
-    // The release is signed with the project's own permanent key, which the build gets from the repository's
-    // SIGNING_KEY secret (ci/build.sh puts it in a file and names it in AD_KEYSTORE).  Every release has to be
-    // signed with this same key, or Android refuses to install it over the one a player already has.  The
-    // key file itself is the secret; the password below only opens it.
+    // The release is signed with the project's own permanent key: AD_KEYSTORE names the key file (a .p12)
+    // when a release is built.  Every release has to be signed with this same key, or Android refuses to
+    // install it over the one a player already has.  The key file itself is the secret; the password below
+    // only opens it.
     signingConfigs {
         release {
             def keystore = System.getenv('AD_KEYSTORE')

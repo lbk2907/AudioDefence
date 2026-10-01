@@ -516,26 +516,27 @@ Hold the phone sideways; the whole screen is the touch area.
 
 ### Building the app
 
-The easy way needs nothing installed: `.github/workflows/android.yml` builds the
-app on GitHub. It runs when a push changes the game, or by hand from the
-Actions tab (**Build the Android APK → Run workflow**), takes fifteen to thirty
-minutes, and leaves the APK under the run's **Artifacts**, in `AudioDefence-Android`. With a repository
-secret called `SIGNING_KEY` holding the app's signing key, it builds the
-release, `AudioDefence.apk`; without one, only a test build that cannot install
-over a release. Every release has to be signed with the same key, or phones
-refuse to install it over the one they have: keep the key somewhere safe and
-private, and hand it on with the project.
-
-To build it yourself you need Java 17 (a JDK), Python 3.12 beside whatever
-Python you play with (`py install 3.12`), the Android SDK with
-`platforms;android-35`, `build-tools;35.0.0` and `platform-tools` (set
-`ANDROID_HOME` to it), and Gradle 8.13. Then, in `android/`:
+You need Java 17 (a JDK), Python 3.12 beside whatever Python you play with
+(`py install 3.12`), the Android SDK with `platforms;android-35`,
+`build-tools;35.0.0` and `platform-tools` (set `ANDROID_HOME` to it), and
+Gradle 8.13. Then, in `android/`:
 
     gradle assembleDebug
 
 The build copies `audiodefence/` and `game/` into the app itself, so there is
 nothing to copy by hand, and leaves `app/build/outputs/apk/debug/app-debug.apk`.
 With USB debugging on, `adb install app-debug.apk` puts it on the phone.
+
+That is a test build, signed with a key Android makes for each computer, and it
+cannot install over a release. A release is signed with the app's own key, the
+same one every time, or phones refuse to install it over the one they have:
+set `AD_KEYSTORE` to that key file (a `.p12`) and build with
+
+    gradle assembleRelease
+
+which leaves `app/build/outputs/apk/release/app-release.apk` — give it to
+players as `AudioDefence.apk`. Keep the key somewhere safe and private, and
+hand it on with the project.
 
 ## Controls
 
