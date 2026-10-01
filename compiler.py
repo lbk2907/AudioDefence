@@ -12,6 +12,7 @@ build.  Every other choice is one of these flags, which still work typed out:
     py compiler.py --no-game      leave the game's data out
     py compiler.py --dry-run      say what a build would do, build nothing
     py compiler.py --android      the Android app alone, leaving the changelog as it is
+    py compiler.py --key PATH     sign the Android app with the key at PATH (typed only: the menu asks)
 
 A build makes one folder, dist\\AudioDefence, with the game's data copied in, and ends by zipping it into
 dist\\AudioDefence-Win-<VERSION>.zip, which is what a release's asset is and what the updater reads.
@@ -28,10 +29,12 @@ keyboard (from a script), it is the release build straight away, without the men
 
 The release build ends by building the Android app from the same VERSION, with Gradle in android\\, and
 puts it in dist as AudioDefence-Android-<VERSION>.apk, the name the app's updater looks for on a release.
-It is signed with the project's key, the .p12 file AD_KEYSTORE names; with no key, or with the Android
-tools missing, the release build makes no APK and says why, and the game's own build is unaffected.
---android builds the app alone, with the same key, or without one as a test build:
-dist\\AudioDefence-Android-<VERSION>-TEST.apk, which cannot install over a release.
+It is signed with a release key: the one --key names, or else the one AD_KEYSTORE names, or else the only
+key in C:\\Android\\keys (tools\\android_keys.py makes them, and chooses which AD_KEYSTORE names).  From the
+menu the compiler asks where the key is, offering that one.  With no key, or with the Android tools missing,
+the release build makes no APK and says why, and the game's own build is unaffected.  --android builds the
+app alone, with the same key, or without one as a test build: dist\\AudioDefence-Android-<VERSION>-TEST.apk,
+which cannot install over a release.
 
 The port, the HRTF, the vendored DLLs and the version - read from VERSION in the repository - go inside
 the build; the game's own files do not - they are copied next to the executable, where
@@ -613,6 +616,13 @@ ANDROID_PLATFORM = 'android-35'
 ANDROID_PYTHON = '3.13'
 #: the Android plugin runs on nothing older than Java 17, and Gradle 8.13 on nothing newer than 23
 JAVA_RANGE = (17, 23)
+#: where the README has the Android SDK and Gradle unzipped, and where tools/android_keys.py keeps the keys
+ANDROID_TOOLS = r'C:\Android' if host.WINDOWS else os.path.expanduser('~/Android')
+KEYS = os.path.join(ANDROID_TOOLS, 'keys')
+#: the two tools that ready a computer, which the messages below send you to: the setup (ANDROID_HOME, the
+#: SDK's parts, the first build's fetch) and the signing keys
+SETUP, KEY_TOOL = (('py tools\\android_setup.py', 'py tools\\android_keys.py') if host.WINDOWS else
+                   ('uv run tools/android_setup.py', 'uv run tools/android_keys.py'))
 
 
 def apk_name(version: str, signed: bool) -> str:
@@ -622,12 +632,16 @@ def apk_name(version: str, signed: bool) -> str:
 
 
 def find_gradle() -> str:
-    """Gradle: on the PATH, or else unzipped under C:\\Gradle as the README says (the newest there)."""
-    found = shutil.which('gradle')
-    if found or not host.WINDOWS:
-        return found or ''
-    unzipped = glob.glob(r'C:\Gradle\gradle-*\bin\gradle.bat')
-    return max(unzipped, key=lambda p: [int(n) for n in re.findall(r'\d+', p)]) if unzipped else ''
+    """Gradle: unzipped into C:\\Android as the README says, or else into C:\\Gradle, where the README once
+    had it (the newest in either), or else on the PATH."""
+    places = [os.path.join(ANDROID_TOOLS, 'gradle-*', 'bin', 'gradle.bat' if host.WINDOWS else 'gradle')]
+    if host.WINDOWS:
+        places.append(r'C:\Gradle\gradle-*\bin\gradle.bat')
+    for place in places:
+        unzipped = glob.glob(place)
+        if unzipped:
+            return max(unzipped, key=lambda p: [int(n) for n in re.findall(r'\d+', os.path.dirname(p))])
+    return shutil.which('gradle') or ''
 
 
 def find_java() -> str:
@@ -653,30 +667,74 @@ def java_major(java: str) -> int:
     return int(found.group(2) or 0) if major == 1 else major
 
 
-def has_android_python() -> bool:
-    """Whether Chaquopy will find the Python it builds the app's own with, where it looks for it: py -3.13
-    on Windows, python3.13 elsewhere."""
+def android_python() -> str:
+    """The python.exe Chaquopy builds the app's own Python with - py -3.13's on Windows, python3.13's
+    elsewhere - or '' when there is none.  It is handed to Gradle (-PbuildPython), because Chaquopy's own
+    search did not find it from inside Gradle."""
     cmd = ['py', '-' + ANDROID_PYTHON] if host.WINDOWS else ['python' + ANDROID_PYTHON]
     try:
-        return subprocess.run(cmd + ['--version'], capture_output=True, stdin=subprocess.DEVNULL,
-                              timeout=60).returncode == 0
+        run = subprocess.run(cmd + ['-c', 'import sys; print(sys.executable)'], capture_output=True, text=True,
+                             stdin=subprocess.DEVNULL, timeout=60)
     except (OSError, subprocess.SubprocessError):
-        return False
+        return ''
+    return run.stdout.strip() if run.returncode == 0 else ''
 
 
-def release_key() -> tuple[str, str]:
-    """The project's key, the file AD_KEYSTORE names; or '' and why there is none to sign with."""
+def gradle_command(task: str) -> list:
+    """Gradle running task in android/, given the Python to build the app's own with."""
+    python = android_python()
+    return [find_gradle(), task, '--console=plain'] + (['-PbuildPython=' + python] if python else [])
+
+
+def android_fetched() -> bool:
+    """Whether a build has fetched what the first one fetches - Gradle's plugins, Chaquopy, Python for
+    Android, numpy - into Gradle's cache, so that the next build takes minutes rather than twenty."""
+    home = os.environ.get('GRADLE_USER_HOME') or os.path.join(os.path.expanduser('~'), '.gradle')
+    return os.path.isdir(os.path.join(home, 'caches', 'modules-2', 'files-2.1', 'com.chaquo.python'))
+
+
+def remembered_key() -> tuple[str, str]:
+    """The release key to offer: the file AD_KEYSTORE names, or else the only key in C:\\Android\\keys; or ''
+    and why there is none."""
     path = os.environ.get('AD_KEYSTORE', '').strip()
-    if not path:
-        return '', 'AD_KEYSTORE is not set'
-    if not os.path.isfile(path):
-        return '', 'AD_KEYSTORE names %s, which is not there' % path
-    return path, ''
+    if path:
+        return (path, '') if os.path.isfile(path) else ('', 'AD_KEYSTORE names %s, which is not there' % path)
+    keys = sorted(glob.glob(os.path.join(KEYS, '*.p12')))
+    if len(keys) == 1:
+        return keys[0], ''
+    if keys:
+        return '', ('there are %d keys in %s and AD_KEYSTORE chooses none of them: choose one with %s'
+                    % (len(keys), KEYS, KEY_TOOL))
+    return '', 'there is no release key: make one with %s' % KEY_TOOL
 
 
-def android_plan(release: bool) -> tuple[list, list, str, str]:
+def release_key(given: str = '') -> tuple[str, str]:
+    """The key to sign with: the one given (--key, or typed at the menu's question), or else the remembered
+    one; or '' and why there is none."""
+    if given:
+        return (given, '') if os.path.isfile(given) else ('', 'there is no key at %s' % given)
+    return remembered_key()
+
+
+def ask_key() -> str:
+    """The menu's question before a build that makes a release APK: where the key is, Enter for the
+    remembered one.  Returns the path, or '' for none."""
+    offered, why = remembered_key()
+    say('Where is your signing key?')
+    while True:
+        try:
+            typed = input('Press Enter for %s, or type the path to another: ' % offered if offered else
+                          'Type its path, or press Enter to go on without one (%s): ' % why).strip().strip('"')
+        except EOFError:
+            typed = ''
+        if not typed or os.path.isfile(typed):
+            return typed or offered
+        say('There is no file at %s.' % typed)
+
+
+def android_plan(release: bool, given: str = '') -> tuple[list, list, str, str]:
     """What would stop the Android build and what might, in plain words, with the key it would sign with
-    and why there is none.  The release build makes no APK without the key, rather than one a player's
+    and why there is none - given being the key --key or the menu named.  The release build makes no APK without the key, rather than one a player's
     phone could not update from.  "Building the app" under On Android in the README says how to install
     each tool."""
     found, doubts = [], []
@@ -694,28 +752,26 @@ def android_plan(release: bool) -> tuple[list, list, str, str]:
                           'set JAVA_HOME to a JDK %d to %d' % ((major,) + JAVA_RANGE))
     sdk = os.environ.get('ANDROID_HOME', '').strip()
     if not sdk:
-        found.append('ANDROID_HOME is not set: it names the Android SDK, %s'
-                     % ('setx ANDROID_HOME C:\\Android' if host.WINDOWS else 'export ANDROID_HOME=~/Android'))
+        found.append('ANDROID_HOME is not set: it names the Android SDK, and %s sets it' % SETUP)
     elif not os.path.isdir(os.path.join(sdk, 'platforms', ANDROID_PLATFORM)):
-        found.append('the Android SDK in ANDROID_HOME, %s, has no platforms%s%s: sdkmanager "platforms;%s" '
-                     '"build-tools;35.0.0"' % (sdk, os.sep, ANDROID_PLATFORM, ANDROID_PLATFORM))
-    if not has_android_python():
+        found.append('the Android SDK in ANDROID_HOME, %s, has no platforms%s%s: %s fetches it'
+                     % (sdk, os.sep, ANDROID_PLATFORM, SETUP))
+    if not android_python():
         found.append('Python %s is not there for Chaquopy to build the app\'s own Python with: %s'
                      % (ANDROID_PYTHON, 'py install ' + ANDROID_PYTHON if host.WINDOWS
                         else 'brew install python@' + ANDROID_PYTHON))
     if not find_gradle():
-        found.append('Gradle is not on the PATH' + (', nor unzipped under C:\\Gradle' if host.WINDOWS else ''))
-    key, no_key = release_key()
+        found.append('Gradle is not unzipped in %s, nor on the PATH' % ANDROID_TOOLS)
+    key, no_key = release_key(given)
     if release and not key:
-        found.append("%s, and a release APK has to be signed with the project's own key: set AD_KEYSTORE to "
-                     "the key file (A release, under On Android in the README), or choose the Android build "
-                     "for a test APK" % no_key)
+        found.append("%s, and a release APK has to be signed with the project's own key (A release, under "
+                     "On Android in the README), or choose the Android build for a test APK" % no_key)
     return found, doubts, key, no_key
 
 
-def describe_android(release: bool) -> None:
+def describe_android(release: bool, given: str = '') -> None:
     """What build_android would do, for --dry-run."""
-    found, doubts, key, no_key = android_plan(release)
+    found, doubts, key, no_key = android_plan(release, given)
     for doubt in doubts:
         say('warning: ' + doubt)
     if found:
@@ -729,12 +785,12 @@ def describe_android(release: bool) -> None:
            '' if key else ' - a test build, because ' + no_key))
 
 
-def build_android(release: bool) -> tuple[int, str]:
+def build_android(release: bool, given: str = '') -> tuple[int, str]:
     """Build the Android app with Gradle and put the APK in dist.  Returns the exit status, and the line the
     build's summary gives it: where the APK is, or that it was not made and why."""
     say()
     say('building the Android app ...')
-    found, doubts, key, no_key = android_plan(release)
+    found, doubts, key, no_key = android_plan(release, given)
     for doubt in doubts:
         say('  warning: ' + doubt)
     if found:
@@ -745,18 +801,22 @@ def build_android(release: bool) -> tuple[int, str]:
         return (0 if release else 2), ('the Android app was not made: %s - see above.'
                                        % '; '.join(problem.split(': ')[0] for problem in found))
     env = dict(os.environ)
-    if not key:
+    if key:
+        env['AD_KEYSTORE'] = key                        # what android/app/build.gradle signs with
+        say('  signing it with %s.' % key)
+    else:
         env.pop('AD_KEYSTORE', None)                    # a test build signs with this computer's own key
         say("  %s, so this is a test build, signed with this computer's own key: it cannot install over a "
             "release, nor a release over it." % no_key)
     task, kind = ('assembleRelease', 'release') if key else ('assembleDebug', 'debug')
     # what android/app/build.gradle calls the build too: VERSION, or today's first release without one
     version = build_version() or first_version()
-    say('running: gradle %s, in android.  The first build fetches its tools and takes ten to twenty minutes.'
-        % task)
+    say('running: gradle %s, in android.%s' % (task, '' if android_fetched() else
+                                                 '  The first build fetches its tools and takes ten to twenty '
+                                                 'minutes.'))
     started = time.perf_counter()
     try:
-        failed = subprocess.run([find_gradle(), task, '--console=plain'], cwd=ANDROID, env=env).returncode != 0
+        failed = subprocess.run(gradle_command(task), cwd=ANDROID, env=env).returncode != 0
     except OSError as error:
         say('Gradle would not start: %s' % error)
         failed = True
@@ -791,13 +851,15 @@ def main(argv=None) -> int:
     parser.add_argument('--dry-run', action='store_true', help='print what would be done, build nothing')
     parser.add_argument('--android', action='store_true',
                         help='build the Android app alone, and leave the changelog as it is')
+    parser.add_argument('--key', metavar='PATH', default='',
+                        help='sign the Android app with the key at PATH, rather than the one AD_KEYSTORE names')
     args = parser.parse_args(argv)
     os.chdir(HERE)                                      # the paths above are relative to the project
     if args.android:                                    # nothing of the desktop's: the other flags are its
         if args.dry_run:
-            describe_android(release=False)
+            describe_android(release=False, given=args.key)
             return 0
-        status, line = build_android(release=False)
+        status, line = build_android(release=False, given=args.key)
         say()
         say(line)
         say()
@@ -870,7 +932,7 @@ def main(argv=None) -> int:
             for warning in release_warnings(os.path.join(HERE, 'changelog.txt')):
                 say('before releasing: ' + warning)
         else:
-            describe_android(release=True)
+            describe_android(release=True, given=args.key)
         return 0
 
     started = time.perf_counter()
@@ -904,7 +966,7 @@ def main(argv=None) -> int:
             say('before releasing: ' + warning)
         package(dest_root)
     # the release's APK, from the VERSION just filed; the game's build stands whatever becomes of it
-    android = build_android(release=True) if plain else None
+    android = build_android(release=True, given=args.key) if plain else None
 
     exe = executable(dest_root, args)
     say()
@@ -947,6 +1009,12 @@ if host.MAC:                                            # not offered there: see
     MENU = tuple(choice for choice in MENU if '--onefile' not in choice[1])
 
 
+def makes_apk(flags: list) -> bool:
+    """Whether a menu choice builds the Android app: the Android build, and the release builds."""
+    return '--android' in flags or not set(flags) & {'--no-package', '--no-game', '--console', '--clean',
+                                                     '--test', '--dry-run'}
+
+
 def menu() -> list | None:
     """Ask which build.  Returns the flags for it, or None to quit."""
     version = build_version()
@@ -968,6 +1036,10 @@ def menu() -> list | None:
             text, flags = MENU[int(choice) - 1]
             say('%s.' % text.split(':')[0])
             say()
+            if makes_apk(flags):                        # anyone's key, not only the one this computer has
+                key = ask_key()
+                say()
+                return list(flags) + (['--key', key] if key else [])
             return list(flags)
         say('There is no choice "%s". Type a number from 0 to %d.' % (choice, len(MENU)))
 

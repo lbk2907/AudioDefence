@@ -182,11 +182,19 @@ they were.
   of the APK. It is built by hand on a computer, with Gradle 8.13: `gradle assembleDebug` for a test build, or
   `assembleRelease` with `AD_KEYSTORE` naming the project's permanent key for a release - or by `compiler.py`,
   whose release build runs the second after the desktop's and puts `AudioDefence-Android-<version>.apk` in
-  `dist`, and whose `--android` runs either alone (user request, 2026-10-01).  There is no Gradle
-  wrapper, and no GitHub workflow: builds are made by hand (user's choice, 2026-10-01).  The app's version is
-  read from `VERSION` as the build is set up: `versionName` is the tag and `versionCode` its digits as one
-  number, yymmddNN (`26.10.01-1` is 26100101, 99123199 at the most), so each release is newer to Android than
-  the last.  The first builds were fixed at version code 11.
+  `dist`, and whose `--android` runs either alone (user request, 2026-10-01).  `tools/android_setup.py` does
+  the setup a script can - checks the installed tools with the compiler's own checks, sets `ANDROID_HOME`,
+  fetches the SDK's parts and runs the first build for what it fetches - and with `--phone` puts the newest APK
+  in `dist` on a phone with adb, so the README keeps only the downloads and installs (user request,
+  2026-10-01).  `tools/android_keys.py` makes the signing keys in `C:\Android\keys`, with the store type and
+  the default alias and passwords it reads from `build.gradle`, never overwriting one, and chooses which
+  `AD_KEYSTORE` names; the compiler asks where the key is before any build that makes the APK, offering that
+  one, so anybody can build with their own key, and `build.gradle` takes another key's alias and passwords
+  from `AD_KEY_ALIAS`, `AD_KEYSTORE_PASSWORD` and `AD_KEY_PASSWORD` (user request, 2026-10-01).  There is
+  no Gradle wrapper, and no GitHub workflow: builds are made by hand (user's choice, 2026-10-01).  The app's
+  version is read from `VERSION` as the build is set up: `versionName` is the tag and `versionCode` its digits
+  as one number, yymmddNN (`26.10.01-1` is 26100101, 99123199 at the most), so each release is newer to
+  Android than the last.  The first builds were fixed at version code 11.
 * **Starting.**  `MainActivity` unpacks the assets into the app's own files folder the first time and after
   every install or update, then calls `android_main.run`, the phone's main loop - `__main__` with pygame's
   events replaced by the touches the Java side collects (`TouchView`, `Bridge`).

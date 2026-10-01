@@ -86,17 +86,18 @@ android {
 
     // The release is signed with the project's own permanent key: AD_KEYSTORE names the key file (a .p12)
     // when a release is built.  Every release has to be signed with this same key, or Android refuses to
-    // install it over the one a player already has.  The key file itself is the secret; the password below
-    // only opens it.
+    // install it over the one a player already has.  The key file itself is the secret; the passwords below
+    // only open it.  They and the alias are the ones tools/android_keys.py makes every key with; a key made
+    // some other way gives its own in AD_KEY_ALIAS, AD_KEYSTORE_PASSWORD and AD_KEY_PASSWORD.
     signingConfigs {
         release {
             def keystore = System.getenv('AD_KEYSTORE')
             if (keystore) {
                 storeFile file(keystore)
                 storeType 'pkcs12'
-                storePassword 'audiodefence-android'
-                keyAlias 'audiodefence'
-                keyPassword 'audiodefence-android'
+                storePassword System.getenv('AD_KEYSTORE_PASSWORD') ?: 'audiodefence-android'
+                keyAlias System.getenv('AD_KEY_ALIAS') ?: 'audiodefence'
+                keyPassword System.getenv('AD_KEY_PASSWORD') ?: 'audiodefence-android'
             }
         }
     }

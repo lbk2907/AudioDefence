@@ -517,7 +517,9 @@ Hold the phone sideways; the whole screen is the touch area.
 ### Building the app
 
 Everything here is done once, on Windows, in a command prompt, with an internet
-connection and about 5 GB free. Nothing needs Android Studio.
+connection and about 5 GB free. Nothing needs Android Studio. Steps 1 to 4
+are the downloads and installs, done by hand; the two tools in steps 5 and 6
+do the rest.
 
 **1. Python 3.13, for the build.** The game runs on Python 3.14, but the app
 carries a Python of its own inside it, and Chaquopy, which puts it there, has
@@ -531,10 +533,10 @@ other's way:
 
 **2. Java 21.** Either way:
 
-- **From the website:** on
-  [adoptium.net](https://adoptium.net/temurin/releases/?version=21&os=windows&arch=x64&package=jdk),
-  download **Temurin 21 (LTS)**, the **JDK** for **Windows x64**, as the
-  `.msi` installer, and run it. On the page that lists what to install, set
+- **From the website:** on Adoptium's
+  [release page](https://adoptium.net/temurin/releases/), choose the **LTS**
+  version, **21**, for **Windows**, **x64**, the **JDK**, and download the
+  `.msi` installer and run it. On the page that lists what to install, set
   **Set JAVA_HOME variable** to **Will be installed on local hard drive** —
   it is off unless you do.
 - **With winget:**
@@ -544,84 +546,84 @@ other's way:
 In a new command prompt, `java -version` says 21. Java 17 works too, but
 nothing newer than 23: Gradle 8.13 does not run on it.
 
-**3. The Android SDK.** On
+**3. The Android command-line tools.** On
 [developer.android.com/studio](https://developer.android.com/studio), find
 **Command line tools only** and download the zip for Windows. Make the folder
 `C:\Android\cmdline-tools`, unzip the download into it, and rename the folder
 it makes, `cmdline-tools`, to `latest` — so that
-`C:\Android\cmdline-tools\latest\bin\sdkmanager.bat` exists. Then tell Windows
-where it is:
-
-    setx ANDROID_HOME C:\Android
-
-and, in a new command prompt, accept the licences (answer `y` to each) and
-fetch what the app is built with:
-
-    C:\Android\cmdline-tools\latest\bin\sdkmanager --licenses
-    C:\Android\cmdline-tools\latest\bin\sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+`C:\Android\cmdline-tools\latest\bin\sdkmanager.bat` exists.
 
 **4. Gradle 8.13.** From [gradle.org/releases](https://gradle.org/releases/),
-download **v8.13, binary-only**, and unzip it into `C:\Gradle`, so that
-`C:\Gradle\gradle-8.13\bin\gradle.bat` exists. Type that whole path each time,
-or add `C:\Gradle\gradle-8.13\bin` to your **Path** (**Settings → System →
-About → Advanced system settings → Environment Variables**, your user's
-**Path**, **New**) and type `gradle`.
+download **v8.13, binary-only**, and unzip it into `C:\Android`, beside the
+command-line tools, so that `C:\Android\gradle-8.13\bin\gradle.bat` exists.
+(Gradle unzipped into `C:\Gradle`, or on your Path, is found as well.)
 
-**5. Build.** The one-step way is the compiler: double-click `compiler.py`
-and choose **Android build** (or type `py compiler.py --android`). It checks
-that everything above is there, names whatever is not, runs Gradle and puts
-the app in `dist` — see [Building an executable](#building-an-executable). By
-hand instead, in the repository's `android` folder:
+**5. The rest of the setup.** In a new command prompt, in the repository's
+folder:
 
-    gradle assembleDebug
+    py tools\android_setup.py
 
-The first build fetches Android's build tools, Chaquopy, Python for Android
-and numpy, and takes ten to twenty minutes; later ones take a minute or two.
-It copies `audiodefence/` and `game/` into the app by itself, so there is
-nothing to copy by hand. It ends with **BUILD SUCCESSFUL** and leaves the app
-at `android\app\build\outputs\apk\debug\app-debug.apk`.
+It checks steps 1 to 4 and says which is missing; sets `ANDROID_HOME`;
+accepts the Android SDK's licences and fetches the parts the app is built
+with; and runs a first build, which fetches Gradle's plugins, Chaquopy,
+Python for Android and numpy and takes ten to twenty minutes. Each step is
+said as it goes, and a summary at the end says what is ready and what is
+left. Run it again whenever you like: it skips what is done.
 
-**6. Onto the phone.** Copy `app-debug.apk` to the phone and open it there —
-see [Installing it](#installing-it). Or, with the phone on a USB cable: in
-**Settings → About phone**, tap **Build number** seven times to turn on
-**Developer options**; turn on **USB debugging** in them; allow the computer
-when the phone asks; and
+**6. The signing key.**
 
-    C:\Android\platform-tools\adb install -r android\app\build\outputs\apk\debug\app-debug.apk
+    py tools\android_keys.py
 
-`-r` replaces an earlier one and keeps its progress.
+lists the keys in `C:\Android\keys`, makes a new one — it asks for a name,
+**release** if you just press Enter — and chooses the one the compiler
+offers. See [A release](#a-release) for keeping it safe.
+
+**7. Build.** In a new command prompt, double-click `compiler.py` and choose
+**Android build** (or type `py compiler.py --android`) — see
+[Building an executable](#building-an-executable). It asks where your signing
+key is: Enter takes the one from step 6. It leaves the app in `dist`, and
+takes a minute or two.
+
+**8. Onto the phone.** Copy the APK from `dist` to the phone and open it there
+— see [Installing it](#installing-it). Or connect the phone with a USB cable
+and type
+
+    py tools\android_setup.py --phone
+
+which installs the newest APK in `dist` over the app already there, keeping
+its progress. If it cannot see the phone, it says what to switch on in the
+phone's settings first.
 
 #### A release
 
-The build above is a test build, signed with a key Android makes for each
-computer: it cannot install over a release, nor a release over it. A release
-is signed with the app's own key, the same one every time, or phones refuse to
-install it over the one they have. Make the key once, with the `keytool` that
-came with Java; its name and password have to be the ones
-`android/app/build.gradle` uses:
+A release is signed with the app's own key, the same one every time, or phones
+refuse to install it over the one they have. A build without a key is a test
+build, signed with a key Android makes for each computer instead: it cannot
+install over a release, nor a release over it.
 
-    keytool -genkeypair -keystore audiodefence.p12 -storetype PKCS12 -alias audiodefence -keyalg RSA -keysize 2048 -validity 10000 -storepass audiodefence-android -keypass audiodefence-android -dname "CN=Audio Defence"
+Keep the key safe: back it up somewhere private, never in the repository, and
+hand it on with the project. Every release has to be signed with it. Phones
+that already have Erick's builds can only update with his key: ask him for it
+and choose it with `py tools\android_keys.py`, or install yours fresh.
 
-Keep `audiodefence.p12` somewhere safe and private — never in the repository —
-and hand it on with the project. Phones that already have Erick's builds can
-only update with his key: ask him for it, or install yours fresh. Then tell
-Windows where it is, once:
+The compiler asks where the key is whenever its choice makes the APK — Enter
+takes the one `AD_KEYSTORE` names, which `android_keys.py` sets, or the only
+key in `C:\Android\keys` — and typed out, `--key` and the path does the same.
+A key made some other way, with its own alias and passwords, needs them in
+`AD_KEY_ALIAS`, `AD_KEYSTORE_PASSWORD` and `AD_KEY_PASSWORD` as well.
 
-    setx AD_KEYSTORE C:\path\to\audiodefence.p12
-
-and, in a new command prompt, the compiler's release build — or its Android
-build — signs the app with it and leaves it at
-`dist\AudioDefence-Android-<version>.apk`, the version being the one in
-`VERSION`. Without the key, the release build makes no APK and says why, and
-the Android build makes a test one, `AudioDefence-Android-<version>-TEST.apk`.
-By hand instead, with `AD_KEYSTORE` set, `gradle assembleRelease` leaves
-`android\app\build\outputs\apk\release\app-release.apk`, to be renamed
-`AudioDefence-Android-<version>.apk`. Attach it to the GitHub release beside
-the Windows and Mac zips: that is the file the app looks for when it updates
-itself. The app's version comes from
-`VERSION` as it is built — its name is the tag, and the number Android compares
-is the same digits run together, `26.10.01-1` being 26100101 — so every release
-is newer to Android than the one before.
+With the key, the compiler's release build — or its Android build — signs the
+app and leaves it at `dist\AudioDefence-Android-<version>.apk`, the version
+being the one in `VERSION`. Without the key, the release build makes no APK
+and says why, and the Android build makes a test one,
+`AudioDefence-Android-<version>-TEST.apk`. Attach the release's APK to the
+GitHub release beside the Windows and Mac zips: that is the file the app looks
+for when it updates itself. The app's version comes from `VERSION` as it is
+built — its name is the tag, and the number Android compares is the same
+digits run together, `26.10.01-1` being 26100101 — so every release is newer
+to Android than the one before. Without the compiler, `gradle assembleDebug`
+— or `assembleRelease`, with `AD_KEYSTORE` set — in the `android` folder
+leaves the app under `android\app\build\outputs\apk`.
 
 ## Controls
 
@@ -1272,7 +1274,9 @@ went with it.
     assets/hrtf/        the HRTF recovered from the binary
     analysis/           the reverse engineering: disassembly, digests, dumps
     docs/               PORTING_NOTES.md, GAME_STRUCTURE.md
-    tools/              reverse-engineering and asset tools
+    tools/              reverse-engineering and asset tools; android_setup.py,
+                        which readies a computer to build the Android app, and
+                        android_keys.py, which makes and chooses its signing keys
     vendor/             OpenAL Soft (the Windows DLL, and the Mac dylib in
                         openal-mac/), the NVDA controller client
 
@@ -1453,7 +1457,9 @@ its own. It asks which build you want:
     9. Android build: the Android app alone, leaving the changelog as it is
     0. Quit
 
-Type the number and press Enter. The window waits for Enter at the end, so you
+Type the number and press Enter. A choice that makes the Android app asks
+first where your signing key is: Enter takes the one it names, or type the
+path to another (see *A release*, under [On Android](#on-android)). The window waits for Enter at the end, so you
 can hear how it went before it closes.
 
 That is the whole build. The script checks what it needs, runs PyInstaller with
@@ -1464,8 +1470,8 @@ runs on a machine with no Python on it at all.
 The release build then builds the Android app from the same `VERSION`, with
 Gradle, and leaves it at `dist\AudioDefence-Android-<version>.apk` — the APK
 alone, with nothing beside it and in no zip. It needs the tools listed under
-*Building the app* in [On Android](#on-android), and the app's key in
-`AD_KEYSTORE` (*A release*, there). If any of them is missing, the game is
+*Building the app* in [On Android](#on-android), and the app's key
+(*A release*, there). If any of them is missing, the game is
 still built and zipped, and the build ends by saying the APK was not made and
 why. Choice 9, *Android build*, makes the APK alone, without touching the
 changelog; with no key it makes a test build,
@@ -1473,7 +1479,8 @@ changelog; with no key it makes a test build,
 release.
 
 Each choice is one of the options in the table below, and they still work typed
-out — `py compiler.py --test` builds straight away with no menu. Run with no
+out — `py compiler.py --test` builds straight away with no menu. `--key` is
+typed only: the menu asks for it. Run with no
 options and nothing to type into — from a script — it goes straight to the
 release build.
 
@@ -1488,14 +1495,15 @@ is no cross-compiling to another system.
 
 | option | what it does |
 |---|---|
-| `--onefile` | one executable instead of one folder — see below before you reach for it |
+| `--onefile` | one executable instead of one folder — see below before you reach for it. |
 | `--no-game` | do not copy the game's data; the build then needs `--game PATH` to find it |
 | `--console` | keep a console window beside the game, where a failed start-up prints its traceback |
 | `--clean` | empty both of PyInstaller's working places first — this project's `build\` folder and the shared cache in `%LOCALAPPDATA%\pyinstaller` — when a rebuild behaves oddly. `dist\` is untouched, and so is everything in the repository |
 | `--test` | run the result for ten seconds afterwards and read its log: that it found the game data, that the game's own HRTF is in use, and that it ended without a traceback |
 | `--dry-run` | print what would happen, build nothing — including every file that would land beside the executable |
 | `--no-package` | do not make the zip. A build otherwise ends by packing `dist\AudioDefence` into `dist\AudioDefence-Win-<version>.zip`, which is what a release's asset is and what the updater reads, warning first if `VERSION` is missing or `changelog.txt` still starts with `unrelease:` |
-| `--android` | build the Android app alone, and leave the changelog as it is: `dist\AudioDefence-Android-<version>.apk`, signed with the key `AD_KEYSTORE` names, or `...-TEST.apk` without one. The other options are the desktop build's and do not apply |
+| `--android` | build the Android app alone, and leave the changelog as it is: `dist\AudioDefence-Android-<version>.apk`, signed with the key `--key` or `AD_KEYSTORE` names, or `...-TEST.apk` without one. The other options are the desktop build's and do not apply |
+| `--key PATH` | sign the Android app with the key at PATH, rather than the one `AD_KEYSTORE` names or the only one in `C:\Android\keys` |
 
 ### Cutting a release
 
@@ -1516,7 +1524,7 @@ In order:
   to commit.
 - tag the release `26.09.21-1` and upload `dist\AudioDefence-Win-26.09.21-1.zip`
   and `dist\AudioDefence-Android-26.09.21-1.apk`, beside the Mac zip. The
-  release build makes the APK too, signed with the key `AD_KEYSTORE` names (see
+  release build makes the APK too, signed with the key it asks you for (see
   *A release*, under [On Android](#on-android)): every release APK has to be
   signed with that same key, or phones will not install it over the one they
   have.
