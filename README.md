@@ -652,7 +652,8 @@ built — its name is the tag, and the number Android compares is the same
 digits run together, `26.10.01-1` being 26100101 — so every release is newer
 to Android than the one before. Without the compiler, `gradle assembleDebug`
 — or `assembleRelease`, with `AD_KEYSTORE` set — in the `android` folder
-leaves the app under `android\app\build\outputs\apk`.
+leaves the app under `android\app\build\outputs\apk`. Gradle closes when a
+build ends, so it does not stay in memory or lock its folder.
 
 ### What gets downloaded
 
