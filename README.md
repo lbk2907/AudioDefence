@@ -519,7 +519,8 @@ Hold the phone sideways; the whole screen is the touch area.
 Everything here is done once, on Windows, in a command prompt, with an internet
 connection and about 5 GB free. Nothing needs Android Studio. Steps 1 to 4
 are the downloads and installs, done by hand; the two tools in steps 5 and 6
-do the rest.
+do the rest. [What gets downloaded](#what-gets-downloaded), below, lists every
+download, and how to do the setup tool's part by hand too.
 
 **1. Python 3.13, for the build.** The game runs on Python 3.14, but the app
 carries a Python of its own inside it, and Chaquopy, which puts it there, has
@@ -529,7 +530,9 @@ other's way:
 
     py install 3.13
 
-`py -0` then lists both.
+`py -0` then lists both. Or from the website: on
+[python.org's Windows page](https://www.python.org/downloads/windows/), take
+the Windows installer (64-bit) of the newest 3.13 release and run it.
 
 **2. Java 21.** Either way:
 
@@ -555,7 +558,8 @@ it makes, `cmdline-tools`, to `latest` — so that
 
 **4. Gradle 8.13.** From [gradle.org/releases](https://gradle.org/releases/),
 download **v8.13, binary-only**, and unzip it into `C:\Android`, beside the
-command-line tools, so that `C:\Android\gradle-8.13\bin\gradle.bat` exists.
+command-line tools. The zip holds one folder, `gradle-8.13`, which keeps its
+name, so that `C:\Android\gradle-8.13\bin\gradle.bat` exists.
 (Gradle unzipped into `C:\Gradle`, or on your Path, is found as well.)
 
 **5. The rest of the setup.** In a new command prompt, in the repository's
@@ -564,11 +568,12 @@ folder:
     py tools\android_setup.py
 
 It checks steps 1 to 4 and says which is missing; sets `ANDROID_HOME`;
-accepts the Android SDK's licences and fetches the parts the app is built
-with; and runs a first build, which fetches Gradle's plugins, Chaquopy,
-Python for Android and numpy and takes ten to twenty minutes. Each step is
-said as it goes, and a summary at the end says what is ready and what is
-left. Run it again whenever you like: it skips what is done.
+accepts the Android SDK's licences and downloads the parts the app is built
+with; and runs a first build, a test build and then a release, which
+downloads Gradle's own parts and takes ten to twenty minutes. Before each
+download it says what it is and roughly how big. Each step is said as it
+goes, and a summary at the end says what is ready and what is left. Run it
+again whenever you like: it skips what is done.
 
 **6. The signing key.**
 
@@ -582,7 +587,11 @@ offers. See [A release](#a-release) for keeping it safe.
 **Android build** (or type `py compiler.py --android`) — see
 [Building an executable](#building-an-executable). It asks where your signing
 key is: Enter takes the one from step 6. It leaves the app in `dist`, and
-takes a minute or two.
+takes a minute or two. Once step 5's first build is done, the compiler runs
+Gradle offline (`--offline`), so building downloads nothing. If Gradle then
+finds a part missing — after trying a newer version, say — the compiler
+stops and says so: run `py tools\android_setup.py` again, which downloads
+it, and build again.
 
 **8. Onto the phone.** Copy the APK from `dist` to the phone and open it there
 — see [Installing it](#installing-it). Or connect the phone with a USB cable
@@ -625,17 +634,125 @@ to Android than the one before. Without the compiler, `gradle assembleDebug`
 — or `assembleRelease`, with `AD_KEYSTORE` set — in the `android` folder
 leaves the app under `android\app\build\outputs\apk`.
 
-#### A newer Python for the app
+### What gets downloaded
 
-The app runs Python 3.13, set by one line in `android/app/build.gradle`:
-`def appPython = '3.13'`. The compiler and the setup tool read it from there.
+Each of these is downloaded once. After the first build, building the app
+downloads nothing: the compiler runs Gradle offline. Building for Windows
+downloads nothing at all.
+
+| What | Size, about | Who downloads it | When |
+|---|---|---|---|
+| Python 3.13 | 120 MB installed | you, step 1 | once |
+| Java 21, the Temurin JDK | 330 MB installed | you, step 2 | once |
+| the Android command-line tools | 170 MB unzipped | you, step 3 | once |
+| Gradle 8.13 | 150 MB unzipped | you, step 4 | once |
+| Android platform 35 and build-tools 35.0.0 | a 125 MB download, 270 MB installed | sdkmanager, which the setup tool runs | once |
+| platform-tools, which holds adb | an 8 MB download, 17 MB installed | sdkmanager, which the setup tool runs, or you | once; only `--phone` uses it |
+| Gradle's own parts: the Android Gradle plugin, Chaquopy and Python for Android | a 120 MB download, 360 MB once Gradle has unpacked it, in `%USERPROFILE%\.gradle` | Gradle, in the setup tool's first build | the first build only |
+| numpy, for the app's Python | a few MB | pip, which Chaquopy runs in that build | the first test build and the first release |
+
+numpy is pip's to download, not Gradle's, so offline does not reach it: it
+is kept in `android\app\build`, and downloaded again only if that folder is
+deleted or the app's Python changes.
+
+#### Doing it by hand
+
+Steps 1 to 4 are by hand already, each with its link and the folder it goes
+in. The setup tool's downloads can be done by hand too.
+
+**The Android SDK's parts.** sdkmanager, from step 3, downloads them. These
+are the lines the setup tool runs, typed in a command prompt:
+
+    C:\Android\cmdline-tools\latest\bin\sdkmanager --licenses
+    C:\Android\cmdline-tools\latest\bin\sdkmanager platforms;android-35 build-tools;35.0.0 platform-tools
+
+The first asks you to accept each of the Android SDK's licences: type `y` and
+press Enter for each. sdkmanager installs nothing until they are accepted.
+The second puts the platform in `C:\Android\platforms\android-35`, the build
+tools in `C:\Android\build-tools\35.0.0`, and platform-tools in
+`C:\Android\platform-tools`. Then tell the build where they are, as the setup
+tool does, and open a new command prompt:
+
+    setx ANDROID_HOME C:\Android
+
+**platform-tools from the website.** platform-tools, which only `--phone`
+needs, can come from Google's page instead:
+[developer.android.com/studio/releases/platform-tools](https://developer.android.com/studio/releases/platform-tools).
+Download SDK Platform-Tools for Windows. The zip holds one folder,
+`platform-tools`, which keeps its name: unzip it into `C:\Android`, so that
+`C:\Android\platform-tools\adb.exe` exists. Either way works.
+
+**Gradle's own parts cannot be downloaded by hand.** The build works out
+which of some 350 library files it needs as it goes, so only a build fetches
+them: the setup tool's first build, or `gradle assembleDebug assembleRelease`
+typed in the `android` folder. They stay in `%USERPROFILE%\.gradle` from then
+on.
+
+#### When everything is in place
+
+Each folder, and the one file in it that shows it is right:
+
+- `C:\Android\cmdline-tools\latest`, with `bin\sdkmanager.bat`
+- `C:\Android\gradle-8.13`, with `bin\gradle.bat`
+- `C:\Android\platforms\android-35`, with `android.jar`
+- `C:\Android\build-tools\35.0.0`, with `aapt2.exe`
+- `C:\Android\platform-tools`, with `adb.exe`, only for `--phone`
+- `C:\Android\licenses`, with `android-sdk-license`
+- `C:\Android\keys`, with your key from step 6, `release.p12` unless you
+  named it otherwise
+- `%USERPROFILE%\.gradle\caches\modules-2\files-2.1\com.chaquo.python`, a
+  folder the first build leaves: while it is there, the compiler builds
+  offline
+
+And in a new command prompt, `py -0` lists 3.13, `java -version` says 21,
+and `echo %ANDROID_HOME%` says `C:\Android`.
+
+### Trying newer versions
+
+Every version the build uses is set in one place. To try a newer one,
+change it there, build with the compiler's **Android build** (choice 2), and
+play the test APK on a phone before making a release with it. To go back,
+put the line back as it was. A newer version of anything Gradle fetches is a
+new download, so the compiler, building offline, stops and says a part is
+missing: run `py tools\android_setup.py`, which downloads it, and build
+again.
+
+**The app's Python.** One line in `android/app/build.gradle`,
+`def appPython = '3.13'`; the compiler and the setup tool read it from there.
 It cannot be 3.14 yet only because the app needs numpy, and nobody has built
 numpy for Android on 3.14. To see whether that has changed, look on
 [Chaquopy's numpy page](https://chaquo.com/pypi-13.1/numpy/) for a file with
 both `cp314` and `arm64_v8a` in its name. Or simply try it: change the line to
-`'3.14'`, install Python 3.14 if you have not, and build the Android app. If
-numpy is still missing, the build stops at installing it and says so; put the
-line back. If it builds, play it on a phone before making a release with it.
+`'3.14'`, install Python 3.14 if you have not, and build. If numpy is still
+missing, the build stops at installing it and says so.
+
+**Java.** `JAVA_RANGE = (17, 23)` in `compiler.py`, which the compiler and
+the setup tool check Java against. The limit is Gradle: 8.13 runs on nothing
+newer than Java 23. Java 24 needs Gradle 8.14 or later, and Java 25 Gradle
+9.1 or later, which may in turn need a newer Android Gradle plugin. Install
+the newer JDK, point `JAVA_HOME` at it, raise the 23, and unzip a Gradle that
+runs on it. To go back, point `JAVA_HOME` at Java 21 again.
+
+**Gradle.** Whichever is unzipped in `C:\Android`: the tools take the newest
+`gradle-` folder there. Unzip the newer one beside `gradle-8.13`; to go back,
+delete it. The limit is the Android Gradle plugin: each version names the
+oldest Gradle it runs on, 8.13 for plugin 8.13, and a much newer Gradle may
+need a newer plugin.
+
+**The Android platform and build tools.** `compileSdk 35` and
+`buildToolsVersion '35.0.0'` in `android/app/build.gradle`. The compiler and
+the setup tool read both from there, and the setup tool downloads what they
+name, so after changing them run `py tools\android_setup.py` before you
+build. The limit is the Android Gradle plugin: a platform newer than the
+plugin may need a newer plugin. `targetSdk 34`, beside them, is different: it is the
+version of Android whose rules the app follows on a phone, so raising it
+changes how the app behaves there. Try that one with the phone in hand.
+
+**Chaquopy and the Android Gradle plugin.** Their versions are in
+`android/build.gradle`: `id 'com.chaquo.python' version '17.0.0'` and
+`id 'com.android.application' version '8.13.0'`. Chaquopy 17.0 works with
+Python 3.10 to 3.14 and the Android Gradle plugin 7.3 to 9.2. A newer plugin
+may need a newer Gradle and Java, as above.
 
 ## Controls
 
@@ -1485,7 +1602,9 @@ alone, with nothing beside it and in no zip. It needs the tools listed under
 *Building the app* in [On Android](#on-android), and the app's key
 (*A release*, there). If any of them is missing, the game is
 still built and zipped, and the build ends by saying the APK was not made and
-why. Choice 2, *Android build*, makes the APK alone, without touching the
+why. Once the setup tool's first build has run, Gradle runs with `--offline`
+and downloads nothing; a part it lacks is said, and `py tools\android_setup.py`
+downloads it. Choice 2, *Android build*, makes the APK alone, without touching the
 changelog; with no key it makes a test build,
 `dist\AudioDefence-Android-<version>-TEST.apk`, which cannot install over a
 release.

@@ -51,7 +51,11 @@ def buildPythonExe = { ->
 
 android {
     namespace 'com.audiodefence'
+    // The Android platform the app compiles against and the build tools it is made with.  compiler.py reads
+    // both from these two lines, and tools/android_setup.py fetches what they name: changing one is all
+    // it takes to try another ("Trying newer versions", under On Android in the README).
     compileSdk 35
+    buildToolsVersion '35.0.0'
 
     defaultConfig {
         applicationId "com.audiodefence.android"

@@ -186,7 +186,13 @@ they were.
   the setup a script can - checks the installed tools with the compiler's own checks, sets `ANDROID_HOME`,
   fetches the SDK's parts and runs the first build for what it fetches - and with `--phone` puts the newest APK
   in `dist` on a phone with adb, so the README keeps only the downloads and installs (user request,
-  2026-10-01).  `tools/android_keys.py` makes the signing keys in `C:\Android\keys`, with the store type and
+  2026-10-01).  Once that first build - a test build and an unsigned release, since the release's checks
+  fetch parts the test build does not - has filled Gradle's cache, the compiler runs Gradle with
+  `--offline`, so a build downloads nothing: a part it finds missing is said, and leaves
+  `android/.gradle/fetch-needed` so that the setup tool builds online again and fetches it (user request,
+  2026-10-01).  The platform and build tools the setup fetches and the compiler checks for are read from
+  `compileSdk` and `buildToolsVersion` in `android/app/build.gradle`, as `appPython` is, so trying another
+  is a change to one line (user request, 2026-10-01).  `tools/android_keys.py` makes the signing keys in `C:\Android\keys`, with the store type and
   the default alias and passwords it reads from `build.gradle`, never overwriting one, and chooses which
   `AD_KEYSTORE` names; the compiler asks where the key is before any build that makes the APK, offering that
   one, so anybody can build with their own key, and `build.gradle` takes another key's alias and passwords

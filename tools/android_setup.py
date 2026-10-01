@@ -10,8 +10,13 @@ run again, it skips what is done and says so:
 
 1. checks the tools that are installed by hand;
 2. sets ANDROID_HOME, when it is not set and the command-line tools are unzipped in C:\\Android;
-3. accepts the SDK's licences and fetches the parts the app is built with, the ones that are not there;
-4. runs a first build, which fetches Gradle's plugins, Chaquopy, Python for Android and numpy.
+3. accepts the SDK's licences and fetches the parts the app is built with, the ones that are not there, and
+   platform-tools, which only --phone uses;
+4. runs a first build, of both kinds, which fetches Gradle's plugins, Chaquopy, Python for Android and numpy -
+   and again whenever the compiler's offline build has found a part missing.
+
+Before each download it says what it fetches and roughly how big it is ("What gets downloaded", under On
+Android in the README, lists them all).
 
 The signing key is tools/android_keys.py's.  A variable is set with setx, for this user alone - never the
 system's, nor the Path - and a command prompt opened after that sees it.  On the Mac it says the line to add
@@ -34,9 +39,17 @@ from audiodefence.platform import host                  # noqa: E402
 say = compiler.say
 #: where the README has the command-line tools unzipped, and so what ANDROID_HOME names
 DEFAULT_SDK = compiler.ANDROID_TOOLS
-#: what the SDK needs beyond its command-line tools, each as the folder it makes there; joined with ';' it
-#: is sdkmanager's name for it
-SDK_PARTS = (('platforms', compiler.ANDROID_PLATFORM), ('build-tools', '35.0.0'), ('platform-tools',))
+#: what the SDK needs beyond its command-line tools, each as the folder it makes there - the platform and the
+#: build tools being the ones android/app/build.gradle names, which the compiler reads; joined with ';' it is
+#: sdkmanager's name for it
+SDK_PARTS = (('platforms', compiler.ANDROID_PLATFORM), ('build-tools', compiler.ANDROID_BUILD_TOOLS),
+             ('platform-tools',))
+#: each part as it is said before sdkmanager fetches it, with the size of its download (Google's repository
+#: index, 2026-10-01); the last, adb, only --phone uses, so the build is ready without it
+SAID = {';'.join(SDK_PARTS[0]): 'the Android platform the app is built against, about 65 MB',
+        ';'.join(SDK_PARTS[1]): 'the build tools, about 60 MB',
+        ';'.join(SDK_PARTS[2]): 'adb, which only --phone uses, about 8 MB'}
+NEEDED = [';'.join(part) for part in SDK_PARTS[:2]]
 EXE = '.exe' if host.WINDOWS else ''
 README = 'Building the app, under On Android in the README'
 
@@ -156,8 +169,9 @@ def set_android_home(sdkmanager: str, ready: list, left: list) -> str:
     return sdk
 
 
-def fetch_sdk_parts(sdk: str, sdkmanager: str, java: str, ready: list, left: list) -> None:
-    """Step 3."""
+def fetch_sdk_parts(sdk: str, sdkmanager: str, java: str, ready: list, left: list, optional: list) -> None:
+    """Step 3.  platform-tools is fetched with the rest, but only --phone needs it: without it the build is
+    ready, and the summary lists it as optional."""
     say('Step 3: the parts of the Android SDK the app is built with.')
     absent = [';'.join(part) for part in SDK_PARTS if not (sdk and os.path.isdir(os.path.join(sdk, *part)))]
     if not absent:
@@ -167,24 +181,35 @@ def fetch_sdk_parts(sdk: str, sdkmanager: str, java: str, ready: list, left: lis
     if not (sdk and sdkmanager and java):
         say('  Not fetched yet: that waits for %s, above.'
             % ('Java' if sdk and sdkmanager else 'the command-line tools'))
-        left.append('fetch the SDK parts, by running this again once the tools above are in')
+        if set(absent) & set(NEEDED):
+            left.append('fetch the SDK parts, by running this again once the tools above are in')
+        else:
+            optional.append('platform-tools, which only --phone uses: run this again once the tools above are in')
         return
-    say('  Accepting the licences, then fetching %s. What follows is sdkmanager speaking.' % ', '.join(absent))
+    say('  Accepting the licences, then downloading %s. What follows is sdkmanager speaking.'
+        % '; '.join('%s, %s' % (part, SAID[part]) for part in absent))
     run_sdkmanager(sdkmanager, ['--licenses'], answers='y\n' * 50)
     run_sdkmanager(sdkmanager, absent)
     still = [';'.join(part) for part in SDK_PARTS if not os.path.isdir(os.path.join(sdk, *part))]
-    if still:
+    needed = [part for part in still if part in NEEDED]
+    if needed:
         say('  Still missing: %s. sdkmanager says why, above.' % ', '.join(still))
-        left.append('fetch %s: sdkmanager failed, run this again' % ', '.join(still))
-    else:
-        say('  Fetched.')
-        ready.append('the SDK parts')
+        left.append('fetch %s: sdkmanager failed, run this again' % ', '.join(needed))
+        return
+    say('  Fetched.' if not still else
+        '  Fetched what the build needs. platform-tools is still missing; sdkmanager says why, above.')
+    ready.append('the SDK parts')
+    if still:
+        optional.append('platform-tools, which only --phone uses: sdkmanager failed, run this again')
 
 
 def first_build(ready: list, left: list) -> None:
-    """Step 4: a test build, for what the first build fetches, so that the compiler's builds take minutes."""
+    """Step 4: a test build and a release build, unsigned, for what the first build of each fetches - the
+    release's own checks need parts the test build does not - so that the compiler's builds take minutes and
+    download nothing.  Run again when the compiler's offline build has left compiler.FETCH_NEEDED."""
     say("Step 4: the first build, which fetches Gradle's plugins, Chaquopy, Python for Android and numpy.")
-    if compiler.android_fetched():
+    asked = os.path.isfile(compiler.FETCH_NEEDED)
+    if compiler.android_fetched() and not asked:
         say('  Already fetched. Nothing to do.')
         ready.append('the first build')
         return
@@ -192,19 +217,32 @@ def first_build(ready: list, left: list) -> None:
         say('  Not run yet: that waits for what is missing above.')
         left.append('the first build, by running this again once the rest is ready')
         return
-    say('  Building. It takes ten to twenty minutes the first time. What follows is Gradle speaking.')
+    if asked:
+        say('  The compiler found a part missing. Building again, which downloads it. What follows is Gradle '
+            'speaking.')
+    else:
+        say("  Building, a test build and then a release. It downloads about 130 MB - Gradle's parts and numpy "
+            '- which take about 360 MB once Gradle has unpacked them, and it takes ten to twenty minutes. What '
+            'follows is Gradle speaking.')
+    env = dict(os.environ)
+    env.pop('AD_KEYSTORE', None)                        # this release is unsigned: only what it fetches counts
     try:
-        status = subprocess.run(compiler.gradle_command('assembleDebug'), cwd=compiler.ANDROID,
-                                stdin=subprocess.DEVNULL).returncode
+        status = subprocess.run(compiler.gradle_command('assembleDebug', 'assembleRelease'),
+                                cwd=compiler.ANDROID, env=env, stdin=subprocess.DEVNULL).returncode
     except OSError as error:
         say('  Gradle would not start: %s' % error)
         status = 1
     if status:
         say('  The build failed; what Gradle said is above.')
         left.append('the first build: it failed, see what Gradle said, then run this again')
-    else:
-        say('  Built. From now on a build takes a minute or two.')
-        ready.append('the first build')
+        return
+    if asked:
+        try:
+            os.remove(compiler.FETCH_NEEDED)
+        except OSError:
+            pass
+    say('  Built. From now on a build takes a minute or two, and downloads nothing.')
+    ready.append('the first build')
 
 
 def install_on_phone() -> int:
@@ -260,10 +298,10 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     if args.phone:
         return install_on_phone()
-    ready, left = [], []
+    ready, left, optional = [], [], []
     java, sdkmanager = check_tools(ready, left)
     sdk = set_android_home(sdkmanager, ready, left)
-    fetch_sdk_parts(sdk, sdkmanager, java, ready, left)
+    fetch_sdk_parts(sdk, sdkmanager, java, ready, left, optional)
     first_build(ready, left)
     saved('AD_KEYSTORE')                                # one chosen since this prompt opened counts
     key, _why = compiler.remembered_key()
@@ -272,6 +310,8 @@ def main(argv=None) -> int:
     say('Ready: %s.' % (', '.join(ready) or 'nothing yet'))
     for line in left:
         say('Left to do: %s.' % line)
+    for line in optional:
+        say('Optional: %s.' % line)
     if not key:
         say('Left to do: your signing key. Make it with %s.' % compiler.KEY_TOOL)
     if not left:

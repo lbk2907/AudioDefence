@@ -612,21 +612,24 @@ def test_build(exe: str) -> int:
 # (ASSET_PREFIX in audiodefence/platform/updater_android.py).
 
 ANDROID = os.path.join(HERE, 'android')
-#: what android/app/build.gradle compiles against, and the Python Chaquopy builds the app's own with - read
-#: from build.gradle's `def appPython = '3.13'`, so that trying another Python is a change to that one line
-ANDROID_PLATFORM = 'android-35'
-
-
-def _app_python(default: str = '3.13') -> str:
+def _app_setting(pattern: str, default: str) -> str:
+    """A version android/app/build.gradle sets, as pattern's first group finds it there, or default without
+    it - so that trying another version is a change to that one line ("Trying newer versions", under On
+    Android in the README)."""
     try:
         with open(os.path.join(ANDROID, 'app', 'build.gradle'), encoding='utf-8') as fh:
-            match = re.search(r"""^\s*def\s+appPython\s*=\s*['"](\d+\.\d+)['"]""", fh.read(), re.M)
+            match = re.search(pattern, fh.read(), re.M)
     except OSError:
         return default
     return match.group(1) if match else default
 
 
-ANDROID_PYTHON = _app_python()
+#: the Python Chaquopy builds the app's own with (`def appPython = '3.13'`), the Android platform the app
+#: compiles against (`compileSdk 35`, as the SDK's folder names it) and the build tools it is made with
+#: (`buildToolsVersion '35.0.0'`): what the checks below look for and tools/android_setup.py fetches
+ANDROID_PYTHON = _app_setting(r"""^\s*def\s+appPython\s*=\s*['"](\d+\.\d+)['"]""", '3.13')
+ANDROID_PLATFORM = 'android-' + _app_setting(r'^\s*compileSdk\s*=?\s*(\d+)\s*$', '35')
+ANDROID_BUILD_TOOLS = _app_setting(r"""^\s*buildToolsVersion\s*=?\s*['"](\d+(?:\.\d+)*)['"]""", '35.0.0')
 #: the Android plugin runs on nothing older than Java 17, and Gradle 8.13 on nothing newer than 23
 JAVA_RANGE = (17, 23)
 #: where the README has the Android SDK and Gradle unzipped, and where tools/android_keys.py keeps the keys
@@ -693,17 +696,30 @@ def android_python() -> str:
     return run.stdout.strip() if run.returncode == 0 else ''
 
 
-def gradle_command(task: str) -> list:
-    """Gradle running task in android/, given the Python to build the app's own with."""
+def gradle_command(*tasks: str, offline: bool = False) -> list:
+    """Gradle running tasks in android/, given the Python to build the app's own with; offline, it downloads
+    nothing and stops instead when a part it needs is not in its cache."""
     python = android_python()
-    return [find_gradle(), task, '--console=plain'] + (['-PbuildPython=' + python] if python else [])
+    return ([find_gradle()] + list(tasks) + ['--console=plain'] + (['--offline'] if offline else [])
+            + (['-PbuildPython=' + python] if python else []))
 
 
 def android_fetched() -> bool:
     """Whether a build has fetched what the first one fetches - Gradle's plugins, Chaquopy, Python for
-    Android, numpy - into Gradle's cache, so that the next build takes minutes rather than twenty."""
+    Android, numpy - into Gradle's cache, so that the next build takes minutes rather than twenty, and can be
+    made offline."""
     home = os.environ.get('GRADLE_USER_HOME') or os.path.join(os.path.expanduser('~'), '.gradle')
     return os.path.isdir(os.path.join(home, 'caches', 'modules-2', 'files-2.1', 'com.chaquo.python'))
+
+
+#: what Gradle says, offline, of a part it needs that is not in its cache: "No cached version of ... available
+#: for offline mode" for a library, "Could not resolve" and "was not found in any of the following sources"
+#: for a plugin (its "could not resolve plugin artifact" in lower case)
+OFFLINE_MISSING = re.compile(r'No cached version|offline mode|Could not resolve|'
+                             r'was not found in any of the following sources', re.I)
+#: left by an offline build that stopped for a part not downloaded yet, so that tools/android_setup.py runs its
+#: first build again, online, and fetches it - the compiler itself never goes online once the cache is filled
+FETCH_NEEDED = os.path.join(ANDROID, '.gradle', 'fetch-needed')
 
 
 def remembered_key() -> tuple[str, str]:
@@ -766,9 +782,11 @@ def android_plan(release: bool, given: str = '') -> tuple[list, list, str, str]:
     sdk = os.environ.get('ANDROID_HOME', '').strip()
     if not sdk:
         found.append('ANDROID_HOME is not set: it names the Android SDK, and %s sets it' % SETUP)
-    elif not os.path.isdir(os.path.join(sdk, 'platforms', ANDROID_PLATFORM)):
-        found.append('the Android SDK in ANDROID_HOME, %s, has no platforms%s%s: %s fetches it'
-                     % (sdk, os.sep, ANDROID_PLATFORM, SETUP))
+    else:
+        for part in (('platforms', ANDROID_PLATFORM), ('build-tools', ANDROID_BUILD_TOOLS)):
+            if not os.path.isdir(os.path.join(sdk, *part)):
+                found.append('the Android SDK in ANDROID_HOME, %s, has no %s: %s fetches it'
+                             % (sdk, os.path.join(*part), SETUP))
     if not android_python():
         found.append('Python %s is not there for Chaquopy to build the app\'s own Python with: %s'
                      % (ANDROID_PYTHON, 'py install ' + ANDROID_PYTHON if host.WINDOWS
@@ -792,8 +810,8 @@ def describe_android(release: bool, given: str = '') -> None:
         for problem in found:
             say('  ' + problem)
         return
-    say('the Android app would then be built with gradle %s in android, and put in dist%s%s%s'
-        % ('assembleRelease' if key else 'assembleDebug', os.sep,
+    say('the Android app would then be built with gradle %s%s in android, and put in dist%s%s%s'
+        % ('assembleRelease' if key else 'assembleDebug', ' --offline' if android_fetched() else '', os.sep,
            apk_name(build_version() or first_version(), bool(key)),
            '' if key else ' - a test build, because ' + no_key))
 
@@ -824,16 +842,36 @@ def build_android(release: bool, given: str = '') -> tuple[int, str]:
     task, kind = ('assembleRelease', 'release') if key else ('assembleDebug', 'debug')
     # what android/app/build.gradle calls the build too: VERSION, or today's first release without one
     version = build_version() or first_version()
-    say('running: gradle %s, in android.%s' % (task, '' if android_fetched() else
-                                                 '  The first build fetches its tools and takes ten to twenty '
-                                                 'minutes.'))
+    # once the first build has filled Gradle's cache, a build downloads nothing: what is still missing is
+    # tools/android_setup.py's to fetch, and is said, rather than fetched here without a word
+    offline = android_fetched()
+    say('running: gradle %s%s, in android.%s' % (task, ' --offline' if offline else '', '' if offline else
+                                                   '  The first build fetches its tools and takes ten to '
+                                                   'twenty minutes.'))
     started = time.perf_counter()
+    missing = False
     try:
-        failed = subprocess.run(gradle_command(task), cwd=ANDROID, env=env).returncode != 0
+        with subprocess.Popen(gradle_command(task, offline=offline), cwd=ANDROID, env=env, text=True,
+                              errors='replace', stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as gradle:
+            for line in gradle.stdout:                  # shown as it comes, and read for a missing part
+                sys.stdout.write(line)
+                sys.stdout.flush()
+                missing = missing or bool(offline and OFFLINE_MISSING.search(line))
+        failed = gradle.returncode != 0
     except OSError as error:
         say('Gradle would not start: %s' % error)
         failed = True
     built = os.path.join(ANDROID, 'app', 'build', 'outputs', 'apk', kind, 'app-%s.apk' % kind)
+    if failed and missing:
+        try:
+            os.makedirs(os.path.dirname(FETCH_NEEDED), exist_ok=True)
+            with open(FETCH_NEEDED, 'w', encoding='utf-8') as fh:
+                fh.write('an offline build found a part missing: tools/android_setup.py fetches it\n')
+        except OSError:
+            pass
+        say('A part Gradle needs is not downloaded yet, and the compiler builds without downloading anything. '
+            'Run %s, which downloads it, then build again.' % SETUP)
+        return 1, 'the Android app was not made: a part Gradle needs is not downloaded yet - run %s.' % SETUP
     if failed or not os.path.isfile(built):
         say('Gradle failed - its own output above says why.' if failed else
             'Gradle finished, but left no %s.' % os.path.relpath(built, HERE))
