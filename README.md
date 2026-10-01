@@ -304,7 +304,7 @@ it, or build the executable yourself.
 These are for running from source. A built game from Releases needs none of
 them.
 
-64-bit Python 3.12 or newer on Windows. The simplest way to get it is the
+64-bit Python 3.14 on Windows. The simplest way to get it is the
 **Python install manager** from python.org, which is what that site now leads
 with: install it, then
 
@@ -516,27 +516,89 @@ Hold the phone sideways; the whole screen is the touch area.
 
 ### Building the app
 
-You need Java 17 (a JDK), Python 3.12 beside whatever Python you play with
-(`py install 3.12`), the Android SDK with `platforms;android-35`,
-`build-tools;35.0.0` and `platform-tools` (set `ANDROID_HOME` to it), and
-Gradle 8.13. Then, in `android/`:
+Everything here is done once, on Windows, in a command prompt, with an internet
+connection and about 5 GB free. Nothing needs Android Studio.
+
+**1. Python 3.13, for the build.** The game runs on Python 3.14, but the app
+carries a Python of its own inside it, and Chaquopy, which puts it there, has
+to find that same version on the computer that builds it. 3.13 is the newest
+one Chaquopy has numpy for. It installs beside 3.14, and neither gets in the
+other's way:
+
+    py install 3.13
+
+`py -0` then lists both.
+
+**2. Java 17.** Install the **Eclipse Temurin 17 JDK** — the `.msi` for
+Windows x64 from adoptium.net, with **Set JAVA_HOME variable** turned on as
+it installs — or:
+
+    winget install EclipseAdoptium.Temurin.17.JDK
+
+In a new command prompt, `java -version` says 17.
+
+**3. The Android SDK.** On developer.android.com/studio, under **Command line
+tools only**, download the zip for Windows. Make the folder
+`C:\Android\cmdline-tools`, unzip the download into it, and rename the folder
+it makes, `cmdline-tools`, to `latest` — so that
+`C:\Android\cmdline-tools\latest\bin\sdkmanager.bat` exists. Then tell Windows
+where it is:
+
+    setx ANDROID_HOME C:\Android
+
+and, in a new command prompt, accept the licences (answer `y` to each) and
+fetch what the app is built with:
+
+    C:\Android\cmdline-tools\latest\bin\sdkmanager --licenses
+    C:\Android\cmdline-tools\latest\bin\sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+**4. Gradle 8.13.** From gradle.org/releases, download **v8.13, binary-only**,
+and unzip it into `C:\Gradle`, so that `C:\Gradle\gradle-8.13\bin\gradle.bat`
+exists. Type that whole path each time, or add `C:\Gradle\gradle-8.13\bin` to
+your **Path** (**Settings → System → About → Advanced system settings →
+Environment Variables**, your user's **Path**, **New**) and type `gradle`.
+
+**5. Build.** In the repository's `android` folder:
 
     gradle assembleDebug
 
-The build copies `audiodefence/` and `game/` into the app itself, so there is
-nothing to copy by hand, and leaves `app/build/outputs/apk/debug/app-debug.apk`.
-With USB debugging on, `adb install app-debug.apk` puts it on the phone.
+The first build fetches Android's build tools, Chaquopy, Python for Android
+and numpy, and takes ten to twenty minutes; later ones take a minute or two.
+It copies `audiodefence/` and `game/` into the app by itself, so there is
+nothing to copy by hand. It ends with **BUILD SUCCESSFUL** and leaves the app
+at `android\app\build\outputs\apk\debug\app-debug.apk`.
 
-That is a test build, signed with a key Android makes for each computer, and it
-cannot install over a release. A release is signed with the app's own key, the
-same one every time, or phones refuse to install it over the one they have:
-set `AD_KEYSTORE` to that key file (a `.p12`) and build with
+**6. Onto the phone.** Copy `app-debug.apk` to the phone and open it there —
+see [Installing it](#installing-it). Or, with the phone on a USB cable: in
+**Settings → About phone**, tap **Build number** seven times to turn on
+**Developer options**; turn on **USB debugging** in them; allow the computer
+when the phone asks; and
 
+    C:\Android\platform-tools\adb install -r android\app\build\outputs\apk\debug\app-debug.apk
+
+`-r` replaces an earlier one and keeps its progress.
+
+#### A release
+
+The build above is a test build, signed with a key Android makes for each
+computer: it cannot install over a release, nor a release over it. A release
+is signed with the app's own key, the same one every time, or phones refuse to
+install it over the one they have. Make the key once, with the `keytool` that
+came with Java; its name and password have to be the ones
+`android/app/build.gradle` uses:
+
+    keytool -genkeypair -keystore audiodefence.p12 -storetype PKCS12 -alias audiodefence -keyalg RSA -keysize 2048 -validity 10000 -storepass audiodefence-android -keypass audiodefence-android -dname "CN=Audio Defence"
+
+Keep `audiodefence.p12` somewhere safe and private — never in the repository —
+and hand it on with the project. Phones that already have Erick's builds can
+only update with his key: ask him for it, or install yours fresh. Then, to
+build a release:
+
+    set AD_KEYSTORE=C:\path\to\audiodefence.p12
     gradle assembleRelease
 
-which leaves `app/build/outputs/apk/release/app-release.apk` — give it to
-players as `AudioDefence.apk`. Keep the key somewhere safe and private, and
-hand it on with the project.
+which leaves `android\app\build\outputs\apk\release\app-release.apk` — give it
+to players as `AudioDefence.apk`.
 
 ## Controls
 

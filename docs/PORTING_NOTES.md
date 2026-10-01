@@ -168,7 +168,7 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
 
 The game also runs on Android phones.  The Android version is Erick's work: he made it from the 26.09.26-1
 release, and it was merged into this repository on 2026-10-01 so that there is one game and two ways to
-build it.  The phone runs this same `audiodefence` package under Chaquopy (Python 3.12, arm64 only, Android 8
+build it.  The phone runs this same `audiodefence` package under Chaquopy (Python 3.13, arm64 only, Android 8
 and later); what the phone does differently is behind `platform.host.ANDROID`, so Windows and the Mac are as
 they were.
 
