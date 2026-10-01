@@ -160,11 +160,19 @@ class WeaponManager:
         self = cls()
         self.weapons_array = []
         self.projectile_array = []
+        # PORT ADDITION: only the last melee of the list is made.  The original makes each and keeps the
+        # last, the one before released as it is replaced - and with it its playlist, deactivated before the
+        # activation it had just asked for has run, which then runs and leaves it loaded for good.  None of
+        # the original's challenges names two melees; the Extra mode's Reprise names five.
+        melee = {d.get('name') for d in self.get_all_weapons_array() or [] if ns_bool_value(d.get('melee'))}
+        last_melee = next((e for e in reversed(entries or []) if e.get('name') in melee), None)
         for entry in entries or []:
             for d in self.get_all_weapons_array() or []:
                 if d.get('name') != entry.get('name'):
                     continue
                 if ns_bool_value(d.get('melee')):
+                    if entry is not last_melee:
+                        continue
                     self.melee_weapon = MeleeWeapon(d)
                     self.melee_weapon.weapon_manager = self
                     continue

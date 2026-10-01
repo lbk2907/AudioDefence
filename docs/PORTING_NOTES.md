@@ -2174,6 +2174,12 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   and end at the first death as they always did.  Checked headless: three deaths in the second wave of a
   two-wave arena offered 1, 2 and 4 diamonds, each revive brought the same wave back with the first wave's
   guns full and read out, and the third, refused, went to the failed screen with 7 of 10 diamonds left.
+* PORT ADDITION: a challenge that names several melees makes only the last.  `initWithChallengeWeaponArray:`
+  0x1000a80f4 makes each and keeps the last, releasing the one before as it is replaced - and the playlist
+  the released one deactivates has not finished the activation it asked for a moment earlier, so that
+  activation runs afterwards and leaves it loaded for the rest of the session.  None of the original's
+  challenges names two; Reprise, which hands each act its own melee, names five in its own list.  Checked
+  headless: with a wok, a Banjo and a golf club listed, only the golf club's playlist is loaded.
 
   Exactly those modifiers, and nothing else: they are reset first.  Nothing resets them between the tarot
   screen and the next game-over screen, so a player who walked out of an endless game without finishing it
