@@ -78,8 +78,14 @@ PAIRED_FLAGS = {
 #: reaches.
 CHAIN_REACTION_BLAST = {'radius': 3, 'damages': 50, 'dispersal': 75}
 
+#: `noZombieThemes` is the one here that no card sets, and nothing reads it any more: turning off the music
+#: a zombie brings with it became a setting of each wave's rather than of the whole challenge, a day after
+#: it was written (`custom.ZOMBIE_THEMES`).  The name stays accepted so a challenge written in between is
+#: still one the game will read - `custom._challenge` turns it into the wave setting on every wave and drops
+#: it - because taking it out of here would have those files refused for naming a modifier the game does not
+#: have, which is somebody's work lost over a word.
 PORT_FLAGS = ('earlyPowerUp', 'luckyNight', 'lessPowerUps', 'lessCoins', 'alwaysCritical',
-              'everythingExplodes', 'noFartyBlast') + tuple(PAIRED_FLAGS)
+              'everythingExplodes', 'noFartyBlast', 'noZombieThemes') + tuple(PAIRED_FLAGS)
 
 
 class GameModifiers:

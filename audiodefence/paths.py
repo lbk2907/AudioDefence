@@ -49,6 +49,15 @@ if not FROZEN:
         os.makedirs(LOCALIZATION, exist_ok=True)
     except OSError as exc:                                # a read-only checkout: English, and no complaint
         logging.getLogger('paths').info('no localization folder, and none could be made: %s', exc)
+#: PORT ADDITION (user request): the folder challenges a player has written are read from, beside the
+#: executable - beside the app, on the Mac - as the language files are.  A `.adchallenge` or a `.adpack`
+#: dropped in here is an arena in the game (`game/custom.py`), and the Challenge maker writes what it
+#: generates into it.
+#:
+#: It is made when something first asks for it rather than at import, because a player who never opens the
+#: maker has no use for an empty folder; the maker asks for it on the way in, which is what makes the
+#: folder appear beside the executable the first time it is opened.
+CUSTOM_CHALLENGES = os.path.join(EXE_DIR, 'challenges')
 OPENAL_DLL = (os.path.join(VENDOR, 'openal-mac', 'libopenal.dylib') if host.MAC else
               os.path.join(VENDOR, 'openal', 'soft_oal.dll'))
 NVDA_DLL = os.path.join(VENDOR, 'nvda', 'nvdaControllerClient64.dll')
@@ -102,3 +111,17 @@ def user_dir() -> str:
 
 def bundle_path(*parts: str) -> str:
     return os.path.join(BUNDLE, *parts)
+
+
+def custom_challenges_dir() -> str:
+    """PORT ADDITION: `CUSTOM_CHALLENGES`, made if it is not there.
+
+    The folder is returned either way.  A copy installed somewhere it cannot be written is then a folder
+    with nothing in it, which the loader reads as "no custom challenges" - the game plays on, and only the
+    Challenge maker has anything to say about it.
+    """
+    try:
+        os.makedirs(CUSTOM_CHALLENGES, exist_ok=True)
+    except OSError as exc:
+        logging.getLogger('paths').info('no challenges folder, and none could be made: %s', exc)
+    return CUSTOM_CHALLENGES

@@ -205,6 +205,19 @@ class AmbientManager:
             log.info('[AMBIANT] Try to play brick ambiant : %s', brick_ambiant)
             self.play_enemy_ambiant_with_name(brick_ambiant, True)
             return
+        # PORT ADDITION (user request, 2026-10-01): a wave can ask to be played without the music a zombie
+        # brings with it.  Six of the game's enemies carry an `ambiant` in `enemies.plist` - the Chainsaw,
+        # the Hulk and HulkB, the Whisperer, and the Dog and DodgeB, which is four themes between them - and
+        # somebody building a wave may want the arena they chose rather than whichever zombie walked in
+        # last.  One wave at a time (`custom.ZOMBIE_THEMES`), so one wave of a storyline can be quiet and
+        # the next can have the Dog's theme walking in with it.
+        #
+        # Asked here: below the brick's own `Ambiant`, which is the wave's music rather than a zombie's and
+        # wins as it always did, and above the walk over what is standing in the arena.
+        if brick is not None and brick.brick_dictionary.get('NoZombieThemes'):
+            log.info('[AMBIANT] %s asked for no zombie themes', brick.name)
+            self.stop_ambiant()
+            return
         if self.enemy_with_current_ambiant_is_alive():
             log.info('[AMBIANT]Enemy with current ambiant is alive')
             return

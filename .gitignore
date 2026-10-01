@@ -43,3 +43,12 @@ android/.gradle/
 android/**/*.apk
 android/app/src/main/python/
 android/app/src/main/assets/
+
+# Challenges a player has made or generated (audiodefence/game/custom.py).  Run from source the folder is
+# the repository's own, and what is in it belongs to whoever is playing, not to the port.
+challenges/
+
+# And the copies compiler.py takes of that folder before every build (back_up_player_files).  Somebody's
+# own arenas and the recordings they speak with, which is work rather than source and is nobody else's to
+# publish - 232 MB of it on the machine this was written on.
+challenges-backup-*/

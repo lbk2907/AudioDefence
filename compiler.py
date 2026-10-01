@@ -129,6 +129,91 @@ def package(dest_root: str) -> str:
     return archive
 
 
+#: Folders in the build that belong to whoever is playing it rather than to the build - `challenges` is
+#: where their own arenas and the recordings they speak with live (`paths.CUSTOM_CHALLENGES`), beside the
+#: executable, which is inside what PyInstaller deletes.
+PLAYER_FOLDERS = ('challenges',)
+
+
+def back_up_player_files(dest_root: str) -> str:
+    """Copy anything of the player's out of the build folder into a dated folder of its own, and say where.
+
+    Belt as well as braces.  `hold_player_files` below moves their work aside and puts it back, and that is
+    tested and works - but a build is the one moment when a folder somebody has spent hours filling is
+    being carried about by a script, and on 2026-10-01 a `challenges/audio` folder went missing across a
+    build for a reason that was never established.  A copy costs a second and settles the question: whatever
+    happens to the build, the work is also sitting in the repository under a name with the date on it.
+
+    Answers the folder it wrote, or an empty string when there was nothing of the player's to copy.
+    """
+    wanted = [n for n in PLAYER_FOLDERS if os.path.isdir(os.path.join(dest_root, n))]
+    if not wanted:
+        return ''
+    into = os.path.join(HERE, 'challenges-backup-' + time.strftime('%Y%m%d-%H%M%S'))
+    try:
+        for name in wanted:
+            shutil.copytree(os.path.join(dest_root, name), os.path.join(into, name), dirs_exist_ok=True)
+    except OSError as exc:
+        say('your %s could not be copied aside first: %s' % (', '.join(wanted), exc))
+        return ''
+    files = sum(len(f) for _d, _s, f in os.walk(into))
+    say('copied your %s aside: %i file(s) in %s'
+        % (', '.join(wanted), files, os.path.basename(into)))
+    return into
+
+
+def hold_player_files(dest_root: str):
+    """Move anything of the player's out of the build folder, and answer where it went.
+
+    PyInstaller's COLLECT removes `dist/AudioDefence` whole before it writes it again, so a build run in a
+    folder somebody has been *playing* takes their own files with it - and `challenges` is work that only
+    exists there.  This is not a tidy-up: it is the difference between rebuilding and destroying somebody's
+    arenas, which nearly happened (2026-10-01).  A temporary folder beside `dist`, so it is on the same
+    drive and the move cannot half-finish across one.  `back_up_player_files` has already taken a copy.
+    """
+    held = {}
+    for name in PLAYER_FOLDERS:
+        here = os.path.join(dest_root, name)
+        if not os.path.isdir(here):
+            continue
+        keep = tempfile.mkdtemp(prefix='ad-keep-', dir=os.path.join(HERE, 'dist'))
+        shutil.move(here, os.path.join(keep, name))
+        held[name] = keep
+        say('holding your %s folder while the build runs' % name)
+    return held
+
+
+def give_player_files_back(held, dest_root: str) -> None:
+    """Put them back where they were, and say so.  Anything the build wrote under the same name is kept and
+    the player's is put beside it rather than over it, since neither is ours to throw away."""
+    for name, keep in (held or {}).items():
+        came_from = os.path.join(keep, name)
+        goes_to = os.path.join(dest_root, name)
+        try:
+            if os.path.isdir(goes_to):
+                merge_into(came_from, goes_to)
+            else:
+                os.makedirs(dest_root, exist_ok=True)
+                shutil.move(came_from, goes_to)
+            say('your %s folder is back in the build' % name)
+        except OSError as exc:
+            say('your %s folder could not be put back: it is in %s' % (name, keep))
+            say('  (%s)' % exc)
+            continue
+        shutil.rmtree(keep, ignore_errors=True)
+
+
+def merge_into(came_from: str, goes_to: str) -> None:
+    """Every file under `came_from` into `goes_to`, without replacing one that is already there."""
+    for dirpath, _dirs, files in os.walk(came_from):
+        where = os.path.join(goes_to, os.path.relpath(dirpath, came_from))
+        os.makedirs(where, exist_ok=True)
+        for filename in files:
+            target = os.path.join(where, filename)
+            if not os.path.exists(target):
+                shutil.move(os.path.join(dirpath, filename), target)
+
+
 def build_files(dest_root: str) -> list:
     """Every file of the built folder, as the zip holds it and the updater names it: relative, with '/'
     between folders, and an app's link to a folder as the one entry it is."""
@@ -1009,6 +1094,8 @@ def main(argv=None) -> int:
         return 0
 
     started = time.perf_counter()
+    copied = back_up_player_files(output_dir(args))
+    kept = hold_player_files(output_dir(args))
     try:
         failed = subprocess.run(cmd).returncode != 0
     finally:
@@ -1019,6 +1106,11 @@ def main(argv=None) -> int:
     say('built in %.0f seconds.' % (time.perf_counter() - started))
 
     dest_root = output_dir(args)
+    give_player_files_back(kept, dest_root)
+    if copied:
+        # Said at the end as well as the start, because this is the line somebody wants when the build has
+        # just finished and their folder looks wrong.
+        say('a copy of your work from before this build is in %s' % os.path.basename(copied))
     app = host.MAC and not args.console
     if app:
         arrange_mac_app(dest_root)

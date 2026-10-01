@@ -1000,6 +1000,345 @@ time the completed screen shows, so a run you lost can be compared with one you
 won, and so the copy is not handing you figures you were never told. The tip
 follows them.
 
+## Making your own challenges
+
+Under **Play → Extra** there is a **Custom** row, and behind it the arenas you
+have made and a **Challenge maker**. Opening the maker is what creates the
+`challenges` folder beside the game — beside `AudioDefence.app` on the Mac, as
+the `localization` folder is — and everything in that folder is read as an
+arena when the game starts.
+
+The maker has six buttons. **Create a challenge** asks you to type a name and
+then opens the editor on it. **Create an arena** names an arena and puts a first
+challenge in it; more are added from the arena's own list, with **Add a
+challenge to this arena**. **Generate a challenge** and **Generate an arena**
+skip the naming and make one at random. **Open the challenges folder** opens it
+in Explorer or the Finder, and **Read the folder again** picks up a file you
+have edited by hand without restarting the game. Under them the screen says what
+the folder holds, and names any file it could not read and why.
+
+Anything you create starts **empty**: one wave with nothing in it, waiting for
+you to put your own zombies in. Its row in the arena says *nothing in it yet*
+until you do, and Shift+Enter there opens the editor. If you would rather start
+from a crowd than from nothing, **Reroll the waves** in the editor builds one,
+sized against the guns you own — and **Generate a challenge** skips the naming
+and does it in one press.
+
+### Typing a name
+
+The game never asked you to type anything before. When it does now, it opens the
+system's own box: a real Windows text field — the one Explorer renames a file in
+— or Finder's on the Mac. So every editing key you already know works, because
+Windows is the one implementing it. Ctrl+A selects the lot, Ctrl+C and Ctrl+V
+carry a name in and out of the game, Ctrl+Backspace takes back a word, Ctrl+Left
+and Ctrl+Right move by words, Home and End jump to the ends, and Shift with any
+of them selects. Enter accepts and Escape cancels, as everywhere else in the
+game. What the box already holds starts selected, so typing replaces it.
+
+Your screen reader reads it as an ordinary edit field, because that is what it
+is, rather than as something the game read out to you.
+
+Names can hold letters, digits, spaces and `' - , . ! ? & ( )`; an objective or a
+tip takes the punctuation writing needs. Anything else says so and the box opens
+again holding what you typed, so you fix the name rather than start it over.
+
+You can rename a challenge from its **Title** row in the editor — Enter to type
+one, Shift+Enter for a suggestion — and an arena with **Shift+Enter** on its row
+in the Custom list. Renaming does not lose stars you have already won.
+
+The **Objective** and **Tip** rows work the same way: Enter to write your own,
+Shift+Enter to cycle the suggestions. A sentence takes the punctuation writing
+needs, and once you have written one it stays written — rerolling the waves
+rewrites the suggested objectives but never yours.
+
+What is generated uses only the zombies your Zombiepedia has unlocked and only
+the guns you have bought, so a challenge it hands you is one you can play. Each
+wave is sized rather than guessed: this game has no health, one zombie reaching
+you ends the run, so what makes a wave hard is not how much life is in it but
+whether every zombie can be killed before it arrives. The maker widens the gap
+between arrivals — and, if that is not enough, stands them further off, and only
+then thins the crowd — until the tightest moment leaves the slack it rolled for.
+Its ammunition is counted from the life in the waves and half again, so the
+accuracy star is still worth something.
+
+A custom challenge pays its coins and keeps its own three stars, and that is
+all: its stars never open one of the game's own arenas or one of Extra's
+chapters, so no amount of generating opens anything you have not played for.
+
+### Editing one
+
+On a challenge's row in its arena, **Shift+Enter** opens an editor. Most rows
+there are stepped values, as the port's own rows in Settings are — Enter for the
+next, Shift+Enter for the previous. The title, the objective and the tip are
+typed instead, in the system's box (above), and Shift+Enter on one of those
+offers a suggestion rather than a previous value. You can change its title,
+objective and tip, the ambience, both guns and their ammunition, the melee
+weapon, the accuracy, time and coin goals, and how hard and how many the waves
+should be. Every gun and melee weapon you have bought is offered, all ten and
+all five.
+
+Under **In the arena** are five rows, each one you press Enter on to turn on or
+off:
+
+- **Herd of Cows** — cows wander in and out. They are worth nothing and they are
+  not a threat; they are something else making a noise while you listen for what
+  is.
+- **Car Symphony** — car alarms start going off around you. Shoot a car and it
+  blows up, which is worth doing before a crowd walks past it.
+- **Jukebox** — an old jukebox plays music over everything. You cannot destroy
+  it, but shooting it buys you about ten seconds of quiet.
+- **Generator Malfunction** — a loud generator runs in the arena. Shooting it
+  stops it, and it explodes doing so; about a minute later it starts again.
+- **Thunder storm** — the arena's own weather, which takes over the ambience and
+  makes everything harder to place by ear.
+
+These are the same things Endless hands out as tarot cards, doing the same thing
+— the arena's own furniture rather than anything new — so a challenge can be
+built around the noise as well as around the crowd.
+
+There are two ways to fill the waves. **Reroll the waves** builds the crowds
+again at random, to the difficulty and the number of waves you have set and
+sized for the guns you have chosen. **Place the zombies yourself** opens the
+wave editor instead, and is the subject of the next section. **Save** writes the
+challenge back to its file; nothing is written until you do, and leaving with
+changes unsaved asks first.
+
+### Placing the zombies yourself
+
+The wave editor lists every wave and every zombie in it, and each wave's header
+says how much room it leaves you:
+
+    Wave 2, 6 zombies, 3 seconds of slack
+
+That is the same number the generator solves for. It is the whole of whether a
+wave can be won — this game has no health, so one zombie reaching you ends the
+run, and what matters is not how much life is in a wave but whether every zombie
+can be killed before its own clock runs out. When you have gone too far it says
+so plainly: *too tight to win by 9 seconds*.
+
+**Zombies in wave 1** is the quick way to size a wave: step it up and one at
+random out of what your Zombiepedia has unlocked is added, step it down and the
+last comes off. **Add a zombie to wave 1** asks which one — a list of every zombie your Zombiepedia has
+unlocked, by the name you know it by — and places it where it will not land on
+the one before it. A zombie's own row opens it, and there you set:
+
+- **Zombie** — which one, by the name the Zombiepedia gives it, from those it
+  has unlocked. That is the name you know it by: Reject, Snufflehog, Whisperer,
+  Zombie Dog. The game has more internal names than the Zombiepedia has entries
+  — `Zombie`, `ZombieB` and `ZombieC` are one zombie with three sets of
+  recordings — and those never show up here. Put two of the same zombie in a
+  wave and they are given different recordings, so they sound like two
+- **In wave** — which wave it arrives in. This is how a zombie moves between
+  waves; it keeps its bearing, distance and time, because the wave is what
+  changed
+- **Comes from** — the bearing it walks in from
+- **How far away** — how far out it starts, which is how much time it gives you
+- **Arrives** — how long after the wave starts it appears
+
+Every change reads back the slack of the wave it is in, so the cost of what you
+just did is audible as you do it.
+
+**Diamonds in wave 1** puts diamonds in the arena for that wave, up to eight.
+Each arrives two seconds in, nine units out at a bearing of its own, and leaves
+about nine seconds later unless you shoot it — the same diamonds Endless drops,
+which until now only Endless had. A wave can be nothing but diamonds if what you
+want is a wave spent collecting them; it ends when one of them is shot or goes.
+
+**Zombie themes in wave 1** is whether that wave plays the music its zombies
+bring with them. Four of them have their own — the Chainsaw, the Hulk, the
+Whisperer and the Zombie Dog — and it starts *on*, because that is what the game
+does. Turn it off and the wave is heard over the ambience you chose instead of
+over whichever zombie walked in last. It is a question per wave, so one wave of a
+storyline can be quiet and the next can have the Dog's theme coming in with it.
+
+**Power-up in wave 1** hands that wave an air drop, the way the game's own
+challenges do. Step the row through *none*, *any*, **Minigun**, **Fireworks**,
+**Tornado**, **Tesla Coil**: *any* is whatever the game feels like, as a drop in
+Endless is, and the four named ones always come as named. When a wave has one,
+**The power-up arrives** sets how long after the wave starts it appears, so a
+drop can be the thing that lets you deal with what is already walking towards
+you, or the reward for surviving the first half of a wave.
+
+A challenge's drop always arrives. The ordinary air-drop cooldown — the one your
+**Air Drops Frequency** upgrade shortens — only runs down in Endless, so a drop
+that waited for it would never come in a challenge at all. The game's own
+challenges work the same way: every one of them forces its drop.
+
+**Add a wave** puts an empty one at the end, and **Delete wave 2** removes one
+and everything in it, after asking. A challenge always keeps at least one wave;
+beyond that, a wave may hold nothing at all. An empty wave in the middle of a
+challenge is simply passed over, so it costs nothing to leave one there while you
+work out what goes in it.
+
+A challenge with no zombies in it *anywhere* will not start — there would be
+nothing to play — and its row says so.
+
+The wave editor writes as it goes rather than waiting for Save. Rerolling
+afterwards replaces everything you placed by hand, though each wave keeps its
+cutscene.
+
+The title steps through names the generator can write. For a name of your own —
+or for anything else the editor does not offer — edit the file: the editor
+patches only the keys it changed, so your own words, your own waves and even
+keys the game has never heard of survive being edited. Renaming does not lose
+the stars you have won, because a challenge is identified by its `id`, not its
+title.
+
+**Delete this challenge** removes the file it came from, after asking. A
+challenge that is part of a pack takes the rest of that pack with it.
+
+### Cutscenes and ambience of your own
+
+The game's own challenges talk to you — Dr Bastard introducing an arena, a line
+at the end of it. Those are *scripted sounds*, and a challenge you make can have
+them too, from recordings of your own.
+
+In the editor, **Cutscenes** opens the dialogue wave by wave. **Add a line to
+wave 1** opens the ordinary Windows file dialog (Finder's on the Mac); the file
+you pick is copied into `challenges\audio`, so a pack and the recordings it
+speaks with can be handed to somebody else together. Anything FFmpeg reads
+works: WAV, MP3, OGG, Opus, FLAC, M4A, AAC, WMA, AIFF and the rest — the same
+decoder that plays the game's own sounds.
+
+Every wave has three cutscenes, and that is what a storyline is built out of:
+
+- **before the wave** — the arena is quiet, the lines play, and the crowd arrives
+  when they have finished. This is what a cutscene usually is, and what a line
+  you add starts as: the game's own dialogue works this way, holding its zombies
+  back until the talking is done.
+- **during the wave** — dialogue over a crowd that is already coming. The
+  unusual one; nothing in the game does much of it.
+- **after the wave** — once the wave is cleared and before the next one starts.
+
+So a challenge of ten waves has eleven quiet moments to put a scene in, and the
+one after the **last** wave is the end of the challenge: kill the last zombie and
+the challenge-completed screen waits for the closing line before it appears.
+
+A line's row opens it, and there you can set:
+
+- **Where in the wave** — before it, during it, or after it. A line is added as
+  dialogue over the wave and moved here, so there is one Add row per wave rather
+  than three.
+- **Plays** — at a time from its cutscene's start, or after another line of the
+  same cutscene has finished.
+- **Holds the wave** — when it holds, the wave is not over until the line is, so
+  the challenge waits for it even with nothing left to kill. That is what makes
+  a cutscene a cutscene. A wave may have a cutscene and no zombies at all, which
+  is how the game's own closing lines work. A *before* or *after* scene always
+  has the arena to itself, so it holds either way.
+- **Can be skipped** — whether the Skip button ends it.
+- **Silences other sounds**, **Loops**, and **Loudness**.
+- **Placement** — *centred* is heard from everywhere at once, the way narration
+  is; *placed* is heard from one bearing at one distance; *walks past you*
+  crosses the arena while it talks, which is what Dr Bastard does.
+- **Hear it** plays the recording then and there, so you can place it by ear
+  instead of by playing the challenge.
+
+**Import an ambience**, on the editor's own screen, does the same for the bed
+that plays under the arena: pick a file and it becomes that challenge's
+ambience, alongside the ten the game ships. It is copied in under a name
+beginning `ambient_`, which is how the game recognises one.
+
+Recordings are never deleted when you remove a line — another challenge may be
+using it, and the audio folder is yours to tidy.
+
+### One arena, one file
+
+An arena with dialogue in it used to be two things to send: the `.adpack` and the
+recordings it speaks with. **Make this arena one file**, on the arena's own
+screen, puts them together — still a `.adpack`, with the recordings inside it.
+You are asked first, because the file the arena is in now is replaced by the one.
+
+After that there is nothing else to keep. Hand that file to somebody and it
+plays, dialogue and all. **You can delete the audio folder** and the arena still
+works: the next time the game reads the pack it puts its recordings back. The
+folder is a working copy, not something you have to look after.
+
+It stays a normal arena, too. Edit it, add waves, import more recordings — the
+game writes back into the file, and a recording you import goes inside it so it
+keeps travelling with it. The row says *Already one file* once it is one.
+
+Only the recordings the arena actually names go in — the cutscene lines and an
+ambience you imported — so an audio folder you have been experimenting in does
+not make the file any bigger than the arena needs. Your own recordings are left
+where they are; nothing is taken out of the audio folder.
+
+If somebody else's pack calls a line by a name you have already used for a
+*different* recording, theirs comes in under another name and their pack's lines
+are pointed at it, so both still say the right thing. A recording already there
+is recognised by what it is rather than by its name, so reading the same pack
+twice copies nothing.
+
+A plain `.adpack` — one you wrote by hand, or an arena you have not converted —
+still needs the audio folder, because it is only text and the names of things.
+
+### Writing one by hand
+
+Both kinds of file are plain JSON and can be edited in any text editor. A file
+ending in `.adchallenge` is one challenge; one ending in `.adpack` is an arena
+and the challenges in it. The quickest way to start is to generate one and
+change it.
+
+    {
+      "format": "audiodefence-challenge",
+      "version": 1,
+      "title": "Dead Air",
+      "arena": "My Arena",
+      "objective": "What the challenge screen says this asks of you.",
+      "tip": "What it offers as advice.",
+      "ambient": "ambient_roman",
+      "weapons": [{"name": "pistol", "ammo": 60}, {"name": "wok"}],
+      "coins": 200,
+      "accuracy": {"objective": 45, "reward": 150},
+      "time": {"objective": 150, "reward": 150},
+      "waves": [
+        {"before": "dr_bastard_arrives",
+         "enemies": [{"kind": "Zombie", "angle": 0, "distance": 10, "at": 0},
+                     {"kind": "Hulk", "angle": 140, "distance": 12, "at": 6}],
+         "passers": [{"kind": "Cow", "angle": 70, "distance": 11, "at": 1}],
+         "cutscene": ["dr_bastard_laughs"],
+         "after": [{"sound": "dr_bastard_leaves", "at": 1.5}]}
+      ]
+    }
+
+`angle` is degrees clockwise from where you start, `distance` is how far out in
+units, and `at` is seconds from the start of the wave. `"powerup": 8` gives the
+wave an air drop eight seconds in, and `{"at": 8, "kind": "tesla"}` says which —
+`any`, `minigun`, `fireworks`, `tornado` or `tesla`. `"diamonds": 2` puts that
+many diamonds in the arena for the wave. `kind` is the zombie's
+internal name — `Zombie`, `WeakZombie`, `Hulk`, `Runner`, `Farty`, `Chainsaw`,
+`Clown`, `QuietZombie`, `Shield`, `Dodge`, `Berserk`, `Colossus`, and the
+lettered variants of most of them (`ZombieB`, `RunnerC`) which sound different
+and are otherwise the same. A wave may also say `"rigged": true`, which gives
+every zombie in it the Farty's bomb so one shot takes the lot. A challenge may
+name `"modifiers"` it is played with, and a pack's challenges may name each
+other in `"requires"` so one has to be beaten before the next opens. The **In the
+arena** checkboxes are modifiers too — `"cows"`, `"cars"`, `"jukebox"`,
+`"machine"` and `"storm"` — so a file can ask for them directly. A wave may say
+`"zombie_themes": false` to be played without the music its zombies bring. `"coins"` is
+what finishing it pays, up to 1000 — the most the game itself pays for any one
+challenge — and so is each star's `"reward"`; leave it out and it pays 200.
+
+`"before"`, `"cutscene"` and `"after"` are the wave's three cutscenes, in the
+order they are heard, and each is one sound's name or a list of them. A name is
+a file in `challenges\audio` without its extension. Written longhand a line can
+say when it starts (`"at"`, or `"after"` naming another line of the same
+cutscene), whether it holds the wave (`"blocker"`), whether Skip ends it
+(`"skippable"`), `"stops_other_sounds"`, `"gain"`, `"loop"`, where it is heard
+from (`"angle"` and `"distance"`) or where it walks between (`"from"` and
+`"to"`). Two things a `before` or an `after` may not be, because the challenge
+would stop there with nothing to do: all loops, and the only thing in a wave —
+a wave still needs zombies or a cutscene of its own.
+
+A challenge holding a zombie your Zombiepedia has not unlocked yet says so on
+its row and will not open, so a pack from somebody who has played further than
+you have is something to grow into rather than a wave you cannot make sense of.
+
+A file that cannot be read is skipped and the game plays on; the maker screen
+and the Custom screen name it and say what is wrong with it, and the log has the
+same. An arena needs at least one gun in its loadout — a melee weapon on its own
+is not a loadout the game can start.
+
 ## Updates
 
 The game keeps itself up to date. When the main menu opens it asks GitHub
@@ -1099,7 +1438,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **171 divergences** and **15 original quirks kept on purpose** in the notes, of which 78 are
+There are **176 divergences** and **15 original quirks kept on purpose** in the notes, of which 78 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -1309,6 +1648,10 @@ replacing them.
 - **A fifth level for four of the power-ups** — the Minigun, the Fireworks, the Tesla and the Tornado.
   It is not for sale: the Powered Power Ups tarot card is the only way to reach it, and before this that
   card gave a player who had bought every upgrade nothing at all.
+- **Challenges of your own**, in the Custom list under Extra, out of a `challenges` folder beside the game.
+  The **Challenge maker** generates one, or a whole arena of them, from the zombies your Zombiepedia has
+  unlocked and the guns you have bought, and sizes each wave so it can be won. You can also write them by
+  hand. See [Making your own challenges](#making-your-own-challenges).
 
 ### Original quirks kept on purpose
 

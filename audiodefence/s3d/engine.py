@@ -82,6 +82,12 @@ class S3DEngine:
         self.dispatcher = S3DEngineDispatcher(self)
         self._models = None
         self.play_list_cache: dict[str, S3DPlayList] = {}
+        #: PORT ADDITION: sounds made straight from a file for the Challenge maker's Hear it, kept by path
+        #: so pressing it twice plays the one sound again rather than making a second (`sound_from_path`)
+        self._previews: dict[str, S3DSound] = {}
+        #: PORT ADDITION: playlists built for a player's own cutscenes and ambiences, so the folder being
+        #: read again can drop exactly those and leave the game's own alone (`forget_custom_play_lists`)
+        self._custom_names: set = set()
         # masterMixer <- dryMixer, masterMixer <- Stereoverb(wetMixer); Stereoverb 2.2 / 2 / wet 0 / dry 0
         self.bus = ReverbBus(self.device)
         self.bus_al = oal.ContextAL(self.device.al, self.bus.context) if self.bus.available else None
@@ -229,8 +235,64 @@ class S3DEngine:
         self._load_models()
         pl = self.play_list_cache.get(name)
         if pl is None:
+            pl = self._custom_play_list(name)             # PORT ADDITION: see below
+        if pl is None:
             log.info('playlist for %s not found, returning nil.', name)
         return pl
+
+    def _custom_play_list(self, name: str) -> 'S3DPlayList | None':
+        """PORT ADDITION (user request): a playlist for a cutscene a player has put together.
+
+        `_load_models` reads `game/meta/S3DPlayListModel`, which is Somethin' Else's folder and stays
+        theirs.  A wave written by a player keeps its recordings in the challenges folder beside the
+        executable instead, and `game/custom.py` builds a model for it out of the files actually there.
+        This is the "engine that looks in both" `additions.py` says audible content of the port's own
+        would need; the looking is only ever done for a name the game's own data does not have.
+
+        Anything that goes wrong here answers None, which every caller already reads as "no playlist":
+        a cutscene that cannot be built is a wave with no dialogue in it, not a game that will not start.
+        """
+        try:
+            from ..game import custom
+            model = custom.playlist_model(name)
+        except Exception:
+            log.exception('the custom playlist %s could not be built', name)
+            return None
+        if model is None:
+            return None
+        pl = S3DPlayList(self, model)
+        self.play_list_cache[name] = pl
+        self._custom_names.add(name)
+        return pl
+
+    def sound_from_path(self, path: str) -> 'S3DSound | None':
+        """PORT ADDITION (user request): a sound made straight from a file, belonging to no playlist.
+
+        The Challenge maker's Hear it needs to play a recording that is not in any playlist yet - a
+        cutscene's own lives only while its wave is loaded - and `S3DSound` takes a path, which is all
+        `agent_with_entry` does with an entry once it has built one.  Kept so it can be stopped and
+        played again rather than remade each time, which would leak a buffer per press.
+        """
+        if not os.path.isfile(path):
+            return None
+        snd = self._previews.get(path)
+        if snd is None:
+            snd = S3DSound(self, path)
+            self._previews[path] = snd
+        return snd
+
+    def forget_custom_play_lists(self) -> None:
+        """PORT ADDITION: drop the playlists built above, so a cutscene changed in the maker is heard as
+        it is now rather than as it was when it was first asked for (`custom.load`)."""
+        for name in list(self._custom_names):
+            pl = self.play_list_cache.pop(name, None)
+            self._custom_names.discard(name)
+            if pl is None:
+                continue
+            try:
+                pl.stop_all()
+            except Exception:                             # it may never have been activated
+                log.debug('the custom playlist %s did not need stopping', name, exc_info=True)
 
     def stop_all(self) -> None:                                         # 0x1000fc628
         self._load_models()

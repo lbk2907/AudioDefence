@@ -140,8 +140,11 @@ class ChallengeData:
         # PORT ADDITION: a challenge of the port's own (Play, Extra) belongs to no world, so nothing
         # follows it.  Without this the world lookup came back empty and the index arithmetic below ran
         # off the end of an empty list - the crash a player found by pressing Next challenge after one.
+        # A custom challenge (`custom.py`) belongs to no world either, and what follows it inside its own
+        # arena is `custom.challenge_after`, asked by `App.go_to_challenge_after`.
+        from . import custom
         from .additions import EXTRA_CHALLENGES
-        if challenge in EXTRA_CHALLENGES:
+        if challenge in EXTRA_CHALLENGES or custom.is_custom(challenge):
             return False
         if not ((self._world(world) or {}).get('challenges') or []):
             return False

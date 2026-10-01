@@ -317,6 +317,54 @@ they were.
 
 ## Divergences
 
+* A time of nought is a time that happens (user request, 2026-10-01).  `-[ADBrick update:]` 0x1000a0ed0
+  decides a wave's air drop is due with `(now - dt) < when and now >= when`, which can never be true for a
+  `when` of nought: `time_in_brick` is nought before the first tick and `dt` after it, so the first time the
+  question is asked `now - dt` is nought as well, and `0 < 0` is false.  The moment is behind it before it
+  is ever looked for, and the drop simply never comes.  None of the game's own waves notices - all 37
+  `PowerUp` times in its data were read and every one is above nought, the smallest being the 0.01 of
+  `tutorial_4_brick_4`, which is that same first tick written as a number that works.  A wave built in the
+  port's own editor does notice, because its ladder starts at "0 seconds in" meaning as the wave starts: a
+  player found two of their waves handing out nothing at all.  `_due` reads nought as what it says, and the
+  two kinds of drop are now each asked only when the wave actually names one - `ns_float_value` reads a
+  missing key as nought, so a wave asking only for a forced drop had been asking for the waiting kind on its
+  first tick as well.
+* A wave with nothing in it finishes itself (user request, 2026-09-30).  Nothing in the game ever asks
+  whether a wave is over except something in it ending: `soundOrEnemyWithNameWasDeactivated:` 0x1000c6bb0 is
+  the only caller of `currentBrickIsCleared` 0x1000c6ca0.  A wave holding neither enemies nor sounds has
+  nothing that can end, so it is never asked, and the game stops there for good - no enemy to kill, no line
+  to hear, and nothing to do but quit.  `BrickManager.update` lets one such wave by per pass, which at sixty
+  passes a second is heard as the wave simply not being there.  It is needed because a challenge somebody is
+  building starts from empty waves, and an unfilled wave must be a wave waiting rather than a dead end.
+  Nothing of the game's own changes: all 341 bricks were read - 194 of the original's and 147 of the port's
+  - and not one is empty.  It does catch two of the original's own loose ends, where a challenge names a
+  brick that is not in the bundle at all (`Endless_Level2_a` asks for level2_brick_21 and `demo.plist` for
+  level4_brick_12): a missing plist is an empty dictionary, so those waves would hang in exactly this way,
+  and now they pass instead.
+* `-[ADPasserByManager update:]` 0x1000d59e4 returns early for any mode but Endless, so the cows and the
+  car alarms a `GameModifiers` flag asks for arrive only there; a challenge counts as well now (user
+  request, 2026-09-30).  The flags are the original's own - `cows`, `cars`, `jukebox` and `machine` in
+  `FLAGS`, which are also four of its tarot cards - and `startTimers` 0x1000d57c0 reads all four whatever
+  the mode: it adds the Jukebox and the Machine itself, so those two have always worked anywhere, and sets
+  `nextCow` and `nextCar`, which nothing outside Endless ever read again.  Three of the four already did
+  what a challenge would want of them and two of them did nothing at all.  Nothing of the game's own
+  changes: not one of the original's 45 challenges carries a `Modifiers` key, and of the port's six arenas
+  that do, none names `cows` or `cars`.  Modes 3 and 4 - the looping scenario and the menu demo - are left
+  as they were.  Measured in a challenge afterwards: the Jukebox and the Generator at nought, a cow at 43 s
+  and a car alarm at 61 s, which are the original's own 15-to-50 and 25-to-70 second draws.
+* `-[ADSound initWithDictionary:]` 0x1000b2d68 ends on `set_state(1 if spawn_time != 0 else 0)`, which asks
+  the wrong question of a line written at nought seconds.  State 1 is "its clock is running" and state 0 is
+  "parked until something triggers it": `checkSpawnOnStart:` 0x1000a19fc and `checkEnemiesSpawnAfterKill:`
+  0x1000a20ac are what move a sound out of 0, `-[ADSound update:]` 0x1000b3914 has no branch for it at all,
+  and `ignoreIfSkipped` parks a sound by putting it back there.  So a sound at nought with nothing to wait
+  for is parked for ever, and a `blocker` that never plays holds its wave with it - the challenge stops,
+  with nothing left to kill and no way on but quitting the game.  In the original's own data the two
+  questions are the same question and this is not a bug there: all 131 scripted sounds in the game's plists
+  were counted, and every one either names a `spawn_after` and has no `spawn_time` (30 of them) or has a
+  non-zero `spawn_time` and nothing to wait for (101); the port's own arenas have no scripted sounds at all.
+  None is in the gap, so the port asks the question that was meant - `set_state(0 if spawn_after else 1)` -
+  and the state of every sound the game ships is unchanged.  A cutscene a player writes *is* in the gap:
+  "at the start" is what a line usually wants, and `game/custom.py` writes `at: 0` for it.
 * `-[ADWeapon playSingleShootSound]` spins on the main thread until it picks a `_fire_` sound that is not
   playing; with no such sound it would hang forever (the port returns instead).  The weapons' fire sounds last
   1 to 1.7 s while the Tactical Rifle fires every 0.25 s and the Micro SMG every 0.2 s, so after a few quick
@@ -2700,6 +2748,464 @@ they were.
 * A challenge with no stars reads "0 stars unlocked" (user request, 2026-10-01, found in the Android
   version).  `statusForChallengeWithDict:` 0x100054960 adds the s only above one star, so the original said
   "0 star unlocked"; the port adds it for every count but one.
+
+* PORT ADDITION: challenges a player writes, and the Challenge maker that generates them (user request,
+  2026-09-30).  `additions.py` is where the *port* invents content; `audiodefence/game/custom.py` is where a
+  **player** does.  A file in the `challenges` folder beside the executable - beside the app, on the Mac, as
+  `localization` is - is read as an arena of its own under Play, Extra, Custom, and is played by the same
+  code that plays Somethin' Else's challenges: `data._load` falls back to `custom.PLISTS` exactly as it falls
+  back to `additions.PLISTS`, so every one of the twenty-two places that read the game's data finds a custom
+  challenge without knowing it is one.  The bundle is asked first, the port's own second and a player's
+  third, so nothing written in that folder can shadow either.
+
+  **Two files, one format.**  `<name>.adchallenge` is one challenge and `<name>.adpack` is an arena and the
+  challenges in it; both are JSON, and the module's docstring is the specification.  A challenge names its
+  title, its objective and tip, the ambience, the weapons and their ammunition, the three stars, any
+  `Modifiers` (the port's own challenge key, see above), and its waves; a wave is a list of enemies, each with
+  a bearing, a distance and either a time or an `after` naming the slot whose death starts its clock
+  (`checkSpawnAfterKill:` 0x1000a20ac), plus optional passers-by.  It is translated into the brick
+  dictionaries `Brick.__init__` already reads - numbered slots (`"Zombie 1"`), `Rigged`, `NoBlast`,
+  `PasserBy` keyed by the kind - so nothing in the engine knows the difference.
+
+  **Nothing a player writes reaches the game's own progression.**  `totalStarsUnlocked` 0x10001ecd4 gates
+  Somethin' Else's worlds and `ChallengeData.total_stars_unlocked_for_chapters` gates the port's chapters;
+  a custom arena is in neither list, so a folder of generated arenas cannot open City Crossroad (25 stars),
+  Maya Ruin (40) or Chapter 6.  It pays the coins its file asks for and remembers its own three stars for
+  its row to read out - that, and nothing else (user decision, 2026-09-30).
+
+  What it may pay is `custom.REWARD_CAP`, **1000** (user request, 2026-09-30; 200 until then).  That is the
+  most the game itself pays for finishing anything: all 45 of the original's challenges were counted and
+  `urban_10` and `maya_10`, the last of each world, are the two that pay it, the other 43 paying 500 or 200.
+  So a challenge somebody wrote can be worth as much as the hardest challenge the game has, and no more.
+  Each star has the same ceiling.  It is a cap and not a rate: anybody who can write the file can write
+  themselves an easy one too, so this is here to keep a mistyped number from being absurd rather than to
+  stand between a player and their own coins.  What a file *gets* when it says nothing, and what the
+  generator writes into one it makes, is `custom.DEFAULT_REWARD`, still 200 - what a chapter-1 arena of the
+  port's pays and what every challenge of the original's first two worlds pays.  Deliberately not the cap:
+  the ceiling went up for challenges somebody writes on purpose, and an arena generated at random has not
+  earned the top of it.
+
+  **A bad file is a row on a screen, never a crash.**  Every value is read defensively and every limit is
+  there to stop a mistyped number hanging the game before anybody can see it (`MAX_WAVES`, `MAX_ENEMIES`,
+  `MAX_FILE_BYTES` and the rest).  A file that will not read is skipped, the reason is kept in
+  `custom.PROBLEMS`, and the Custom and Challenge maker screens read them out.  One refusal is not
+  defensiveness but the original's own arithmetic: `initWithChallengeWeaponArray:` 0x1000a80f4 ends on
+  `weapons_array[0]`, so a loadout of nothing but a melee weapon would raise there, and a file that hands
+  out no gun is refused with that said.
+
+  **Unlocked by the Zombiepedia.**  The generator draws only from enemies the Zombiepedia has opened, and a
+  hand-written challenge holding one it has not says so on its row and will not open - which is what
+  `canUseBrickWithName:` 0x1000c259c does for an Endless brick, for the same reason.  Asking that question
+  needs more than `getKillRequirementForEnemyWithName:` 0x100084ea8 on its own, because the entry carrying a
+  requirement is not always the one a wave names: `Runner` holds 0 and is the entry the Zombiepedia shows
+  while `RunnerB` and `RunnerC` hold none at all, and `Dodge` holds 400 while `DodgeB` holds none.
+  `custom.required_kills` takes the largest requirement of the enemy, of what its name is a variant of
+  (a trailing B, C or D), and of everything sharing its display name that carries a `bestiary` - so a wave
+  naming `DodgeB` is gated exactly as the Zombie Dog a player reads about is.  Measured over all 35 entries
+  of `enemies.plist` (the Zombiepedia shows twelve of them, one per display name): 16 kinds open at nought kills, `QuietZombie` at 150, `Berserk` at 250, `Shield` at 350,
+  `Dodge` and `DodgeB` at 400 and `Colossus` at 450, and the cows, cars, jukebox, slot machine, diamond and
+  power-up container are out of it altogether, having no `bestiary` anywhere in their family.  Ted, Jim and
+  Bob are out as well, on speed 0: they stand where they spawn, and a crowd of them is a wave the wok can
+  never reach.
+
+  **What it generates is sized, not guessed.**  There is no player health here - one enemy reaching you ends
+  the run (`attack` 0x100060304) - so a wave is not the life in it but whether each enemy can be killed
+  before its own clock runs out, which is what `tools/arena_pressure.py` measures for the port's own arenas.
+  `custom.wave_margin` is that measure, cut down to what a generator needs and what this package can carry:
+  each enemy's deadline from `-[ADEnemy update:]`'s own walk (in at `speed` until three units, then
+  `agressiveSpeed` to 0.3, and only `1 - circlingFactor` of the speed closing while it circles), the wave
+  taken in deadline order, and the slack at the tightest moment.  `SPAWN_SOUND` is a flat second rather than
+  the measured recording the tool reads, because that needs a decoder this package does not have and a
+  second is the pessimistic end.  `_size_wave` then makes the wave winnable with three levers in the order
+  that costs a player least: the gap between arrivals, then the distance they start from, then the count.
+  It can give up - eight Colossuses against a Micro SMG is thirty seconds of shooting each and no spacing
+  makes that a wave - and then keeps the widest arrangement it tried, so a roll that asked too much is a
+  hard challenge rather than an impossible one.  What it hands out is what the player has actually bought
+  (`Inventory.has_unlocked_weapon`), and the ammunition is counted from the life in the waves and half again,
+  so the accuracy star still means something.  The crowd weapons are left out of the draw: a shotgun or a
+  bazooka is priced pack by pack rather than enemy by enemy (`arena_pressure.area_pressure`), and this
+  measure counts one thing at a time.
+
+  The bearings a generated crowd walks in from are a turn of about 137.5 degrees apart, which never settles
+  into a pattern however many there are, and they are **written into the file** rather than rolled when it
+  is played - a challenge has stars on it, and a star won against one arrangement has to mean the same as a
+  star won against the next.
+
+  **Editing one** (user decision, 2026-09-30): Shift plus Enter on a challenge's row opens
+  `Port_ChallengeEditorViewController`, where every row is a stepped value as the port's own rows in
+  Settings are.  It has to be: nothing in this port reads typed text - there is no text-entry widget
+  anywhere in it, and a caret a screen reader can follow is a feature of its own - so the title steps
+  through names drawn from the generator's two word lists and anything else is a line in the file.  The
+  rows change the challenge; the waves are rebuilt by Reroll rather than placed one zombie at a time, which
+  keeps the promise the generator makes - `_size_wave` sizes every wave against the loadout it will
+  actually be played with - that a hand-placed zombie could not be held to.  The Reroll row reads out the
+  slack at the tightest moment, so making an arena harder is something a player can hear.
+
+  `save_challenge` **patches the file rather than rebuilding it**: it reads the JSON, sets the keys that
+  changed on that one challenge object, and writes it out again.  A pack's other challenges are not
+  touched, a sentence somebody wrote themselves is kept (the editor offers it as a choice beside the
+  generator's three, `generated_objective`), unknown keys survive, and waves are written back only when
+  Reroll actually replaced them - so saving a change of title never pushes a hand-placed wave through the
+  generator's inverse.  The identity is the file's `id` and not the title, so renaming does not orphan the
+  stars already won.  Two slots of the same gun is refused while stepping (`_step_slot` skips what the
+  other slot holds): it reads out twice and carries one gun's ammunition on two lines.
+
+  **The Zombiepedia's names, and only those** (user request, 2026-09-30).  An earlier pass of the editor
+  offered `unlocked_kinds` and said what it found, which leaked the game's own bookkeeping at a player -
+  "It is now a FartyB", a row reading "DodgeB".  `custom.display_name` and `pedia_roster` answer with what
+  the Zombiepedia shows instead.  The catch is that the original's data does not line those up:
+  `enemies.plist` gives `Runner` the displayName "Snufflehog" and the bestiary, while `RunnerB` and
+  `RunnerC` are called "Runner" and carry none - and the encyclopedia only ever lists an entry that has a
+  bestiary (`mapDisplayNameToName` 0x100078b94), so it has never once said "Runner".  `Dodge` and `DodgeB`
+  are the same trick under "Zombie Dog" and "Dodger".  Taking each kind's own displayName therefore gave
+  a roster with both "Runner" and "Snufflehog" in it, two rows for one zombie; the name is taken from
+  whichever entry of the family carries the bestiary instead, which collapses the game's sixteen walking
+  keys onto the Zombiepedia's twelve entries, in its own order (by `Unlock requirement`, as
+  `sortZombieNames` 0x100079610 sorts them).  The variants are not thrown away but spent: `variant_of`
+  takes them in turn, so two Zombies in a wave are `Zombie` and `ZombieB` and sound like two, which is
+  what having three sets of recordings is for and what `_crowd` already did.
+
+  **Placing the zombies by hand** (user request, 2026-09-30), which the editor above deliberately did not
+  do and now does: `Port_WaveEditorViewController` lists every wave and every zombie in it, and
+  `Port_EnemyEditorViewController` is one of them.  The wave stays the unit - `brickIsCleared` 0x1000a1658
+  clears one and the manager loads the next, which is what a wave is - and what changes is that a zombie
+  goes in the wave the player chose.  Moving between waves is a stepped row (**In wave**) rather than a
+  cut and a paste, so it is one gesture; the place goes with it, since the wave is what changed, and the
+  slot is renumbered on the way in because a key free in one wave may be taken in another
+  (`custom.move_enemy`, `free_slot` - `Enemies` is a dictionary and the kind is read off the front of the
+  key, `Enemy.__init__` 0x10005ddd4).
+
+  Every wave's header reads out `custom.wave_margin` against the best gun the challenge hands out at level
+  1 - the same measure `_size_wave` solves for, so "3 seconds of slack" means the same on both sides of
+  the screen - and every change reads back the slack of the wave it touched.  That is the substitute for
+  seeing a wave: it goes negative honestly ("too tight to win by 9 seconds") rather than being hidden
+  behind a refusal, because a player is allowed to build something brutal on purpose.
+
+  One guard is left, where there were four: the last wave cannot be deleted, because a challenge with no
+  waves is a file `_read` refuses.  The other three went when the empty wave did (user request,
+  2026-09-30) - a wave can be stepped down to nothing, its last zombie can be removed, its only cutscene
+  line can be moved out from under it, and a wave added arrives empty rather than with a zombie in it.
+  All four existed only because an empty wave used to be a dead end.  The editor writes
+  as it goes rather than waiting for a Save - there is no half-placed zombie worth keeping in memory -
+  and Reroll still replaces what was placed by hand, which its hint now says, while keeping each wave's
+  cutscene.
+
+  **Typing a name** (user request, 2026-09-30).  `Port_ChallengeEditorViewController` stepped its title
+  through names drawn from the generator's word lists because there is no text entry anywhere in this
+  port, which made naming a thing you worked around rather than did.  `ui/host.TextEntryScreen` is the
+  entry: a modal overlay like an alert, so the screen under it keeps its rows and its cursor, with no
+  method in the binary to depart from - a phone has a keyboard the system draws, and this game never asks
+  for a word.  What it does about being unable to see is the whole of it: every character is read back as
+  it is typed, a space says "space" rather than passing as a pause, Backspace says what it removed and
+  what is left, either arrow reads the line back (there is no caret to move, which is a deliberate
+  simplification rather than an omission), and a character a name may not hold says so instead of being
+  dropped where nobody would notice.  Enter and Escape mean what they mean everywhere else.
+
+  A sentence is not a name, so `TextEntryScreen` takes what a character has to pass: a title holds letters,
+  digits and the marks a title uses, while the objective and the tip (user request, 2026-09-30) take the
+  punctuation writing needs.  Both keep out the brace and the percent sign, because the localization layer
+  reads those as substitutions (`_VALUE_TOKEN`) and a stray one would be a gap nobody meant to leave.  A
+  sentence a player wrote stays written: `generated_objective` recognises only the three the generator
+  writes, so rerolling rewrites those and never theirs.
+
+  **The system's own box** (user request, 2026-09-30) is what the typing moved to afterwards.  A field the
+  port draws is a field with only the keys the port thought of, and `TextEntryScreen` had none of what a
+  keyboard actually does: no caret, no selection, no Control plus A, no Control plus C or V, no word at a
+  time, and one Backspace per character to take back a word.  So `platform/textentry.py` hands the job to
+  the system, the way choosing a sound file already does.  Windows gets a real `EDIT` control in a window
+  of its own - the control Explorer renames a file in - so every editing key works because the system
+  implements it, and a screen reader reads an edit field rather than a sentence the game decided to say.
+  The Mac gets AppleScript's `display dialog` with a `default answer`, which is Finder's.  Not a
+  `DLGTEMPLATE`: that has to be packed byte by byte in memory and buys only what `IsDialogMessageW` gives a
+  plain window anyway, which the box's own message loop asks for directly.
+
+  Four keys are taken in that loop, before `TranslateMessage` can turn them into characters - taking one
+  there is the whole of taking it, so there is no character left for the control to insert and no beep for
+  a key it did not expect.  Enter and Escape, because they have to mean here what they mean on every other
+  screen in the game.  Control plus A, because the control has done it itself since Windows 2000 but only
+  as a courtesy a dialog manager is free to swallow first, and "select it all and type over it" is what
+  this box is most often opened to do.  Control plus Backspace, because the control's own answer is to
+  insert character 0x7F - a box in the middle of your title - which is a thirty-year-old loose end in
+  `user32` and not something to pass on to a player.
+
+  The box is modal, as the file dialog is: the game's window is disabled while it is open and brought back
+  afterwards, enabled first so Windows does not hand the focus to whatever else is on the screen.  The
+  presses that piled up behind it are dropped (`_drop_held_keys`), or the Enter that accepted the box would
+  also press the row the cursor is on - the same shape as the controller bug under `_pad_input`, where one
+  press of Cross skipped the intro and then started a game.  Only the presses: a key-up is what clears a
+  held key, and the Enter that *opened* the box is still waiting to be let go of.
+
+  Two things it cannot borrow.  Validation stays the port's, because a paste does not pass through the
+  keyboard: `ui/host.ask_for_text` checks what came back and opens the box again holding it, so a name with
+  a character in it that cannot go in is fixed rather than retyped.  And translation stays the port's,
+  because the box is the one place the port's text does not pass through `Speech.speak` - a Win32 window
+  caption goes to Windows as it is written - so the title and the prompt are translated before they are
+  handed over, and a box in Russian says what the screen behind it would.  `TextEntryScreen` is still
+  there and is still the answer where there is no system box, and for a box that could not be shown:
+  `textentry.available()` stops claiming one after the first failure, so a Windows that refuses to make the
+  window is a port that types the old way rather than one that cannot name a challenge.
+
+  On top of it: `custom.create_challenge` and `create_arena` make one from a typed name, and
+  `rename_arena` renames one.  A created challenge is `starter_challenge`, which is **one wave with nothing
+  in it** (user request, 2026-09-30).  It was one generated crowd until then, so that a challenge could be
+  played the moment it was named; but a crowd nobody asked for is a crowd they have to delete a zombie at a
+  time before they can place their own, and placing their own is what naming a challenge is for.  A
+  challenge still needs at least one wave, which `_read` refuses to do without, so one empty wave is as
+  empty as a challenge gets.  An arena is still created with its first challenge, for the same reason: an
+  arena with nothing in it is a file `_read` refuses.
+
+  An unfilled challenge is not playable, and its row says so rather than being silently startable:
+  `custom.nothing_to_kill_in` is what the Custom arena screen reads, and the row offers the editor instead
+  ("nothing in it yet, press Shift plus Enter to put some zombies in it").  Not because it would break -
+  every wave in it would be let by (the divergence above) - but because it would be a run that was over
+  before it started and paid its coins for nothing.  An empty wave *inside* a challenge that does have
+  zombies is left alone: that is a pause between crowds, and somebody wrote it on purpose.  Renaming an arena is several files when it is the loose gathering - a pack says
+  its arena once at the top, and the loose `.adchallenge` files say it each - so `rename_arena` walks them
+  and answers how many it touched.  Identity stays the file's `id`, so none of this loses a won star.
+
+  **An air drop in a wave** (user request, 2026-09-30): a `PowerUp` block on the brick, which is how the
+  game's own challenges hand one out - `Brick.update` 0x1000a0ed0 watches `time_in_brick` past
+  `force_spawn_time` and calls `forceToPopPowerUpContainerWithType:` 0x1000c7b68, which upper-cases the
+  `type` and matches MINIGUN, FIREWORKS, TORNADO and TESLA, falling through to a drop of no named kind.
+  `custom._powerup` writes that block, short (`"powerup": 8`) or long (`{"at": 8, "kind": "tesla"}`), and
+  the wave editor sets it on two rows - the kind, and when, the second shown only when there is a drop to
+  time.  The row's words are the game's own: `displayNameForItemWithName:` 0x1000a7568 falls through to the
+  power-ups, so Tesla is "Tesla Coil" as it is in the armory.
+
+  **It is always a forced drop**, never the kind that waits (`spawn_time` ->
+  `tryToPopPowerUpContainer` 0x1000c7b4c), and a file asking to wait is refused with that said.  The
+  air-drop cooldown only runs down in Endless: `ADBrickManager update:` 0x1000c37b0 ticks
+  `ADPowerUpManager update:` 0x10004b5a4 under `mode == 1` and nowhere else, so in a challenge it stays at
+  whatever `resetPowerUpCooldown` 0x10004b640 left it - 90 seconds at level 1 - for the whole run, and
+  every ask is refused.  Measured both ways: 30 seconds of Endless took the cooldown 90 -> 60, and 30
+  seconds of a challenge left it at 90.  The game's own data says it twice more: all 29 of its
+  `spawn_time` blocks are Endless bricks and all 8 of its `force_spawn_time` ones are challenges, as are
+  all 13 of the port's own.  So the waiting kind is not a choice withheld, it is a wave with a drop in its
+  file and no drop in the arena.  `spawn_after` goes the same way - `checkSpawnAfterKill:` 0x1000a20ac
+  answers it with the waiting call - so "a drop when the Hulk dies" is refused rather than silently never
+  arriving.
+
+  **The arena's own furniture** (user request, 2026-09-30, grown 2026-10-01): `custom.ARENA_EXTRAS` is the
+  cows, the car alarms, the jukebox, the generator and the thunderstorm, offered as five rows in the editor
+  that are on or off.  All five are flags a card already sets and need nothing of the port's: the storm is
+  `startWithambient:gain:` 0x100098004 swapping the arena's bed for `ambient_storm` and timing the thunder,
+  which was never gated on the mode and so already worked in a challenge.
+
+  **Diamonds in a wave** (user request, 2026-10-01): `custom.WAVE_DIAMONDS` on the brick, read by
+  `BrickManager.load_brick_with_name` 0x1000c2930, up to `MAX_DIAMONDS` of them.  `addDiamond` 0x1000c7748
+  is the original's own and is used unchanged - a `DiamondDropper` on `Diamond` out of `enemies.plist`,
+  placed at a bearing of its own choosing nine units out, arriving two seconds later and leaving about nine
+  seconds after that unless it is shot.  What is new is anything but Endless ever calling it: the timer that
+  does so sits under `mode == 1` in `update:` 0x1000c37b0 and drops one every 40 to 70 seconds, so a
+  challenge had no diamonds in it at all and there was no way to ask for any.
+
+  `Brick.is_empty` counts them, which is the one thing that had to change beside it: a wave of nothing but
+  diamonds is a wave meant to be spent collecting them, and the empty-wave pass above would otherwise take
+  them away before they could be reached.  They do not hold the wave open past that - `brickIsCleared`
+  0x1000a1658 looks at the brick's enemies and sounds and a diamond is neither, and is the manager's rather
+  than the brick's - so a diamonds-only wave lasts until one of them is shot or walks off, which is what
+  ends it.  Measured: a wave asking for three put three shootable diamonds in the arena and went on to the
+  next wave afterwards.
+
+  **A wave with or without its zombies' music** (user request, 2026-10-01).  Six of the game's enemies
+  carry an `ambiant` in `enemies.plist` - the Chainsaw, Hulk and HulkB, the Whisperer, Dodge and DodgeB,
+  four themes between them - and `AmbientManager.check_ambiant` 0x100099444 starts whichever one is
+  standing in the arena.  Somebody building a wave may want the ambience they chose instead.  A **wave's**
+  setting and not a challenge's: what wants to be quiet is usually one wave of a storyline rather than all
+  of them.  So it is `custom.ZOMBIE_THEMES` on the brick, a key of the port's own that nothing of the
+  game's reads, written from `"zombie_themes": false` in the file and set by a row in the wave editor;
+  `check_ambiant` asks it below the brick's own `Ambiant`, which is the wave's music rather than a zombie's
+  and wins as it always did, and above the walk over what is standing in the arena.
+
+  It was a challenge-wide modifier for one day first, which is the only reason `noZombieThemes` is still in
+  `modifiers.PORT_FLAGS`: a file written in that day names it, and taking the name out would have those
+  files refused for naming a modifier the game does not have - somebody's work lost over a word.
+  `_challenge` turns it into the wave setting on every wave and drops it from the dictionary, and
+  `save_challenge` drops it from the file the next time the waves are written, so the two can never
+  disagree about a wave.  Without that second half the flag won: a wave turned back on turned itself off
+  again the moment the file was read.  Each is a
+  `GameModifiers` flag of the original's own and what it switches on is the original's own
+  (`ADPasserByManager` 0x1000d570c owns all four), so the editor writes a flag into the challenge's
+  `modifiers` and the game does the rest exactly as it does in Endless when a card turns one on.  Two cows
+  were needed before it worked outside Endless, which is the `update:` divergence above.
+
+  The rows' words are read out of `Tarot.plist` rather than written in the port: each of the four is also
+  one of the game's own cards, and a card already says what its flag does - "Car alarms will go off around
+  you. Shoot the cars to blow them up!".  So the editor cannot drift from the cards, and the rows come
+  translated, every card's title and description being a phrase the language files already carry.
+
+  Which way a press goes is decided by what the row says rather than by whether the plain flag is in the
+  list, because one of the port's level-4 flags stands for two things at once and `cattleMarket` is half
+  cows (`PAIRED_FLAGS`).  A row reading yes for that reason turns off when pressed and says that
+  `cattleMarket` is still asking for the cows - taking *that* flag out to stop them would quietly take away
+  the lucky night it gives with its other hand.  A flag the editor does not offer is never dropped either:
+  the draft carries the whole `modifiers` list, so `fasterEnemies` written by hand survives a save.
+
+  **A zombie's key is its place in the wave**, and `custom.slot_name` is the only thing that decides it.
+  There used to be two answers to that question, which is a crash a player found (2026-10-01): `_wave`
+  numbered by the place in the wave when it read a file, and `free_slot` numbered per kind when the editor
+  added one, so a wave of a Zombie, a Chainsaw and a Zombie was `Zombie 1, Chainsaw 1, Zombie 2` in the
+  editor and `Zombie 1, Chainsaw 2, Zombie 3` once it had been saved and read again.  Every save renamed
+  most of the wave, and a screen still holding the name it had been given could not find its zombie -
+  `KeyError: 'Chainsaw 1'` out of `step_kind`, which is what editing a second wave did twice over.
+
+  Three things keep the two the same now.  `custom.renumber` puts a wave's keys back in that shape after
+  anything that adds, removes or moves a zombie, and answers what became what.  `_WaveWork.write_waves`
+  re-reads the waves from the file once it has written them, so the editor holds what the file says rather
+  than what was sent to it - `save_challenge` reads the folder again, which builds every wave afresh, so
+  the dictionaries a screen was holding go stale the moment they are written.  And `custom.rename_kind`
+  changes a zombie's kind in place rather than taking it out and putting it back, so it keeps its turn in
+  the wave and the zombies after it keep their names.
+
+  **Which zombie, asked rather than assumed** (user request, 2026-10-01).  `Add a zombie to wave 1` used to
+  add `pedia_roster()[0]`, which is the Chainsaw: the Zombiepedia's order is by what it asks before it will
+  show you an entry (`sort_zombie_names` 0x100079610), so its first row is the first zombie the game
+  introduces and the Colossus is its twelfth.  Anybody who wanted a Colossus had to add a Chainsaw and step
+  its kind eleven times.  The row opens an alert listing the unlocked names instead, so the wave editor
+  keeps its rows and its cursor underneath.  `Zombies in wave 1` does not ask - it is the quick way to size
+  a wave, so one press is one more zombie - and it puts in one drawn at random out of what the Zombiepedia
+  has unlocked (user request, 2026-10-01).  It was another of the last one in the wave, which made stepping
+  it up build a crowd all of one kind; a crowd worth listening to is a mixed one, and the row that asks is
+  there for when it should not be a surprise.
+
+  **Every gun that has been bought** (user request, 2026-09-30).  The editor's gun and melee rows read
+  `WeaponManager.get_all_weapons_array` filtered by what the player owns, in the order Weapons.plist lists
+  them.  They used to read `custom.GENERATOR_GUNS`, which is the shorter list the *generator* draws from and
+  which leaves the crowd weapons out on purpose: a shotgun, a grenade launcher or a bazooka is priced pack
+  by pack rather than enemy by enemy (`tools/arena_pressure.py`), and `_size_wave` counts one thing at a
+  time, so a crowd built for a bazooka is a crowd with nothing to do in it.  That is a limit on building a
+  crowd at random and says nothing about what a challenge may hand out - reading it in the editor hid five
+  of the ten guns from somebody placing their own zombies.  The generator keeps its own list.  `wave_margin`
+  is still counted one zombie at a time, so for a crowd weapon the slack a row reads is the pessimistic
+  figure, which is the safe direction to be wrong in; the Reroll row says so.
+
+  **An arena as one file** (user request, 2026-10-01).  A pack with dialogue in it was a `.adpack` *and*
+  the folder of recordings it speaks with, and somebody handed only the file heard none of it.  So a
+  `.adpack` may now be either the JSON it always was or a zip holding that JSON as `pack.json` with the
+  sounds its cutscenes name under `audio/`.  Both are read and both keep the same suffix: which one a file
+  is is the reader's business, not the player's, and `is_zipped` asks the file rather than its name - every
+  zip begins `PK`.  `pack_up` writes one from the files the arena is already made of rather than from
+  `PLISTS`, for the reason `save_challenge` patches rather than rebuilds: a key a later version adds, or
+  the order somebody put their keys in, is theirs and survives being shared.  Only the sounds the cutscenes
+  name go in (`sounds_named_by`), so an audio folder somebody has been experimenting in does not travel.
+
+  Reading one installs its recordings into the audio folder, which is what makes a received arena behave
+  like one of their own afterwards - editable, with its sounds available to their other challenges.  Two
+  things had to be true for that to be safe.  A name already taken by a *different* recording gets another
+  name and this pack's own lines are pointed at it (`_point_at`), so two people's packs can both call a
+  line `intro`.  And the folder is searched by what a recording *is* rather than by what it is called
+  (`_recordings_by_content`): by name alone a renamed pack renamed itself again on every read, because the
+  name it wanted was still taken, so `intro_2` became `intro_3` and then `intro_4` - a copy of the same
+  audio per launch for as long as both packs were installed.  Found by trying it twice.
+
+  A zipped pack is allowed to be `MAX_PACK_BYTES` where a plain one is `MAX_FILE_BYTES`, since it carries
+  speech; the document *inside* it is still measured against `MAX_FILE_BYTES`, so a zip cannot smuggle in a
+  page of JSON too big to read.
+
+  **It is a conversion and not a copy** (user request, 2026-10-01).  The first version wrote the zip
+  *beside* the files it was made from, which is the same arena twice: `load` refuses the second one
+  challenge by challenge, so pressing the row reported "another file has already used the name" six times
+  and left the maker screen reading out six problems.  `pack_up` replaces what it was made from, having
+  first read the new file back (`_read(temp, as_pack=True)` - said rather than left to the name, since the
+  file it is checked under is not the name it will have) and written it beside itself and moved it into
+  place, so a conversion that cannot be read back does not happen and the arena stays as it was.
+
+  **And a zipped pack is edited in place, not only read** (user request, 2026-10-01), which is what makes
+  the audio folder genuinely optional rather than merely restorable.  `_document_of` reads the document out
+  of either shape without touching the recordings - `_unpack` installs and may rename them, which is right
+  when the folder is being read and wrong when a file is about to be written back.  `save_challenge` then
+  patches that document and `_rewrite_zip` writes the pack beside itself and moves it into place, carrying
+  every recording across: the whole arena is in that one file and there is no second copy of it to fall
+  back on.  `add_to_pack` puts a newly imported recording inside it, for a cutscene line or for an
+  ambience, so an arena that is one file stays one file.  Measured on a real arena of six challenges and
+  thirteen recordings: converted to a single 29.4 MB pack, renamed a challenge and changed a wave through
+  the editor, deleted the audio folder entirely, and all thirteen lines still had their recording.
+
+  **Cutscenes and ambience of a player's own** (user request, 2026-09-30), which is the thing
+  `additions.py` says the port could not do: "a new enemy or weapon that makes a noise needs recordings,
+  and the engine finds those by name under `game/sounds/`, which is their folder.  Audible content needs a
+  folder of the port's own and an engine that looks in both."  Both halves turned out to be small.  The
+  folder is `challenges/audio`, which `import_audio` copies a chosen file into - copied and not pointed at,
+  because a challenge naming a path on one machine says nothing on anybody else's, and a pack is meant to
+  be handed over.  The looking is `S3DSound.agent_with_entry`, which builds a path with
+  `os.path.join(paths.BUNDLE, entry.path, ...)`: `os.path.join` drops everything before an absolute path,
+  so an entry pointing at that folder already resolves there and the engine needed a way *in* rather than
+  a change to how it reads files.  That way in is `S3DEngine._custom_play_list`, asked only for a name
+  `game/meta/S3DPlayListModel` does not have, so the game's own data is consulted first and always wins.
+
+  A cutscene is the original's own scripted sound and nothing new: `Sounds` on a brick, read by `ADSound`
+  0x1000b2d68, with `blocker` (which `brickIsCleared` 0x1000a1658 waits on), `skippable` (what lights the
+  Skip button), `stopsOtherSounds`, `gain`, `loop`, a `spawn_time` or a `spawn_after` naming another line -
+  `afterStart` separating "when that one begins" (0x1000a19fc) from "when it has finished" (0x1000a20ac) -
+  and `position` with `finalPosition`, which `ADSound.update` 0x1000b3914 walks between at two units a
+  second.  `custom._cutscene` writes exactly that shape from a line of the file, short (`"cutscene":
+  "my_line"` is one blocking, skippable line at nought, and a lone block of settings is that same one line
+  with somewhere to put a time or a place) or long.  A wave of nothing but a cutscene is one
+  of the original's own shapes - tutorial_7_brick_4, the closing line of "Meet The Farty", has no enemies -
+  so `_wave` requires enemies only when there is no cutscene to hold the wave instead.
+
+  **Three cutscenes to a wave** (user request, 2026-09-30): `before` it, `during` it, and `after` it
+  (`custom.PLACES`).  `during` is the `Sounds` above, which is the original's own key - but talking over a
+  crowd that is already coming is not the original's own habit, and a player found that out by making a
+  challenge where a zombie walked about during the scene (2026-10-01).  Counted over the game's own data:
+  of the 220 zombies in bricks that also carry dialogue, 124 wait for a line before they arrive and 94 wait
+  for another zombie that does; two have a clock of their own (`maya_2_brick_3`, a single Hulk) and not one
+  simply arrives, and 45 of those 47 bricks hold every zombie back until a line has played.  So the line
+  plays and *then* the zombies come, `before` and `after` are what a cutscene usually is, and a line added
+  in the editor is a `before` one - it was a `during` one until that was pointed out.  `before` and `after`
+  are scenes with the arena to themselves, and they are a new *place* to write a cutscene rather than new machinery: each
+  becomes a brick of its own holding `{'Sounds': [...]}` and nothing else, which is tutorial_7_brick_4
+  exactly - no `Enemies` key at all - and `brickIsCleared` 0x1000a1658 then has nothing to wait for but the
+  lines, so the scene ends when the last of its blockers does and `loadNextBrick` 0x1000c3058 starts what
+  comes after.  A challenge of ten waves therefore has eleven seams to put a scene in, and the `after` of
+  the last wave is the end of the challenge: `challenge_is_over` is set when the *last brick* clears
+  (`currentBrickIsCleared` 0x1000c6ca0), so the score screen waits for the closing line rather than
+  arriving with the last zombie.  Measured on a two-wave storyline played out tick by tick: scene, wave,
+  scene, wave, scene, and the score screen asked for 0.43 s after the last wave was cleared, which is the
+  closing recording's length.
+
+  The two lists live on the wave under keys of the port's own, `custom_before` and `custom_after`, which
+  nothing in the game reads: `_challenge` takes them off the wave to make the bricks and `_wave_to_object`
+  writes them back, so the round trip through the editor keeps them.  `bricks` is what the game plays and
+  holds the scene bricks; `custom_waves` is the waves proper, and is what `waves_of` and the editors walk -
+  a screen reading `bricks` would number the third crowd as the fifth and write each scene back out as a
+  wave of its own.
+
+  Two shapes are refused, both because they would stop the game dead rather than merely read oddly.  A
+  `before` or `after` of nothing but looping lines, because the only thing that ever asks whether a wave is
+  over is `soundOrEnemyWithNameWasDeactivated:` 0x1000c6bb0 and a line that loops never deactivates to ask
+  it.  And a wave with neither enemies nor a cutscene *of its own* - a `before` and an `after` are waves of
+  their own by then, so they do nothing to end the wave they are written on, and an empty wave between two
+  scenes has no enemy to kill and no sound to finish.  Two scenes running into each other is still easy to
+  write: the lines go in one cutscene, or in the `after` of one wave and the `before` of the next.  The
+  editor refuses the move that would leave a wave empty for the same reason, and says so, because it writes
+  the file as it goes and the refusal would otherwise land on the way back in.
+
+  One row rather than three: a line is added to the wave and moved between the three on its own screen
+  (`Where in the wave`), instead of each wave carrying three Add rows.  On a screen that is read out a row
+  at a time, one row to find beats three to walk past.  A moved line's timing starts again from the top of
+  its new scene, because a line that was waiting for another line of the old one cannot wait for it from a
+  wave away - which `_cutscene` refuses in a file for the same reason.
+
+  An ambience is the same road with one naming rule: `startWithambient:gain:` 0x100098004 takes a
+  playlist's bed with `any_sound_containing('ambient')`, and a sound's key is its file's own name, so
+  `import_ambience` copies a recording in under `AMBIENCE_PREFIX` rather than asking a player to know
+  that.  It is built streamed, as the original's own ambiences are.
+
+  Formats are whatever FFmpeg reads, and not a list of the port's choosing: `s3d/decoder.py` is PyAV, the
+  same decoder that plays the game's `.m4a`.  The picker is `comdlg32.GetOpenFileNameW` through `ctypes`
+  (`platform/filedialog.py`) - Explorer's own dialog, already on every Windows machine and read by a screen
+  reader because it is the system's window rather than one drawn here; the Mac gets AppleScript's `choose
+  file`.  A phone has no file system a player can see, so there is no method in the binary this departs
+  from.  `NOCHANGEDIR` is set: the game reads its own data by relative path in places, and a dialog that
+  moved the working directory would break that for the rest of the run.
+
+  A generated objective and tip are `%` templates held in the code (`custom._OBJECTIVES`, `_TIPS`), so a
+  translator is offered them whole and `localization.translate` matches the filled sentence back to its
+  template when the challenge screen reads one out.  A generated **title** is not: it is content, written
+  into the player's own file where they can change it and read back out of that file afterwards, for the
+  same reason the name of a saved game is not translated.  The challenges folder is in `.gitignore`: run
+  from source it is the repository's own folder, and what is in it belongs to whoever is playing.
 
 
 ## Original quirks kept on purpose
