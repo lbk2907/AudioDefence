@@ -567,7 +567,11 @@ or add `C:\Gradle\gradle-8.13\bin` to your **Path** (**Settings → System →
 About → Advanced system settings → Environment Variables**, your user's
 **Path**, **New**) and type `gradle`.
 
-**5. Build.** In the repository's `android` folder:
+**5. Build.** The one-step way is the compiler: double-click `compiler.py`
+and choose **Android build** (or type `py compiler.py --android`). It checks
+that everything above is there, names whatever is not, runs Gradle and puts
+the app in `dist` — see [Building an executable](#building-an-executable). By
+hand instead, in the repository's `android` folder:
 
     gradle assembleDebug
 
@@ -600,16 +604,21 @@ came with Java; its name and password have to be the ones
 
 Keep `audiodefence.p12` somewhere safe and private — never in the repository —
 and hand it on with the project. Phones that already have Erick's builds can
-only update with his key: ask him for it, or install yours fresh. Then, to
-build a release:
+only update with his key: ask him for it, or install yours fresh. Then tell
+Windows where it is, once:
 
-    set AD_KEYSTORE=C:\path\to\audiodefence.p12
-    gradle assembleRelease
+    setx AD_KEYSTORE C:\path\to\audiodefence.p12
 
-which leaves `android\app\build\outputs\apk\release\app-release.apk`. Rename it
-`AudioDefence-Android-<version>.apk`, the version being the one in `VERSION`,
-and attach it to the GitHub release beside the Windows and Mac zips: that is
-the file the app looks for when it updates itself. The app's version comes from
+and, in a new command prompt, the compiler's release build — or its Android
+build — signs the app with it and leaves it at
+`dist\AudioDefence-Android-<version>.apk`, the version being the one in
+`VERSION`. Without the key, the release build makes no APK and says why, and
+the Android build makes a test one, `AudioDefence-Android-<version>-TEST.apk`.
+By hand instead, with `AD_KEYSTORE` set, `gradle assembleRelease` leaves
+`android\app\build\outputs\apk\release\app-release.apk`, to be renamed
+`AudioDefence-Android-<version>.apk`. Attach it to the GitHub release beside
+the Windows and Mac zips: that is the file the app looks for when it updates
+itself. The app's version comes from
 `VERSION` as it is built — its name is the tag, and the number Android compares
 is the same digits run together, `26.10.01-1` being 26100101 — so every release
 is newer to Android than the one before.
@@ -1433,7 +1442,7 @@ first — and note that the extractor needs the thin arm64 slice, not the fat
 Then **double-click `compiler.py`** in Explorer, or type `py compiler.py` on
 its own. It asks which build you want:
 
-    1. Release build: file the changelog under the version, build, and zip
+    1. Release build: file the changelog under the version, build, zip, then build the Android app
     2. Test build: build, zip, then run it for ten seconds and check its log
     3. Build without the zip
     4. Clean build: empty PyInstaller's cache first, for when a build behaves oddly
@@ -1441,6 +1450,7 @@ its own. It asks which build you want:
     6. One-file build: a single executable instead of a folder
     7. Build without the game's data
     8. Show what a release build would do, without building anything
+    9. Android build: the Android app alone, leaving the changelog as it is
     0. Quit
 
 Type the number and press Enter. The window waits for Enter at the end, so you
@@ -1450,6 +1460,17 @@ That is the whole build. The script checks what it needs, runs PyInstaller with
 the right arguments, copies the game's data next to the executable and says
 where the result is: `dist\AudioDefence\AudioDefence.exe`, in a folder that
 runs on a machine with no Python on it at all.
+
+The release build then builds the Android app from the same `VERSION`, with
+Gradle, and leaves it at `dist\AudioDefence-Android-<version>.apk` — the APK
+alone, with nothing beside it and in no zip. It needs the tools listed under
+*Building the app* in [On Android](#on-android), and the app's key in
+`AD_KEYSTORE` (*A release*, there). If any of them is missing, the game is
+still built and zipped, and the build ends by saying the APK was not made and
+why. Choice 9, *Android build*, makes the APK alone, without touching the
+changelog; with no key it makes a test build,
+`dist\AudioDefence-Android-<version>-TEST.apk`, which cannot install over a
+release.
 
 Each choice is one of the options in the table below, and they still work typed
 out — `py compiler.py --test` builds straight away with no menu. Run with no
@@ -1474,6 +1495,7 @@ is no cross-compiling to another system.
 | `--test` | run the result for ten seconds afterwards and read its log: that it found the game data, that the game's own HRTF is in use, and that it ended without a traceback |
 | `--dry-run` | print what would happen, build nothing — including every file that would land beside the executable |
 | `--no-package` | do not make the zip. A build otherwise ends by packing `dist\AudioDefence` into `dist\AudioDefence-Win-<version>.zip`, which is what a release's asset is and what the updater reads, warning first if `VERSION` is missing or `changelog.txt` still starts with `unrelease:` |
+| `--android` | build the Android app alone, and leave the changelog as it is: `dist\AudioDefence-Android-<version>.apk`, signed with the key `AD_KEYSTORE` names, or `...-TEST.apk` without one. The other options are the desktop build's and do not apply |
 
 ### Cutting a release
 
@@ -1493,11 +1515,11 @@ In order:
   if it had to make one. Every build ends by saying whether there is anything
   to commit.
 - tag the release `26.09.21-1` and upload `dist\AudioDefence-Win-26.09.21-1.zip`
-- for the Android app, build the release APK with `gradle assembleRelease` (see
-  *A release*, under [On Android](#on-android)), rename it
-  `AudioDefence-Android-26.09.21-1.apk` and upload it to the same release, beside
-  the Windows and Mac zips. Sign every release APK with the same key, or phones
-  will not install it over the one they have.
+  and `dist\AudioDefence-Android-26.09.21-1.apk`, beside the Mac zip. The
+  release build makes the APK too, signed with the key `AD_KEYSTORE` names (see
+  *A release*, under [On Android](#on-android)): every release APK has to be
+  signed with that same key, or phones will not install it over the one they
+  have.
 
 The release build — choice 1, or `py compiler.py` with no options from a
 script — does three things to the repository before it copies anything:

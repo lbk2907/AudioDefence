@@ -1,4 +1,4 @@
-"""Build Audio Defence into an executable with PyInstaller.
+"""Build Audio Defence into an executable with PyInstaller, and the Android app with Gradle.
 
 Double-click this file, or run py compiler.py with nothing after it, and it offers a numbered menu of
 builds, then waits for Enter at the end so you can hear how it went.  Its first choice is the release
@@ -11,6 +11,7 @@ build.  Every other choice is one of these flags, which still work typed out:
     py compiler.py --onefile      a single executable instead (unpacks itself at every launch)
     py compiler.py --no-game      leave the game's data out
     py compiler.py --dry-run      say what a build would do, build nothing
+    py compiler.py --android      the Android app alone, leaving the changelog as it is
 
 A build makes one folder, dist\\AudioDefence, with the game's data copied in, and ends by zipping it into
 dist\\AudioDefence-Win-<VERSION>.zip, which is what a release's asset is and what the updater reads.
@@ -25,6 +26,13 @@ under this version's heading in the repository's changelog.txt, and the copy bes
 on that version.  Every build ends by saying whether there is anything to commit.  Run with no flags and no
 keyboard (from a script), it is the release build straight away, without the menu.
 
+The release build ends by building the Android app from the same VERSION, with Gradle in android\\, and
+puts it in dist as AudioDefence-Android-<VERSION>.apk, the name the app's updater looks for on a release.
+It is signed with the project's key, the .p12 file AD_KEYSTORE names; with no key, or with the Android
+tools missing, the release build makes no APK and says why, and the game's own build is unaffected.
+--android builds the app alone, with the same key, or without one as a test build:
+dist\\AudioDefence-Android-<VERSION>-TEST.apk, which cannot install over a release.
+
 The port, the HRTF, the vendored DLLs and the version - read from VERSION in the repository - go inside
 the build; the game's own files do not - they are copied next to the executable, where
 audiodefence/paths.py looks for them when frozen.  Nor do the language files, which go beside it in a
@@ -34,6 +42,7 @@ README.
 from __future__ import annotations
 
 import argparse
+import glob
 import importlib.util
 import os
 import re
@@ -592,8 +601,183 @@ def test_build(exe: str) -> int:
     return 0 if read_log(text, run.returncode, log) else 1
 
 
+# --- the Android app ---------------------------------------------------------------------------------
+# The same VERSION built for phones by Gradle in android/ (see "On Android" in the README).  The build itself
+# is android/app/build.gradle's, which copies the game in and reads VERSION by itself: the compiler finds the
+# tools, runs Gradle and puts the APK in dist under the name the app's updater takes from a release
+# (ASSET_PREFIX in audiodefence/platform/updater_android.py).
+
+ANDROID = os.path.join(HERE, 'android')
+#: what android/app/build.gradle compiles against, and the Python Chaquopy builds the app's own with
+ANDROID_PLATFORM = 'android-35'
+ANDROID_PYTHON = '3.13'
+#: the Android plugin runs on nothing older than Java 17, and Gradle 8.13 on nothing newer than 23
+JAVA_RANGE = (17, 23)
+
+
+def apk_name(version: str, signed: bool) -> str:
+    """'AudioDefence-Android-26.10.01-1.apk', or with -TEST on the end for one signed with this computer's
+    own key, which cannot install over a release."""
+    return 'AudioDefence-Android-%s%s.apk' % (version, '' if signed else '-TEST')
+
+
+def find_gradle() -> str:
+    """Gradle: on the PATH, or else unzipped under C:\\Gradle as the README says (the newest there)."""
+    found = shutil.which('gradle')
+    if found or not host.WINDOWS:
+        return found or ''
+    unzipped = glob.glob(r'C:\Gradle\gradle-*\bin\gradle.bat')
+    return max(unzipped, key=lambda p: [int(n) for n in re.findall(r'\d+', p)]) if unzipped else ''
+
+
+def find_java() -> str:
+    """The java Gradle will run on: JAVA_HOME's when that is set, as Gradle chooses, or else the PATH's."""
+    home = os.environ.get('JAVA_HOME', '').strip()
+    if home:
+        exe = os.path.join(home, 'bin', 'java.exe' if host.WINDOWS else 'java')
+        return exe if os.path.isfile(exe) else ''
+    return shutil.which('java') or ''
+
+
+def java_major(java: str) -> int:
+    """The version java -version gives, as its major number: 21 for "21.0.5", 8 for "1.8.0"; 0 if unknown."""
+    try:
+        run = subprocess.run([java, '-version'], capture_output=True, text=True, stdin=subprocess.DEVNULL,
+                             timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return 0
+    found = re.search(r'version "(\d+)(?:\.(\d+))?', run.stderr + run.stdout)
+    if not found:
+        return 0
+    major = int(found.group(1))
+    return int(found.group(2) or 0) if major == 1 else major
+
+
+def has_android_python() -> bool:
+    """Whether Chaquopy will find the Python it builds the app's own with, where it looks for it: py -3.13
+    on Windows, python3.13 elsewhere."""
+    cmd = ['py', '-' + ANDROID_PYTHON] if host.WINDOWS else ['python' + ANDROID_PYTHON]
+    try:
+        return subprocess.run(cmd + ['--version'], capture_output=True, stdin=subprocess.DEVNULL,
+                              timeout=60).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def release_key() -> tuple[str, str]:
+    """The project's key, the file AD_KEYSTORE names; or '' and why there is none to sign with."""
+    path = os.environ.get('AD_KEYSTORE', '').strip()
+    if not path:
+        return '', 'AD_KEYSTORE is not set'
+    if not os.path.isfile(path):
+        return '', 'AD_KEYSTORE names %s, which is not there' % path
+    return path, ''
+
+
+def android_plan(release: bool) -> tuple[list, list, str, str]:
+    """What would stop the Android build and what might, in plain words, with the key it would sign with
+    and why there is none.  The release build makes no APK without the key, rather than one a player's
+    phone could not update from.  "Building the app" under On Android in the README says how to install
+    each tool."""
+    found, doubts = [], []
+    java = find_java()
+    if not java:
+        found.append('JAVA_HOME is %s, which has no Java in its bin folder' % os.environ['JAVA_HOME'].strip()
+                     if os.environ.get('JAVA_HOME', '').strip() else
+                     'there is no Java: install a JDK, 17 to 23, and set JAVA_HOME')
+    else:
+        major = java_major(java)
+        if major and major < JAVA_RANGE[0]:
+            found.append('Java %d is too old: the Android build needs %d to %d' % ((major,) + JAVA_RANGE))
+        elif major > JAVA_RANGE[1]:
+            doubts.append('Java %d is newer than Gradle 8.13 runs on, so the build will most likely fail: '
+                          'set JAVA_HOME to a JDK %d to %d' % ((major,) + JAVA_RANGE))
+    sdk = os.environ.get('ANDROID_HOME', '').strip()
+    if not sdk:
+        found.append('ANDROID_HOME is not set: it names the Android SDK, %s'
+                     % ('setx ANDROID_HOME C:\\Android' if host.WINDOWS else 'export ANDROID_HOME=~/Android'))
+    elif not os.path.isdir(os.path.join(sdk, 'platforms', ANDROID_PLATFORM)):
+        found.append('the Android SDK in ANDROID_HOME, %s, has no platforms%s%s: sdkmanager "platforms;%s" '
+                     '"build-tools;35.0.0"' % (sdk, os.sep, ANDROID_PLATFORM, ANDROID_PLATFORM))
+    if not has_android_python():
+        found.append('Python %s is not there for Chaquopy to build the app\'s own Python with: %s'
+                     % (ANDROID_PYTHON, 'py install ' + ANDROID_PYTHON if host.WINDOWS
+                        else 'brew install python@' + ANDROID_PYTHON))
+    if not find_gradle():
+        found.append('Gradle is not on the PATH' + (', nor unzipped under C:\\Gradle' if host.WINDOWS else ''))
+    key, no_key = release_key()
+    if release and not key:
+        found.append("%s, and a release APK has to be signed with the project's own key: set AD_KEYSTORE to "
+                     "the key file (A release, under On Android in the README), or choose the Android build "
+                     "for a test APK" % no_key)
+    return found, doubts, key, no_key
+
+
+def describe_android(release: bool) -> None:
+    """What build_android would do, for --dry-run."""
+    found, doubts, key, no_key = android_plan(release)
+    for doubt in doubts:
+        say('warning: ' + doubt)
+    if found:
+        say('the Android app would not be made:')
+        for problem in found:
+            say('  ' + problem)
+        return
+    say('the Android app would then be built with gradle %s in android, and put in dist%s%s%s'
+        % ('assembleRelease' if key else 'assembleDebug', os.sep,
+           apk_name(build_version() or first_version(), bool(key)),
+           '' if key else ' - a test build, because ' + no_key))
+
+
+def build_android(release: bool) -> tuple[int, str]:
+    """Build the Android app with Gradle and put the APK in dist.  Returns the exit status, and the line the
+    build's summary gives it: where the APK is, or that it was not made and why."""
+    say()
+    say('building the Android app ...')
+    found, doubts, key, no_key = android_plan(release)
+    for doubt in doubts:
+        say('  warning: ' + doubt)
+    if found:
+        say('it cannot be built:')
+        for problem in found:
+            say('  ' + problem)
+        # the summary gives each reason without its remedy, which has just been said
+        return (0 if release else 2), ('the Android app was not made: %s - see above.'
+                                       % '; '.join(problem.split(': ')[0] for problem in found))
+    env = dict(os.environ)
+    if not key:
+        env.pop('AD_KEYSTORE', None)                    # a test build signs with this computer's own key
+        say("  %s, so this is a test build, signed with this computer's own key: it cannot install over a "
+            "release, nor a release over it." % no_key)
+    task, kind = ('assembleRelease', 'release') if key else ('assembleDebug', 'debug')
+    # what android/app/build.gradle calls the build too: VERSION, or today's first release without one
+    version = build_version() or first_version()
+    say('running: gradle %s, in android.  The first build fetches its tools and takes ten to twenty minutes.'
+        % task)
+    started = time.perf_counter()
+    try:
+        failed = subprocess.run([find_gradle(), task, '--console=plain'], cwd=ANDROID, env=env).returncode != 0
+    except OSError as error:
+        say('Gradle would not start: %s' % error)
+        failed = True
+    built = os.path.join(ANDROID, 'app', 'build', 'outputs', 'apk', kind, 'app-%s.apk' % kind)
+    if failed or not os.path.isfile(built):
+        say('Gradle failed - its own output above says why.' if failed else
+            'Gradle finished, but left no %s.' % os.path.relpath(built, HERE))
+        return 1, 'the Android app was not made: Gradle failed, see its output above.'
+    apk = os.path.join(HERE, 'dist', apk_name(version, bool(key)))
+    os.makedirs(os.path.dirname(apk), exist_ok=True)
+    shutil.copyfile(built, apk)
+    say('built in %.0f seconds: %s, %.0f MB.'
+        % (time.perf_counter() - started, os.path.basename(apk), os.path.getsize(apk) / (1 << 20)))
+    if key:
+        say('upload this to the release tagged %s, beside the zips.' % version)
+    return 0, 'the Android app is %s' % apk
+
+
 def main(argv=None) -> int:
-    parser = argparse.ArgumentParser(prog='compiler.py', description='build Audio Defence with PyInstaller')
+    parser = argparse.ArgumentParser(
+        prog='compiler.py', description='build Audio Defence with PyInstaller, and the Android app with Gradle')
     parser.add_argument('--onefile', action='store_true',
                         help='one executable instead of one folder (unpacks itself at every launch)')
     parser.add_argument('--no-game', action='store_true',
@@ -605,8 +789,20 @@ def main(argv=None) -> int:
     parser.add_argument('--no-package', action='store_true',
                         help='do not zip the folder afterwards; a build makes the release archive by default')
     parser.add_argument('--dry-run', action='store_true', help='print what would be done, build nothing')
+    parser.add_argument('--android', action='store_true',
+                        help='build the Android app alone, and leave the changelog as it is')
     args = parser.parse_args(argv)
     os.chdir(HERE)                                      # the paths above are relative to the project
+    if args.android:                                    # nothing of the desktop's: the other flags are its
+        if args.dry_run:
+            describe_android(release=False)
+            return 0
+        status, line = build_android(release=False)
+        say()
+        say(line)
+        say()
+        say(commit_notice([]))
+        return status
     if host.MAC and args.onefile:
         say('--onefile is not offered on the Mac: a one-file app unpacks itself at every launch, which costs '
             'tens of seconds there, and an .app is one thing to double-click already.')
@@ -673,6 +869,8 @@ def main(argv=None) -> int:
         if flagged:
             for warning in release_warnings(os.path.join(HERE, 'changelog.txt')):
                 say('before releasing: ' + warning)
+        else:
+            describe_android(release=True)
         return 0
 
     started = time.perf_counter()
@@ -705,12 +903,16 @@ def main(argv=None) -> int:
         for warning in release_warnings(os.path.join(dest_root, 'changelog.txt')):
             say('before releasing: ' + warning)
         package(dest_root)
+    # the release's APK, from the VERSION just filed; the game's build stands whatever becomes of it
+    android = build_android(release=True) if plain else None
 
     exe = executable(dest_root, args)
     say()
     say('the game is %s' % exe)
     say("the folder around it is what you hand over, and the game's own files in it are Somethin' Else's.")
-    result = test_build(exe) if args.test else 0
+    if android:
+        say(android[1])
+    result = test_build(exe) if args.test else (android[0] if android else 0)
     say()
     say(commit_notice(changed))                         # last, so it is the thing left to hear
     return result
@@ -731,7 +933,7 @@ def commit_notice(changed: list) -> str:
 # flags still work as they always have for anyone typing them.
 
 MENU = (
-    ('Release build: file the changelog under the version, build, and zip', []),
+    ('Release build: file the changelog under the version, build, zip, then build the Android app', []),
     ('Test build: build, zip, then run it for ten seconds and check its log', ['--test']),
     ('Build without the zip', ['--no-package']),
     ("Clean build: empty PyInstaller's cache first, for when a build behaves oddly", ['--clean']),
@@ -739,6 +941,7 @@ MENU = (
     ('One-file build: a single executable instead of a folder', ['--onefile']),
     ("Build without the game's data", ['--no-game']),
     ('Show what a release build would do, without building anything', ['--dry-run']),
+    ('Android build: the Android app alone, leaving the changelog as it is', ['--android']),
 )
 if host.MAC:                                            # not offered there: see main()
     MENU = tuple(choice for choice in MENU if '--onefile' not in choice[1])

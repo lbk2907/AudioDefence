@@ -180,7 +180,9 @@ they were.
   second copy of the game to keep in step.  The desktop's launcher and the modules only its speech and haptics
   use (`__main__.py`, `haptic_audio`, `macspeech`, `remotezip`, `speech_audio`, `speech_stream`) are left out
   of the APK. It is built by hand on a computer, with Gradle 8.13: `gradle assembleDebug` for a test build, or
-  `assembleRelease` with `AD_KEYSTORE` naming the project's permanent key for a release.  There is no Gradle
+  `assembleRelease` with `AD_KEYSTORE` naming the project's permanent key for a release - or by `compiler.py`,
+  whose release build runs the second after the desktop's and puts `AudioDefence-Android-<version>.apk` in
+  `dist`, and whose `--android` runs either alone (user request, 2026-10-01).  There is no Gradle
   wrapper, and no GitHub workflow: builds are made by hand (user's choice, 2026-10-01).  The app's version is
   read from `VERSION` as the build is set up: `versionName` is the tag and `versionCode` its digits as one
   number, yymmddNN (`26.10.01-1` is 26100101, 99123199 at the most), so each release is newer to Android than
