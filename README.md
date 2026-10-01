@@ -305,8 +305,9 @@ These are for running from source. A built game from Releases needs none of
 them.
 
 64-bit Python 3.14 on Windows. The simplest way to get it is the
-**Python install manager** from python.org, which is what that site now leads
-with: install it, then
+**Python install manager** from
+[python.org](https://www.python.org/downloads/), which is what that site now
+leads with: install it, then
 
     py install 3.14
 
@@ -478,10 +479,6 @@ in `android/` and in the `_android` modules beside their desktop ones:
 | controls | the keyboard, or a game controller | touch and gestures; no game controllers yet |
 | updates | from inside the game, only the files that changed | from inside the game, the whole app, installed by Android |
 
-It has not yet been played on a real phone: everything that does not need one
-was tested on a computer, with the phone's parts stood in for. Tell us what you
-hear.
-
 ### Installing it
 
 Copy `AudioDefence-Android-<version>.apk` from the latest release to the phone
@@ -532,16 +529,24 @@ other's way:
 
 `py -0` then lists both.
 
-**2. Java 17.** Install the **Eclipse Temurin 17 JDK** — the `.msi` for
-Windows x64 from adoptium.net, with **Set JAVA_HOME variable** turned on as
-it installs — or:
+**2. Java 21.** Either way:
 
-    winget install EclipseAdoptium.Temurin.17.JDK
+- **From the website:** on
+  [adoptium.net](https://adoptium.net/temurin/releases/?version=21&os=windows&arch=x64&package=jdk),
+  download **Temurin 21 (LTS)**, the **JDK** for **Windows x64**, as the
+  `.msi` installer, and run it. On the page that lists what to install, set
+  **Set JAVA_HOME variable** to **Will be installed on local hard drive** —
+  it is off unless you do.
+- **With winget:**
 
-In a new command prompt, `java -version` says 17.
+      winget install EclipseAdoptium.Temurin.21.JDK
 
-**3. The Android SDK.** On developer.android.com/studio, under **Command line
-tools only**, download the zip for Windows. Make the folder
+In a new command prompt, `java -version` says 21. Java 17 works too, but
+nothing newer than 23: Gradle 8.13 does not run on it.
+
+**3. The Android SDK.** On
+[developer.android.com/studio](https://developer.android.com/studio), find
+**Command line tools only** and download the zip for Windows. Make the folder
 `C:\Android\cmdline-tools`, unzip the download into it, and rename the folder
 it makes, `cmdline-tools`, to `latest` — so that
 `C:\Android\cmdline-tools\latest\bin\sdkmanager.bat` exists. Then tell Windows
@@ -555,11 +560,12 @@ fetch what the app is built with:
     C:\Android\cmdline-tools\latest\bin\sdkmanager --licenses
     C:\Android\cmdline-tools\latest\bin\sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
-**4. Gradle 8.13.** From gradle.org/releases, download **v8.13, binary-only**,
-and unzip it into `C:\Gradle`, so that `C:\Gradle\gradle-8.13\bin\gradle.bat`
-exists. Type that whole path each time, or add `C:\Gradle\gradle-8.13\bin` to
-your **Path** (**Settings → System → About → Advanced system settings →
-Environment Variables**, your user's **Path**, **New**) and type `gradle`.
+**4. Gradle 8.13.** From [gradle.org/releases](https://gradle.org/releases/),
+download **v8.13, binary-only**, and unzip it into `C:\Gradle`, so that
+`C:\Gradle\gradle-8.13\bin\gradle.bat` exists. Type that whole path each time,
+or add `C:\Gradle\gradle-8.13\bin` to your **Path** (**Settings → System →
+About → Advanced system settings → Environment Variables**, your user's
+**Path**, **New**) and type `gradle`.
 
 **5. Build.** In the repository's `android` folder:
 

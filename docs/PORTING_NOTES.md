@@ -172,19 +172,19 @@ build it.  The phone runs this same `audiodefence` package under Chaquopy (Pytho
 and later); what the phone does differently is behind `platform.host.ANDROID`, so Windows and the Mac are as
 they were.
 
-* **Building.**  `android/` is the Gradle project (Android Gradle Plugin 8.13, Chaquopy 17.0.0, Java 17).
-  Before each build `android/app/build.gradle` copies in the repository's own `audiodefence` package and
-  `android/python/pygame` - a stand-in for pygame holding the key codes and event objects the screens read,
-  nothing more - as the app's Python, and `game/`, `assets/hrtf`, `localization/` and `VERSION` as its
-  assets.  Those copies are git-ignored: there is no second copy of the game to keep in step.  The
-  desktop's launcher and the modules only its speech and haptics use (`__main__.py`, `haptic_audio`,
-  `macspeech`, `remotezip`, `speech_audio`, `speech_stream`) are left out of the APK.
-  It is built by hand on a computer, with Gradle 8.13: `gradle assembleDebug` for a test build, or
-  `assembleRelease` with `AD_KEYSTORE` naming the project's permanent key for a release.  There is no
-  Gradle wrapper, and no GitHub workflow: builds are made by hand (user's choice, 2026-10-01).  The app's
-  version is read from `VERSION` as the build is set up: `versionName` is the tag and `versionCode` its
-  digits as one number, yymmddNN (`26.10.01-1` is 26100101, 99123199 at the most), so each release is
-  newer to Android than the last.  The first builds were fixed at version code 11.
+* **Building.**  `android/` is the Gradle project (Android Gradle Plugin 8.13, Chaquopy 17.0.0, Java 17 code,
+  built with JDK 17 to 23: Gradle 8.13 runs on nothing newer).  Before each build `android/app/build.gradle`
+  copies in the repository's own `audiodefence` package and `android/python/pygame` - a stand-in for pygame
+  holding the key codes and event objects the screens read, nothing more - as the app's Python, and `game/`,
+  `assets/hrtf`, `localization/` and `VERSION` as its assets.  Those copies are git-ignored: there is no
+  second copy of the game to keep in step.  The desktop's launcher and the modules only its speech and haptics
+  use (`__main__.py`, `haptic_audio`, `macspeech`, `remotezip`, `speech_audio`, `speech_stream`) are left out
+  of the APK. It is built by hand on a computer, with Gradle 8.13: `gradle assembleDebug` for a test build, or
+  `assembleRelease` with `AD_KEYSTORE` naming the project's permanent key for a release.  There is no Gradle
+  wrapper, and no GitHub workflow: builds are made by hand (user's choice, 2026-10-01).  The app's version is
+  read from `VERSION` as the build is set up: `versionName` is the tag and `versionCode` its digits as one
+  number, yymmddNN (`26.10.01-1` is 26100101, 99123199 at the most), so each release is newer to Android than
+  the last.  The first builds were fixed at version code 11.
 * **Starting.**  `MainActivity` unpacks the assets into the app's own files folder the first time and after
   every install or update, then calls `android_main.run`, the phone's main loop - `__main__` with pygame's
   events replaced by the touches the Java side collects (`TouchView`, `Bridge`).
