@@ -37,6 +37,13 @@ from . import decoder, model as s3dmodel
 from . import openal as oal
 from .device import Device
 from .reverb import ReverbBus
+from ..platform import host as _host
+
+if _host.ANDROID:                                 # PORT ADDITION: the Java mixer stands in for OpenAL Soft
+    from . import android as _android
+    oal.ContextAL = _android.ContextAL
+    Device = _android.Device                      # noqa: F811
+    ReverbBus = _android.ReverbBus                # noqa: F811
 
 log = logging.getLogger('s3d')
 
@@ -241,6 +248,13 @@ class S3DEngine:
         channels = data.shape[1]
         duration = data.shape[0] / float(rate) if rate else 0.0
         if entry is None:
+            if _host.ANDROID:                       # the samples stay in Java: the mixer builds the variant
+                buf = al.gen('alGenBuffers')
+                al.buffer_from_sound(buf, data, variant)
+                entry = [buf, 0]
+                self._buffers[key] = entry
+                entry[1] += 1
+                return entry[0], duration, channels
             if variant == 'mono':
                 pcm = data.mean(axis=1) if channels > 1 else data[:, 0]
                 fmt = oal.AL_FORMAT_MONO_FLOAT32

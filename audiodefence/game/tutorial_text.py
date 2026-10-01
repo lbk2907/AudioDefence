@@ -21,6 +21,7 @@ from __future__ import annotations
 import logging
 import re
 
+from ..platform import host
 from ..platform.keymap import KeyMap
 
 log = logging.getLogger('game.tutorial')
@@ -64,6 +65,52 @@ PAD_AIM_BUTTONS = '%s, or press %s.'
 PAD_SHAKE = ', or shake the controller'
 
 
+#: PORT ADDITION (Android build): on a phone the lines name the touches, not keys - the same things the
+#: announcer's own recordings ask for, in the words of this build's controls.  Aiming has a line per aim
+#: control, and the others a line for gestures and one for Button mode (the four corners of the screen).
+PHONE_AIM = {
+    1: 'Hold the phone in front of you and turn your whole body to aim.',
+    2: 'Swipe left or right with one finger to turn and aim.',
+    3: 'Tilt the phone left or right to aim.',
+}
+PHONE_LINES = {
+    'shoot': ('Listen carefully and turn until you feel the zombie is right in front of you, then tap the '
+              'screen to fire, or touch and hold for continuous fire.'),
+    'reload': 'Swipe down with one finger to reload your weapon.',
+    'changeControl': ('You can change your aim control at any time in the pause menu. '
+                      'Tap with two fingers to pause.'),
+    'switch': 'Swipe up with one finger to switch between weapons.',
+    'skip': 'To skip a dialog, tap with two fingers to pause, then choose Skip dialogue.',
+    'melee': ('To use the melee weapon, turn to face the zombies first. Then tap with three fingers, '
+              'or shake the phone.'),
+}
+PHONE_BUTTON_LINES = {
+    'shoot': ('Listen carefully and turn until you feel the zombie is right in front of you, then tap the '
+              'top right corner of the screen to fire, or touch and hold it for continuous fire.'),
+    'reload': 'Tap the bottom right corner of the screen to reload your weapon.',
+    'switch': 'Tap the bottom left corner of the screen to switch between weapons.',
+    'melee': ('To use the melee weapon, turn to face the zombies first. Then tap the top left corner '
+              'of the screen.'),
+}
+_PHONE_AIM_MODE = {'gyro': 1, 'swipe': 2, 'tilt': 3}
+
+
+def phone_text_for(sound_key: str):
+    """The line for this announcer sound on a phone, or None."""
+    from .parameters import GameParameters
+    topic = topic_for(sound_key)
+    if topic is None:
+        return None
+    params = GameParameters.shared()
+    if topic == 'aim':
+        mode = _MODE_SUFFIX.search(sound_key)
+        scheme = _PHONE_AIM_MODE.get(mode.group(1)) if mode else None
+        return PHONE_AIM.get(scheme or params.control_scheme, PHONE_AIM[2])
+    if params.button_mode and topic in PHONE_BUTTON_LINES:
+        return PHONE_BUTTON_LINES[topic]
+    return PHONE_LINES.get(topic)
+
+
 def text_for(sound_key: str):
     """The line for this announcer sound, with the keys that are bound right now, or None - or, when the
     player has chosen a controller's names, with its buttons."""
@@ -72,6 +119,8 @@ def text_for(sound_key: str):
     topic = topic_for(sound_key)
     if topic is None:
         return None
+    if host.ANDROID and not GameParameters.shared().controller_names():
+        return phone_text_for(sound_key)
     keymap = KeyMap.shared()
     line = LINES[topic]
     params = GameParameters.shared()

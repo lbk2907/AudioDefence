@@ -292,6 +292,9 @@ changed — see [Updates](#updates) below.
 `AudioDefenceMac-<version>.zip` on the same release — see
 [On the Mac](#on-the-mac).
 
+**On Android** it is an app, `AudioDefence.apk`, built from this same
+repository — see [On Android](#on-android).
+
 **From source** is everything below: the repository as it stands, run with the
 Python you have. That is the one to take if you want to read the code, change
 it, or build the executable yourself.
@@ -460,6 +463,79 @@ install it over themselves.
 the same version as the Windows DLL. `tools/build_openal_mac.sh` rebuilds it
 from source (it needs cmake and the Xcode command line tools), for an Intel
 Mac with `--arch x86_64`.
+
+## On Android
+
+The Android app is the same port again — the same game code and the same game
+data, taken from this repository when the app is built — run inside the app by
+[Chaquopy](https://chaquo.com/chaquopy/). What a phone does differently lives
+in `android/` and in the `_android` modules beside their desktop ones:
+
+| | Windows and the Mac | Android |
+|---|---|---|
+| sound | OpenAL Soft, with the game's own HRTF | a small mixer of the app's own, in Java, with the same HRTF |
+| speech | the screen reader, or the system voice | the phone's own text-to-speech; TalkBack has to be off |
+| controls | the keyboard, or a game controller | touch and gestures; no game controllers yet |
+| updates | from inside the game | install a newer `AudioDefence.apk` over the old one |
+
+It has not yet been played on a real phone: everything that does not need one
+was tested on a computer, with the phone's parts stood in for. Tell us what you
+hear.
+
+### Installing it
+
+Copy `AudioDefence.apk` to the phone and open it; Android asks to allow
+installing from that source the first time, and Play Protect may warn that the
+app is not from the Play Store — install it anyway. It needs a 64-bit phone
+(arm64) with Android 8 or later.
+
+**Turn TalkBack off before you open the game.** The game speaks for itself, and
+TalkBack would take the touches for its own; if it is on, the game says so.
+The first start unpacks the game's data, saying how far it has got; that takes
+a minute or two, and later starts are quick.
+
+### Controls on the phone
+
+Hold the phone sideways; the whole screen is the touch area.
+
+| in the menus | |
+|---|---|
+| swipe right, left, up or down | the arrow keys — which pair moves through a screen is set by Menu layout, in Settings → Miscellaneous |
+| double tap | Enter |
+| touch and hold | a row's second action |
+| two-finger tap, or the phone's Back | Back |
+| two-finger swipe up or down | the first or last item |
+
+| in a game | |
+|---|---|
+| tap, or touch and hold | one shot, or continuous fire with the automatic weapons |
+| swipe up / swipe down | next weapon / reload |
+| three-finger tap, or a shake | melee — how hard a shake has to be is Shake sensitivity, in Settings → Controls |
+| swipe left or right | turn, when the aiming is set to Swipe; Gyro and Tilt use the phone's sensors |
+| two-finger tap | pause — and in a challenge, Skip dialogue is the first button on the pause screen |
+
+### Building the app
+
+The easy way needs nothing installed: `.github/workflows/android.yml` builds the
+app on GitHub. It runs when a push changes the game, or by hand from the
+Actions tab (**Build the Android APK → Run workflow**), takes fifteen to thirty
+minutes, and leaves the APK under the run's **Artifacts**, in `AudioDefence-Android`. With a repository
+secret called `SIGNING_KEY` holding the app's signing key, it builds the
+release, `AudioDefence.apk`; without one, only a test build that cannot install
+over a release. Every release has to be signed with the same key, or phones
+refuse to install it over the one they have: keep the key somewhere safe and
+private, and hand it on with the project.
+
+To build it yourself you need Java 17 (a JDK), Python 3.12 beside whatever
+Python you play with (`py install 3.12`), the Android SDK with
+`platforms;android-35`, `build-tools;35.0.0` and `platform-tools` (set
+`ANDROID_HOME` to it), and Gradle 8.13. Then, in `android/`:
+
+    gradle assembleDebug
+
+The build copies `audiodefence/` and `game/` into the app itself, so there is
+nothing to copy by hand, and leaves `app/build/outputs/apk/debug/app-debug.apk`.
+With USB debugging on, `adb install app-debug.apk` puts it on the phone.
 
 ## Controls
 

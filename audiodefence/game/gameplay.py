@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import math
 
+from ..platform import host as system
 from ..platform.cfloat import f32
 from ..platform.runloop import RunLoop
 from ..platform.tracker import Tracker
@@ -271,12 +272,20 @@ class AccessibleGameView:
             return
         if self.has_swiped:
             return
+        # FIX (Android, user request): the hold starts fire once per touch.  The duration is added up in
+        # 32-bit floats, and on the phone the step is the real time since the last tick (_weapons_dt), so
+        # four 0.05 s steps come to a hair over 0.2 and the fifth still passes the window below: the hold
+        # began twice, which on a single-shot weapon (pistol, shotgun...) fired two shots.  With the fixed
+        # 0.01 s step of the desktop the window passes exactly once, so there it is left as it was.
+        if system.ANDROID and getattr(self, '_hold_fired', False):
+            return
         if GameParameters.shared().button_mode:
             if self.initial_point[0] < self.frame[2] * 0.5:
                 return
             if self.initial_point[1] >= self.frame[3] * 0.5:
                 return
         if self.weapon_manager is not None:
+            self._hold_fired = True
             self.weapon_manager.continuous_start()
 
     def solve_button_press(self) -> None:                 # 0x10008a914
@@ -314,6 +323,7 @@ class AccessibleGameView:
 
     def set_button_is_down(self, down: bool) -> None:     # 0x10008ac54
         self._button_is_down = bool(down)
+        self._hold_fired = False                          # PORT ADDITION: see update
         if down:
             return
         if not self.has_swiped and self.button_pressed_duration < 0.2 and self.weapon_manager is not None:
@@ -601,7 +611,23 @@ class GameplayController:
         self.weapon_button.weapon_manager = self.weapon_manager
         self.weapon_button.gameplay_view_controller = self
 
+    def _weapons_dt(self) -> float:
+        """FIX (Android, user request): the time the weapons have moved on by since their last update.
+
+        The original ticks them with a fixed 0.01 s every hundredth of a second, and a timer that is late
+        fires once, not once for each tick it missed.  A phone that takes longer than a hundredth over a pass
+        of the game's loop therefore ran every gun slow - the minigun most of all, heard as lag and fewer
+        bullets.  The real time since the last tick is used instead (at most 0.05 s, so a hitch is not
+        a burst), which on a machine that keeps up is the same 0.01."""
+        import time
+        now = time.perf_counter()
+        last, self._weapons_clock = getattr(self, '_weapons_clock', None), now
+        if not system.ANDROID or last is None:
+            return 0.01
+        return min(max(now - last, 0.001), 0.05)
+
     def start_update_timers(self) -> None:                # 0x10005948c
+        self._weapons_clock = None                        # PORT ADDITION: a pause is not time the guns moved on
         for t in (self.update_timer, self.weapon_update_timer, self.stats_update_timer):
             if t is not None:
                 t.invalidate()
@@ -625,10 +651,11 @@ class GameplayController:
         notify_stats('UPDATE_WEAPON_DATA', cw.name if cw is not None else None, False, False, False, False, 0.25)
 
     def update_weapons(self) -> None:                     # 0x100059a48
-        self.weapon_touch_area.update(0.01)
+        dt = self._weapons_dt()
+        self.weapon_touch_area.update(dt)
         if self.weapon_manager is not None:
-            self.weapon_manager.update(0.01)
-        self.weapon_button.update(0.01)
+            self.weapon_manager.update(dt)
+        self.weapon_button.update(dt)
         self.update_score_view_with_animation(True)
 
     def update(self) -> None:                             # 0x100059b50
@@ -940,6 +967,20 @@ class PauseController:
 
     def back_button_pressed(self) -> None:                # 0x1000559ac
         self.validate_button_pressed()
+
+    def can_skip_dialogue(self) -> bool:                  # PORT ADDITION (Android, user request)
+        """Whether Dr. Bastard (or another skippable line) was talking when the game was paused."""
+        gvc = self.gameplay_view_controller
+        return gvc is not None and getattr(gvc, 'challenge_dictionary', None) is not None \
+            and not getattr(gvc, 'skip_button_hidden', True)
+
+    def skip_dialogue_touched(self) -> None:              # PORT ADDITION (Android, user request)
+        """Resume, and skip the line that was playing.  On the phone the three-finger tap is only melee
+        now, so skipping lives here, where no gesture of the fight can set it off by accident."""
+        gvc = self.gameplay_view_controller
+        self.validate_button_pressed()
+        if gvc is not None:
+            gvc.skip_button_pressed()
 
 
 # ======================================================================================== challenge

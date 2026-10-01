@@ -184,6 +184,8 @@ class View:
             parts.append(localization.translate('dimmed'))
         elif self.traits == HEADER:
             parts.append(localization.translate('heading'))
+        if getattr(self, 'adjust', None) is not None:      # PORT ADDITION (Android): a slider
+            parts.append(localization.translate('slider'))
         text = ', '.join(p for p in parts if p)
         if self.hint:
             from ..platform.pad import menu_words         # PORT ADDITION: in a controller's words, if chosen
@@ -269,6 +271,11 @@ def cross_axis_text() -> str:
             'left and right' if vertical else 'up and down',
             'up and down' if vertical else 'left and right',
             input_name('leftshoulder', kind), input_name('rightshoulder', kind))
+    from ..platform import host
+    if host.ANDROID:                                    # PORT ADDITION: the phone's swipes, not arrow keys
+        if vertical:
+            return 'Swipe left and right to change tab, up and down to move through it'
+        return 'Swipe up and down to change tab, left and right to move through it'
     if vertical:
         return 'Left and Right change tab, Up and Down move through it'
     return 'Up and Down change tab, Left and Right move through it'

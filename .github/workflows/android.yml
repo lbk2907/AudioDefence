@@ -1,0 +1,51 @@
+name: Build the Android APK
+
+# By hand from the Actions tab ("Run workflow"), and by itself when something the app is made of changes.
+# The steps of the build itself are in android/ci/build.sh; the game's code and data are this repository's own.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'android/**'
+      - 'audiodefence/**'
+      - 'game/**'
+      - 'assets/hrtf/**'
+      - 'localization/**'
+      - 'VERSION'
+      - '.github/workflows/android.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Get this repository
+        uses: actions/checkout@v4
+
+      - name: Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Python for the build (Chaquopy needs the same version the app uses)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Build the app
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: bash android/ci/build.sh
+
+      - name: Keep the APK where it can be downloaded
+        uses: actions/upload-artifact@v4
+        with:
+          name: AudioDefence-Android
+          path: android/out/*.apk
+          if-no-files-found: error

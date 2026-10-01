@@ -21,13 +21,18 @@ Alt+F4                             Cmd+Q
 """
 from __future__ import annotations
 
+import os
 import sys
 
+#: PORT ADDITION (Android build): the game running inside the Android app (Chaquopy).  Set by android_main
+#: before anything else is imported; AUDIODEFENCE_FAKE_ANDROID does the same on a PC, for testing.
+ANDROID = (os.environ.get('AUDIODEFENCE_ANDROID') == '1'
+           or ('ANDROID_ROOT' in os.environ and 'ANDROID_DATA' in os.environ))
 WINDOWS = sys.platform == 'win32'
 MAC = sys.platform == 'darwin'
 
 #: how the port names itself: in the log, the credits, and the release archive's name
-PORT_NAME = 'Mac' if MAC else 'Windows'
+PORT_NAME = 'Android' if ANDROID else ('Mac' if MAC else 'Windows')
 #: the release archive's platform tag
 ARCHIVE_TAG = 'Mac' if MAC else 'Win'
 #: what each platform's release zip is called, before its version.  The Mac's has no dash after

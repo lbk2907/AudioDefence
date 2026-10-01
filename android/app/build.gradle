@@ -1,0 +1,143 @@
+plugins {
+    id 'com.android.application'
+    id 'com.chaquo.python'
+}
+
+android {
+    namespace 'com.audiodefence'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.audiodefence.android"
+        minSdk 26
+        targetSdk 34
+        versionCode 11
+        versionName "1.0"
+
+        // Python 3.12 on Android has no 32-bit build; every phone of the last several years is arm64
+        ndk {
+            abiFilters "arm64-v8a"
+        }
+        python {
+            version "3.12"
+            pip {
+                install "numpy"
+            }
+        }
+    }
+
+    // the game's sounds are read by file path after unpacking; keeping them uncompressed makes the APK unpack faster
+    androidResources {
+        noCompress "m4a", "mp3", "mhr", "plist", "json"
+        // Android leaves out of the APK, without a word, every folder whose name starts with an underscore
+        // (and a few others). The game's data has such folders - game/sounds/_weapons among them - so this
+        // is Android's usual list minus those two rules: everything in game/ goes in, apart from junk like .git.
+        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }
+
+    // The release is signed with the project's own permanent key, which the build gets from the repository's
+    // SIGNING_KEY secret (ci/build.sh puts it in a file and names it in AD_KEYSTORE).  Every release has to be
+    // signed with this same key, or Android refuses to install it over the one a player already has.  The
+    // key file itself is the secret; the password below only opens it.
+    signingConfigs {
+        release {
+            def keystore = System.getenv('AD_KEYSTORE')
+            if (keystore) {
+                storeFile file(keystore)
+                storeType 'pkcs12'
+                storePassword 'audiodefence-android'
+                keyAlias 'audiodefence'
+                keyPassword 'audiodefence-android'
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (System.getenv('AD_KEYSTORE')) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+}
+
+// The app is built from this repository's own game: the Python package (../audiodefence), the game's data
+// (../game), its HRTF (../assets/hrtf), the language files (../localization) and the VERSION file, plus the
+// Android-only stand-in for pygame (android/python).  Before every build they are copied to where Chaquopy and
+// the APK take them from - src/main/python and src/main/assets, which hold nothing else and are git-ignored
+// (android/.gitignore) - so there is one copy of the game, the one the Windows and Mac builds are made from.
+def repo = rootProject.file('..')
+
+tasks.register('copyGamePython', Sync) {
+    from(new File(repo, 'audiodefence')) {
+        into 'audiodefence'
+        exclude '**/__pycache__/**', '**/*.pyc'
+        // the desktop's launcher, and what only the desktop's speech and haptics use: the phone has stand-ins
+        // (audiodefence/platform/__init__.py) and never imports these
+        exclude '__main__.py', 'platform/haptic_audio.py', 'platform/macspeech.py', 'platform/remotezip.py',
+                'platform/speech_audio.py', 'platform/speech_stream.py'
+    }
+    from(rootProject.file('python')) {
+        exclude '**/__pycache__/**', '**/*.pyc'
+    }
+    into 'src/main/python'
+}
+
+tasks.register('copyGameAssets', Sync) {
+    from(new File(repo, 'game')) { into 'game' }
+    from(new File(repo, 'assets/hrtf')) { into 'hrtf' }
+    from(new File(repo, 'localization')) {
+        into 'localization'
+        include '*.json'
+        exclude 'template.json'
+    }
+    from(new File(repo, 'VERSION'))
+    into 'src/main/assets'
+}
+
+// Everything else in the build comes after the copies: whatever reads the Python or the assets (Chaquopy's
+// tasks, the asset merge, lint) then sees them, and Gradle has no task reading a folder another one writes.
+tasks.configureEach { t ->
+    if (!(t.name in ['copyGamePython', 'copyGameAssets', 'clean'])) {
+        t.dependsOn 'copyGamePython', 'copyGameAssets'
+    }
+}
+
+// After a build, say in the build log whether every file of the game's data made it into the APK.
+// It only reports; it never stops a build.
+afterEvaluate {
+    tasks.matching { it.name == 'assembleDebug' || it.name == 'assembleRelease' }.configureEach { t ->
+        t.doLast {
+            try {
+                def src = file('src/main/assets/game')
+                if (!src.isDirectory()) {
+                    println 'GAME DATA CHECK: there is no game folder in the project'
+                    return
+                }
+                def wanted = [] as Set
+                fileTree(src).visit { d -> if (!d.isDirectory()) wanted << ('assets/game/' + d.relativePath.pathString) }
+                def variant = t.name == 'assembleDebug' ? 'debug' : 'release'
+                fileTree("build/outputs/apk/${variant}").matching { include '*.apk' }.each { apk ->
+                    def packed = [] as Set
+                    def z = new java.util.zip.ZipFile(apk)
+                    try {
+                        z.entries().each { e -> if (!e.isDirectory()) packed << e.name }
+                    } finally {
+                        z.close()
+                    }
+                    def missing = wanted.findAll { !packed.contains(it) }.sort()
+                    println "GAME DATA CHECK: ${wanted.size()} game files, ${missing.size()} missing from ${apk.name}"
+                    missing.take(100).each { println "  missing: ${it}" }
+                }
+            } catch (Throwable e) {
+                println "GAME DATA CHECK could not run: ${e}"
+            }
+        }
+    }
+}

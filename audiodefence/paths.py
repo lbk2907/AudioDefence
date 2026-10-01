@@ -31,6 +31,9 @@ else:
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     EXE_DIR = ROOT
 
+if host.ANDROID:
+    # the app unpacks the game's data into its own files folder (MainActivity), and the game lives there
+    ROOT = EXE_DIR = os.environ.get('AUDIODEFENCE_HOME') or os.path.join(os.path.expanduser('~'), 'adhome')
 ASSETS = os.path.join(ROOT, 'assets')
 HRTF_DIR = os.path.join(ASSETS, 'hrtf')
 VENDOR = os.path.join(ROOT, 'vendor')
@@ -86,7 +89,9 @@ PLAYLIST_META = os.path.join(BUNDLE, 'meta', 'S3DPlayListModel')
 def user_dir() -> str:
     """Where settings and saves live (the NSUserDefaults equivalent): %APPDATA% on Windows, Application
     Support on the Mac."""
-    if host.MAC:
+    if host.ANDROID:
+        base = ROOT
+    elif host.MAC:
         base = os.path.join(os.path.expanduser('~'), 'Library', 'Application Support')
     else:
         base = os.environ.get('APPDATA') or os.path.expanduser('~')

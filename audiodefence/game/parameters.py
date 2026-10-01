@@ -61,10 +61,14 @@ class GameParameters:
     # --- button mode -----------------------------------------------------------------------------
     @property
     def button_mode(self) -> bool:
+        from ..platform import host
+        if host.ANDROID:                                  # PORT CHOICE (user request): no Button mode on the
+            return False                                  # phone - it is always played with gestures
         return self._button_mode
 
     def set_button_mode(self, value: bool) -> None:        # 0x1000a3a50
-        self._button_mode = bool(value)
+        from ..platform import host
+        self._button_mode = False if host.ANDROID else bool(value)
         self.defaults.set_bool(self._button_mode, 'buttonMode')
         self.defaults.synchronize()
 
@@ -177,6 +181,31 @@ class GameParameters:
     #: PORT ADDITION: whether going back to a screen puts the cursor where you left it.  Off by default:
     #: the original rebuilds the screen and starts at the first element every time.
     DEFAULT_REMEMBER_FOCUS = False
+
+    #: PORT ADDITION (Android, user request): how easily a shake of the phone swings the melee weapon.
+    #: 0 is off; 1 needs a hard shake, 10 a light one.  6 is a little easier than the first builds were.
+    SHAKE_LEVELS = tuple(range(0, 11))
+    DEFAULT_SHAKE_SENSITIVITY = 6
+
+    def shake_sensitivity(self) -> int:
+        value = self.defaults.object('shakeSensitivity')
+        try:
+            value = int(value)
+        except (TypeError, ValueError):
+            return self.DEFAULT_SHAKE_SENSITIVITY
+        return max(0, min(10, value))
+
+    def set_shake_sensitivity(self, value: int) -> None:
+        value = max(0, min(10, int(value)))
+        self.defaults.set_object(value, 'shakeSensitivity')
+        self.defaults.synchronize()
+        from ..platform import host
+        if host.ANDROID:
+            try:
+                from ..platform.jbridge import bridge
+                bridge().setShakeSensitivity(value)
+            except Exception:
+                pass
 
     def remember_focus(self) -> bool:
         value = self.defaults.object('rememberFocus')

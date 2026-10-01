@@ -1,4 +1,5 @@
 unrelease:
+Audio Defence runs on Android phones too, as an app of its own: the same game, played by touch and gestures and spoken by the phone's own voice. Turn TalkBack off while you play.
 While a row in Settings has its list of choices open, the OK button no longer closes Settings. Enter takes a choice and Back leaves the list.
 The Powered Power Ups tarot card is worth something to everyone now. It gives a level beyond the highest you can buy, where before it did nothing at all for a fully upgraded player.
 Endless deals three tarot cards instead of two, and sometimes a fourth. Those last cards cannot be changed, so every hand holds something you did not pick.

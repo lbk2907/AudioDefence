@@ -33,7 +33,7 @@ from ..platform.keymap import ACTIONS, BY_MODE, KeyMap, key_text, mode_text
 from ..platform.speech import VOICE_NAME
 from ..s3d.engine import S3DEngine
 from .accessibility import (CELL, Button, View, cross_axis_key, cross_axis_text, menu_tick,
-                            play_button_click)
+                            play_button_click, JUMP_MODS)
 from .challenges import _TableLoader, _play_buttons_sound
 from .host import register
 from .viewcontroller import ViewControllerScreen
@@ -65,6 +65,12 @@ CONTROL_ROWS = (('Button', True), ('Gesture', False))
 
 
 def control_description(button: bool) -> str:
+    if system.ANDROID:                                    # PORT ADDITION (user request): the phone's touches
+        if button:
+            return ('The screen is four corners: top right fires, top left swings the melee weapon, bottom '
+                    'left switches weapon and bottom right reloads')
+        return ('Tap anywhere to fire, or touch and hold for continuous fire. Swipe up to switch weapon, '
+                'swipe down to reload, and tap with three fingers or shake the phone for melee')
     mode = 'button' if button else 'gesture'
     switch, reload = _mode_words('next_weapon', mode), _mode_words('reload', mode)
     if GameParameters.shared().controller_names():
@@ -142,10 +148,18 @@ class ControlSchemePanel:
                    hint='Press Enter for the next value, Shift plus Enter for the previous.',
                    action=self.step_sensitivity, shift_action=self.step_sensitivity_back)
         elif self.category == 'controls':                 # cellForControlAtIndex: 0x1000b5d64
-            for title, button in CONTROL_ROWS:
+            # PORT CHOICE (user request): Button mode is gone on the phone; Gesture is the only way to play
+            for title, button in (r for r in CONTROL_ROWS if not (system.ANDROID and r[1])):
                 cell = t.cell(title, control_description(button), hint=SELECT_HINT,
                               action=lambda b=button: self.select_button_mode(b))
                 cell.selected = bool(params.button_mode) == button
+            if system.ANDROID:                            # PORT ADDITION (user request)
+                row = t.cell('Shake sensitivity', self.shake_text(),
+                             hint='How easily shaking the phone swings your melee weapon, from 1, a hard '
+                                  'shake, to 10, a light one; all the way down is Off. %s. Shake the phone on '
+                                  'this screen to try it: the game says Shake when it feels one.'
+                                  % self.slider_words())
+                row.adjust = self.adjust_shake            # a slider: the swipes across adjust it
         elif self.category == 'sound':                    # cellForSound: 0x1000b619c
             t.cell('Announcer', 'ON' if params.last_announcer_value() else 'OFF',
                    hint='Press Enter to toggle in-game announcements.', action=self.toggle_announcer)
@@ -410,6 +424,28 @@ class ControlSchemePanel:
         self.step_sensitivity(-1)
 
     # --- controls --------------------------------------------------------------------------------
+    @staticmethod
+    def shake_text(value=None) -> str:                    # PORT ADDITION (Android)
+        value = GameParameters.shared().shake_sensitivity() if value is None else value
+        return 'Off' if value == 0 else '%d' % value
+
+    @staticmethod
+    def slider_words() -> str:
+        if GameParameters.shared().menu_axis() == 'vertical':
+            return 'Swipe right to raise it, left to lower it'
+        return 'Swipe up to raise it, down to lower it'
+
+    def adjust_shake(self, step: int) -> None:
+        """The Shake sensitivity slider moved one step (it stops at its ends, as a slider does)."""
+        params = GameParameters.shared()
+        value = max(0, min(10, params.shake_sensitivity() + step))
+        if value == params.shake_sensitivity():
+            self.announce(self.shake_text())              # at an end: says where it still is
+            return
+        params.set_shake_sensitivity(value)
+        self.reload_data()
+        self.announce(self.shake_text())
+
     def select_button_mode(self, button: bool) -> None:
         GameParameters.shared().set_button_mode(button)
         self.reload_data()
@@ -483,6 +519,8 @@ class ControlSchemePanel:
         params.set_tutorial_text_mode(params.DEFAULT_TUTORIAL_TEXT)
         params.set_menu_axis(params.DEFAULT_MENU_AXIS)
         params.set_remember_focus(params.DEFAULT_REMEMBER_FOCUS)
+        if system.ANDROID:                                # PORT ADDITION: the phone's own setting
+            params.set_shake_sensitivity(params.DEFAULT_SHAKE_SENSITIVITY)
         params.set_check_updates(params.DEFAULT_CHECK_UPDATES)
         params.set_menu_music_volume(params.DEFAULT_MENU_MUSIC_VOLUME)
         params.set_vibration_level(params.DEFAULT_VIBRATION)
@@ -923,6 +961,11 @@ class SettingsScreen(ViewControllerScreen):
             if action is not None:
                 self.control_scheme.remove_pad(action)
                 return
+        adjust = getattr(self.focus, 'adjust', None)      # PORT ADDITION: a slider takes the other swipes
+        if adjust is not None and self.control_scheme.choosing is None and cross_axis_key(event) is not None \
+                and not event.mod & JUMP_MODS:
+            adjust(1 if event.key in (pygame.K_UP, pygame.K_RIGHT) else -1)
+            return
         where = cross_axis_key(event)                     # PORT ADDITION: the other arrows change category
         if where is not None:
             if self.control_scheme.choosing is None:      # while a row's list is open, it has the arrows
@@ -1007,6 +1050,12 @@ class PauseScreen(SettingsScreen):
                    actions=[self.restart_button_touched], name='Restart challenge (port)')
         Button('End Game', (358, 263, 150, 40), parent=v, actions=[self.quit_button_touched], name='#29')
         self.first_accessible_element = self.resume_button
+        # PORT ADDITION (Android, user request): the three-finger tap is only melee on the phone, so a line
+        # of Dr. Bastard's is skipped from here.  It is first, because pausing just to skip is why you came.
+        if system.ANDROID and self.pause is not None and self.pause.can_skip_dialogue():
+            self.skip_button = Button('Skip dialogue', (60, 10, 150, 30), parent=v,
+                                      actions=[self.skip_dialogue_touched], name='Skip dialogue (port)')
+            self.first_accessible_element = self.skip_button
         self.roots = [v]
 
     def view_did_load(self) -> None:                      # 0x100055650
@@ -1014,6 +1063,8 @@ class PauseScreen(SettingsScreen):
         sb = self.status_bar_view_controller
         sb.back_button.set_title('Resume')
         sb.set_currencies_visibility(False)
+        if getattr(self, 'skip_button', None) is not None:   # PORT ADDITION: paused to skip, so start there
+            self.post_screen_changed(self.skip_button)
         # loadMissionOverlay adds the mission bar at alpha 0
         pl = _headphones_playlist()
         if pl is not None:
@@ -1028,6 +1079,10 @@ class PauseScreen(SettingsScreen):
             self.pause.validate_button_pressed()
         else:
             self.host.dismiss_presented(self)
+
+    def skip_dialogue_touched(self) -> None:              # PORT ADDITION (Android)
+        if self.pause is not None:
+            self.pause.skip_dialogue_touched()
 
     def restart_button_touched(self) -> None:             # PORT ADDITION
         # The same sound the challenge's own Play button makes (ADChallengeOverviewViewController

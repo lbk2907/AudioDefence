@@ -164,6 +164,60 @@ Control schemes (the original's `controlScheme`):
 The heading itself goes through the original scroll-view model: a 430-point `line.png` strip
 (`line@2x.png`, iPhone nib), `(int)offset % (int)width`, and the 5.68889 points-per-degree swipe scale.
 
+## The Android build
+
+The game also runs on Android phones.  The Android version is Erick's work: he made it from the 26.09.26-1
+release, and it was merged into this repository on 2026-10-01 so that there is one game and two ways to
+build it.  The phone runs this same `audiodefence` package under Chaquopy (Python 3.12, arm64 only, Android 8
+and later); what the phone does differently is behind `platform.host.ANDROID`, so Windows and the Mac are as
+they were.
+
+* **Building.**  `android/` is the Gradle project (Android Gradle Plugin 8.13, Chaquopy 17.0.0, Java 17).
+  Before each build `android/app/build.gradle` copies in the repository's own `audiodefence` package and
+  `android/python/pygame` - a stand-in for pygame holding the key codes and event objects the screens read,
+  nothing more - as the app's Python, and `game/`, `assets/hrtf`, `localization/` and `VERSION` as its
+  assets.  Those copies are git-ignored: there is no second copy of the game to keep in step.  The
+  desktop's launcher and the modules only its speech and haptics use (`__main__.py`, `haptic_audio`,
+  `macspeech`, `remotezip`, `speech_audio`, `speech_stream`) are left out of the APK.
+  `.github/workflows/android.yml` builds it on GitHub (`android/ci/build.sh`): a release signed with the
+  project's permanent key when the repository has the `SIGNING_KEY` secret, otherwise a test build that
+  cannot install over a release.  There is no Gradle wrapper; the workflow brings Gradle 8.13.
+* **Starting.**  `MainActivity` unpacks the assets into the app's own files folder the first time and after
+  every install or update, then calls `android_main.run`, the phone's main loop - `__main__` with pygame's
+  events replaced by the touches the Java side collects (`TouchView`, `Bridge`).
+* **Sound.**  There is no OpenAL Soft on the phone, so `com.audiodefence.audio.MiniAl` takes its calls - a
+  small Java mixer with the game's own HRTF, the same Freeverb and the same per-ear filters - and
+  `SoundDecoder` decodes the bundle's files with the phone's MediaCodec.  `s3d/android.py` and
+  `s3d/decoder_android.py` put them where the engine expects `Device`, the reverb bus and the decoded arrays.
+  The decoder runs two threads ahead of the game on the phone and one on a computer, and on every platform
+  the sounds a hit brings - impacts, hits, deaths - go to the front of its queue.
+* **Speech, controllers, updates, vibration.**  `platform/__init__.py` gives the phone `speech_android`,
+  `pad_android`, `updater_android` and `haptics_android` in place of the desktop's four modules: the
+  phone's own text-to-speech, driven by the Speech tab's voice, rate, pitch and volume rows, with the hints'
+  keys named as the touches that do the same; and, not supported yet, game controllers, vibration and
+  updating from inside the app (a newer APK is installed over the old one, progress kept).  The main menu
+  says the version in place of Check for updates.  TalkBack has to be off: the game speaks for itself, and
+  says so if TalkBack is on.
+* **Controls.**  The phone is held sideways and the whole screen is the touch area.  In the menus a swipe
+  is an arrow key, a double tap Enter, touch and hold Shift plus Enter, a two-finger tap (or the Back
+  button) Escape, and a two-finger swipe up or down the first or last item.  In a game a tap fires once and
+  touch and hold fires on; a swipe up changes weapon and a swipe down reloads; a three-finger tap or a
+  shake of the phone is melee; a two-finger tap pauses; Swipe aiming turns with a sideways swipe, Gyro and
+  Tilt with the phone's own sensors.  The Settings and the tutorial's lines describe these instead of keys.
+* **What the phone changes** (user requests to Erick, all behind `host.ANDROID`):
+  * No Button mode: the Controls tab offers Gesture alone, and a saved Button mode reads as Gesture.
+  * A Shake sensitivity slider in the Controls tab, 1 to 10 or Off; on the Settings screen the game says
+    Shake when it feels one.
+  * Skip dialogue, first on the pause screen while a line can be skipped, since the three-finger tap is
+    melee only on the phone.
+  * The weapons are moved on by the real time since their last update, at most 0.05 s, rather than the
+    fixed 0.01 s of `update_weapons` 0x100059a48: a phone that falls behind its timers ran every gun slow.
+  * With that step, holding fire passed the 0.2 s window of `-[ADAccessibleGameView update:]` 0x10008a754
+    twice and a single-shot weapon fired two shots, so the hold starts fire once per touch.  With the fixed
+    step of the desktop it passes once, and the desktop is left as it was.
+  * A locked challenge or arena reads which challenge opens it - "locked. Complete The Audition first" -
+    where `statusForChallengeWithDict:` 0x100054960 says "locked".
+
 ## Divergences
 
 * `-[ADWeapon playSingleShootSound]` spins on the main thread until it picks a `_fire_` sound that is not

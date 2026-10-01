@@ -151,11 +151,15 @@ class MainMenuScreen(ViewControllerScreen):
         # asking about updates wants to know.  Run from source there is nothing to update from - a
         # checkout moves with git - so the button is replaced by a line that says so.
         from .. import paths
+        from ..platform import host as host_platform
         from ..platform import version
         if paths.FROZEN:
             updates = Button('Check for updates', (426, 330, 117, 41), parent=v,
                              actions=[self.check_for_updates], name='Check for updates (port)')
             updates.hint = 'Current version is %s.' % version.text()
+        elif host_platform.ANDROID:
+            View('Version %s. Install a newer app to update.' % version.text(),
+                 (426, 330, 117, 41), parent=v, name='No updates (port)')
         else:
             View('Updating is not available here. This is the source version, so it updates with git '
                  'rather than from a release.', (426, 330, 117, 41), parent=v, name='No updates (port)')
@@ -382,7 +386,8 @@ class ExtraChapterScreen(ViewControllerScreen):
             d = data.plist(name) or {}
             status = AccessibleChallengeSelectorScreen.status_for_challenge_with_dict(d)
             b.label = '%s, %s' % (str(d.get('title') or name), status)
-            b.hint = None if status == 'locked' else str(d.get('objective') or '')
+            # on the phone a locked row goes on to name the arena that opens it (statusForChallengeWithDict)
+            b.hint = None if status.startswith('locked') else str(d.get('objective') or '')
 
     def view_will_appear(self) -> None:
         super().view_will_appear()

@@ -12,12 +12,18 @@ import threading
 
 import numpy as np
 
+from ..platform import host
+
 _lock = threading.Lock()
 _cache: dict[str, tuple[np.ndarray, int]] = {}
 _pending: dict[str, threading.Event] = {}       # files being decoded by the background thread
 _queue: list[str] = []
 _wake = threading.Condition(_lock)
-_worker: threading.Thread | None = None
+_workers: list = []                             # the background decoding threads
+#: PORT ADDITION: how many threads decode ahead of time.  One on a computer, where decoding is quick; two on a
+#: phone, where it is slow enough that a playlist activated as a zombie appears could still be queued when
+#: that zombie is hit (see WORKERS below the Android section).
+WORKERS = 1
 _callbacks: dict[str, list] = {}                 # decode_async callbacks, called by the background thread
 
 
@@ -50,7 +56,6 @@ def prewarm(paths) -> None:
     the files of a playlist are decoded here as soon as the playlist is activated.  Nothing the game sees
     changes: a file that is not ready yet is still decoded (or waited for) when it is needed.
     """
-    global _worker
     with _lock:
         added = False
         for path in paths:
@@ -61,10 +66,11 @@ def prewarm(paths) -> None:
             added = True
         if not added:
             return
-        if _worker is None or not _worker.is_alive():
-            _worker = threading.Thread(target=_work, name='sound-prewarm', daemon=True)
-            _worker.start()
-        _wake.notify()
+        # PORT ADDITION: the sounds a hit brings - impacts, hits, deaths - go ahead of the rest of the queue,
+        # since they are the ones heard a moment after the trigger is pulled and waiting on them is heard
+        _queue.sort(key=_priority)
+        _ensure_workers()
+        _wake.notify_all()
 
 
 def is_cached(path: str) -> bool:
@@ -74,7 +80,6 @@ def is_cached(path: str) -> bool:
 
 def decode_async(path: str, done) -> None:
     """Decode on the background thread (ahead of queued prewarm work) and call done() from that thread."""
-    global _worker
     with _lock:
         if path in _cache:
             ready = True
@@ -87,12 +92,28 @@ def decode_async(path: str, done) -> None:
             elif path in _queue:
                 _queue.remove(path)
                 _queue.insert(0, path)
-            if _worker is None or not _worker.is_alive():
-                _worker = threading.Thread(target=_work, name='sound-prewarm', daemon=True)
-                _worker.start()
-            _wake.notify()
+            _ensure_workers()
+            _wake.notify_all()
     if ready:
         done()
+
+
+_URGENT = ('impact', 'killconfirm', '_hit', 'death', '_die', 'crit')
+
+
+def _priority(path: str) -> int:
+    """0 for the sounds a hit brings (see prewarm), 1 for everything else; the sort keeps the order within."""
+    name = os.path.basename(path).lower()
+    return 0 if any(word in name for word in _URGENT) else 1
+
+
+def _ensure_workers() -> None:
+    """Start the background threads that are not running (called with _lock held)."""
+    _workers[:] = [w for w in _workers if w.is_alive()]
+    while len(_workers) < WORKERS:
+        w = threading.Thread(target=_work, name='sound-prewarm-%d' % len(_workers), daemon=True)
+        _workers.append(w)
+        w.start()
 
 
 def _work() -> None:
@@ -168,3 +189,23 @@ def lead_in(path: str, floor: float = 0.002, most: float = 0.25) -> float:
 
 def exists(path: str) -> bool:
     return os.path.isfile(path)
+
+
+# PORT ADDITION (Android build): the phone decodes, and keeps the samples on the Java side
+if host.ANDROID:
+    from . import decoder_android as _android
+
+    WORKERS = 2
+
+    def _decode_now(path: str):                            # noqa: F811
+        result = _android.decode_now(path)
+        with _lock:
+            hit = _cache.setdefault(path, result)
+        return hit
+
+    def lead_in(path: str, floor: float = 0.002, most: float = 0.25) -> float:   # noqa: F811
+        with _lock:
+            hit = _cache.get(path)
+        if hit is None:
+            return 0.0
+        return _android.lead_in_of(hit[0], floor, most)

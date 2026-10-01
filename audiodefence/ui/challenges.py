@@ -16,6 +16,7 @@ from ..game import data
 from ..game.challenge_data import ChallengeData
 from ..game.parameters import GameParameters
 from ..platform import crand
+from ..platform import host as system
 from ..platform.cfloat import f32
 from ..platform.defaults import ns_float_value, ns_int_value
 from ..platform.tracker import Tracker
@@ -75,6 +76,7 @@ class _TableLoader:
             # whatever row reuses its view after a change of category
             v.__dict__.pop('binding_action', None)
             v.__dict__.pop('pad_binding_action', None)
+            v.__dict__.pop('adjust', None)                # PORT ADDITION: a slider is that row's alone
             self.table.children.append(v)
             return v
         return View('', self.table.frame, traits=traits, parent=self.table)
@@ -263,7 +265,7 @@ class AccessibleChallengeSelectorScreen(ViewControllerScreen):
             d = self.dictionary_for_challenge_with_name(name) or {}
             status = self.status_for_challenge_with_dict(d)
             # PORT INPUT: the original hint is "double tap to play this challenge"
-            hint = None if status == 'locked' else 'Press Enter to play this challenge.'
+            hint = None if status.startswith('locked') else 'Press Enter to play this challenge.'
             cell = t.cell(d.get('title'), status, hint=hint, action=lambda r=row: self.did_select_row(r))
             cell.label_key_words = True                   # PORT ADDITION: "press Enter to go to armory"
 
@@ -279,7 +281,9 @@ class AccessibleChallengeSelectorScreen(ViewControllerScreen):
         cd = ChallengeData.shared()
         for req in d.get('challenges_requirement') or []:
             if not cd.has_completed_challenge_with_name(req):
-                return 'locked'
+                # PORT ADDITION (Android, user request): on the phone a locked row also says what opens it
+                title = (data.plist(req) or {}).get('title') if system.ANDROID else None
+                return 'locked. Complete %s first' % title if title else 'locked'
         cid = d.get('challenge_id')
         stars = (1 if cd.has_completed_challenge_with_name(cid) else 0) \
             + (1 if cd.has_accuracy_star_for_challenge_with_name(cid) else 0) \
