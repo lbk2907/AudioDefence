@@ -131,10 +131,17 @@ class App:
         with no rows, on a screen showing only the coins and the diamonds, whose own Back went out to the
         world list.  Every one of those screens asks here now, so the port's own go back to Extra.
         """
+        from .game import custom
         from .game.additions import chapter_of
         chapter = chapter_of(challenge_id)
         if chapter is not None:
             self.go_to_extra_chapter(chapter)
+            return
+        # PORT ADDITION (user request): a challenge a player wrote goes back to its own arena, for the same
+        # reason - it belongs to no world either, and the list for no world holds nothing.
+        arena = custom.arena_of(challenge_id)
+        if arena is not None:
+            self.go_to_custom_arena(arena)
             return
         self.go_to_challenge_selector()
 
@@ -175,7 +182,21 @@ class App:
         from .game.challenge_data import ChallengeData
         from .game.parameters import GameParameters
         cd = ChallengeData.shared()
+        from .game import custom
         from .game.additions import arena_after, chapter_of
+        # PORT ADDITION (user request): the same walk through a custom arena.  The challenge after this one
+        # in the arena its file put it in, or - wanting a gun not bought - the arena's own list, which says
+        # so; after the last of an arena, the list of custom arenas.
+        arena = custom.arena_of(challenge)
+        if arena is not None:
+            nxt = custom.challenge_after(challenge)
+            if nxt is None:
+                self.go_to_custom_menu()
+            elif cd.has_weapon_for_challenge_with_name(nxt):
+                self.go_to_accessible_challenge_overview_with_dictionary(self.dictionary_for_challenge_with_name(nxt))
+            else:
+                self.go_to_custom_arena(arena)
+            return
         chapter = chapter_of(challenge)
         if chapter is not None:
             # PORT ADDITION (user request, 2026-09-29): the same walk through a chapter of Extra.  The arena
@@ -245,6 +266,41 @@ class App:
     def go_to_extra_chapter(self, chapter) -> None:       # PORT ADDITION: the arenas of one chapter
         self.start_menu_music('main_menu_theme')
         self.load_view_controller_named('Port_ExtraChapterViewController', chapter=chapter)
+
+    def go_to_custom_menu(self) -> None:                  # PORT ADDITION: the arenas a player has written
+        self.start_menu_music('main_menu_theme')
+        self.load_view_controller_named('Port_CustomMenuViewController')
+
+    def go_to_custom_arena(self, arena) -> None:          # PORT ADDITION: the challenges of one of them
+        self.start_menu_music('main_menu_theme')
+        self.load_view_controller_named('Port_CustomArenaViewController', arena=arena)
+
+    def go_to_challenge_maker(self) -> None:              # PORT ADDITION: the Challenge maker
+        self.start_menu_music('main_menu_theme')
+        self.load_view_controller_named('Port_ChallengeMakerViewController')
+
+    def go_to_challenge_editor(self, challenge_id) -> None:   # PORT ADDITION: editing one of them
+        self.start_menu_music('main_menu_theme')
+        self.load_view_controller_named('Port_ChallengeEditorViewController', challenge_id=challenge_id)
+
+    def go_to_wave_editor(self, challenge_id) -> None:   # PORT ADDITION: its zombies, placed by hand
+        self.start_menu_music('main_menu_theme')
+        self.load_view_controller_named('Port_WaveEditorViewController', challenge_id=challenge_id)
+
+    def go_to_enemy_editor(self, challenge_id, wave, slot) -> None:   # PORT ADDITION: one of them
+        self.start_menu_music('main_menu_theme')
+        self.load_view_controller_named('Port_EnemyEditorViewController', challenge_id=challenge_id,
+                                        wave=wave, slot=slot)
+
+    def go_to_cutscene_editor(self, challenge_id) -> None:   # PORT ADDITION: its dialogue, wave by wave
+        self.start_menu_music('main_menu_theme')
+        self.load_view_controller_named('Port_CutsceneEditorViewController', challenge_id=challenge_id)
+
+    def go_to_cutscene_line(self, challenge_id, wave, place,
+                            where='during') -> None:      # PORT ADDITION: one line of it
+        self.start_menu_music('main_menu_theme')
+        self.load_view_controller_named('Port_CutsceneLineViewController', challenge_id=challenge_id,
+                                        wave=wave, place=place, where=where)
 
     def go_to_play_menu(self) -> None:                    # 0x100082474
         # PORT ADDITION (user request): everything from here until the main menu is "inside Play", and that

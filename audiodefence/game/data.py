@@ -18,8 +18,14 @@ def _load(name: str):
         # PORT ADDITION: a plist of the port's own - a challenge it wrote, and the waves for it.  The
         # overlay adds to their files; this is for a file they do not have at all, and it goes through
         # the same door so that every one of the twenty-two places that read the game's data finds it.
+        #
+        # PORT ADDITION (user request): and then a challenge a *player* wrote, out of the challenges folder
+        # beside the executable (`custom.py`).  Last of the three, so nothing a player writes can shadow
+        # the original's data or the port's - the bundle is asked first and the port's own second.
+        from . import custom
         from .additions import PLISTS
-        return copy.deepcopy(PLISTS.get(name.replace('.plist', '')))
+        key = name.replace('.plist', '')
+        return copy.deepcopy(PLISTS.get(key) if key in PLISTS else custom.plist(key))
     with open(path, 'rb') as fh:
         data = _correct(plistlib.load(fh))                # PORT ADDITION: the original's typos (TYPOS)
     from .additions import apply_to                       # here: additions read the game's own modules

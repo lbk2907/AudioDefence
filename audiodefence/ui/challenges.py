@@ -40,7 +40,12 @@ def _challenge_rows(challenge: dict, outcome: str) -> list:
 def _statistics_heading(challenge: dict) -> str:
     """PORT ADDITION: the first line of a challenge's Copy results.  An Extra arena's says so (user request,
     2026-09-29), so a paste of one is not taken for one of the original's challenges."""
+    from ..game import custom
     from ..game.additions import chapter_of
+    if custom.is_custom(challenge.get('challenge_id')):
+        # PORT ADDITION (user request): and a challenge somebody made says that, so a paste of one is not
+        # taken for an arena of the port's either.
+        return 'Audio Defence Custom Challenge Statistics'
     if chapter_of(challenge.get('challenge_id')) is not None:
         return 'Audio Defence Extra Challenge Statistics'
     return 'Audio Defence Challenge Statistics'
@@ -644,8 +649,17 @@ class AccessibleChallengeCompletedScreen(AccessibleGameOverEndlessScreen):
         if ChallengeData.shared().has_challenge_after(self.challenge_dict.get('challenge_id'),
                                                       GameParameters.shared().last_challenge_world):
             return
+        from ..game import custom
         from ..game.additions import arena_after, chapter_of
         cid = self.challenge_dict.get('challenge_id')
+        if custom.is_custom(cid):
+            # PORT ADDITION (user request): a custom arena is to the Custom screen what a chapter is to
+            # Extra.  Next challenge opens the challenge after this one in the arena its file put it in
+            # (App.go_to_challenge_after), and the last of an arena goes back to the list of them.
+            if custom.challenge_after(cid) is None:
+                self.next_challenge_button.label = 'Arena selection'
+                self.next_challenge_button.set_title('Arena selection')
+            return
         if chapter_of(cid) is not None:
             # PORT ADDITION (user request, 2026-09-29): a chapter is to Extra what a world is to the
             # challenges.  Next challenge opens the arena after this one in its chapter

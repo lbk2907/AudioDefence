@@ -25,6 +25,16 @@ If some of the game's files have gone missing, it asks when it starts whether to
 If you change your sound output while the game is running, the game's sound moves to it, as the speech already did.
 In Tilt mode, turning left and right no longer goes the wrong way.
 A challenge with no stars yet says 0 stars unlocked, not 0 star.
+You can make arenas and challenges of your own, in the Challenge maker under Extra.
+A challenge you write by hand goes in the challenges folder beside the game.
+A challenge you made can be edited: its name, what it asks of you, the guns it hands out, what it pays, and how hard its waves are.
+You can place every zombie yourself, saying which one and where it comes from and when, or have the crowds built for you.
+A challenge can be given dialogue of your own, from your own sound files, and an ambience of your own to play under the arena.
+A wave can have a scene before it and a scene after it, as well as dialogue over the fighting.
+The scene after the last wave is the end of the challenge, and plays before the score screen.
+A wave can hand you an air drop, of whatever kind the game feels like or one you choose.
+A challenge can be given the cows, the car alarms, the jukebox and the generator that Endless hands out as cards.
+Where the game asks you to type, it opens a real text box, so selecting everything, copying, pasting and taking back a word all work as they do anywhere else.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.

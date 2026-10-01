@@ -13,6 +13,178 @@ from .screens import MenuItem, MenuScreen, PlaceholderScreen, Screen, joined
 log = logging.getLogger('ui.host')
 
 
+#: What a typed name may hold.  Letters, digits and spaces from any language, and the handful of marks a
+#: title actually uses - everything else is refused as it is typed rather than silently dropped later.
+#: A file's name is made from this by `custom._slug`, so nothing here has to be safe for a file system.
+_NAME_MARKS = "'-,.!?&()"
+#: A sentence is a sentence: everything a name may hold, and the marks writing actually needs.  Only the
+#: braces and the percent sign are kept out, because the localization layer reads both as substitutions
+#: (`_VALUE_TOKEN` in localization.py) and a stray one would be a gap nobody meant to leave.
+_SENTENCE_MARKS = _NAME_MARKS + ':;"/+=*@#$_[]<>~`^|\\'
+
+
+def name_is_allowed(character: str) -> bool:
+    return bool(character) and (character.isalnum() or character in _NAME_MARKS or character == ' ')
+
+
+def sentence_is_allowed(character: str) -> bool:
+    return bool(character) and (character.isalnum() or character in _SENTENCE_MARKS or character == ' ')
+
+
+def spoken_character(character: str) -> str:
+    """A character as it should be read back while typing.  A space read as "space" rather than as a pause
+    is the difference between hearing what you typed and hearing nothing at all."""
+    if character == ' ':
+        return 'space'
+    return character
+
+
+class TextEntryScreen(MenuScreen):
+    """PORT ADDITION (user request): a typed line of text.
+
+    Nothing in the original reads typed text - a phone has a keyboard the system draws, and the game never
+    asks for a word - so this has no method in the binary to depart from.  The port needs one for the
+    Challenge maker: a challenge somebody made should be called what they want it called, and stepping
+    through names the generator can write is a way round that rather than an answer to it.
+
+    It is a modal overlay, like an alert, so the screen underneath keeps its rows and its cursor.  What it
+    does about being unable to see: every character is read back as it is typed, a space says "space",
+    Backspace says what it removed, and either arrow reads the whole line back.  Enter accepts and Escape
+    cancels, which is what those two keys do everywhere else in the game.
+    """
+
+    def __init__(self, host, title: str, value: str = '', on_done=None, max_length: int = 48,
+                 what: str = 'name', allowed=None):
+        super().__init__(host, title=title)
+        self.value = str(value or '')
+        self.on_done = on_done
+        self.max_length = max_length
+        self.what = what
+        #: what a character has to pass to go in.  A name and a sentence are not the same thing: a title
+        #: has no business holding a semicolon, and an objective has every business holding one.
+        self.allowed = allowed or name_is_allowed
+        self.back_action = self.cancel
+
+    def announce_screen(self) -> None:
+        said = self.value if self.value else 'empty'
+        self.speak('%s. %s. Type a %s, Enter when you are done, Escape to cancel.'
+                   % (self.title, said, self.what))
+
+    def _finish(self, value) -> None:
+        self.host.pop_overlay()
+        if self.on_done is not None:
+            self.on_done(value)
+
+    def accept(self) -> None:
+        text = ' '.join(self.value.split())
+        if not text:
+            self.speak('A %s cannot be empty. Type one, or press Escape to cancel.' % self.what)
+            return
+        self._finish(text)
+
+    def cancel(self) -> None:
+        self._finish(None)
+
+    def key_down(self, event) -> None:
+        key = getattr(event, 'key', None)
+        if key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            self.accept()
+            return
+        if key == pygame.K_ESCAPE:
+            self.speak('Cancelled.')
+            self.cancel()
+            return
+        if key == pygame.K_BACKSPACE:
+            if not self.value:
+                self.speak('empty')
+                return
+            gone, self.value = self.value[-1], self.value[:-1]
+            self.speak('%s deleted. %s' % (spoken_character(gone), self.value or 'empty'))
+            return
+        if key in (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN):
+            self.speak(self.value or 'empty')             # read it back; there is no caret to move
+            return
+        character = getattr(event, 'unicode', '')
+        if not character or not character.isprintable():
+            return
+        if not self.allowed(character):
+            self.speak('%s cannot go in a %s' % (spoken_character(character), self.what))
+            return
+        if len(self.value) >= self.max_length:
+            self.speak('that is as long as a %s can be' % self.what)
+            return
+        self.value += character
+        self.speak(spoken_character(character))
+
+
+def ask_for_text(screen, title: str, value: str = '', on_done=None, max_length: int = 48,
+                 what: str = 'name', allowed=None) -> None:
+    """PORT ADDITION (user request): ask for a line of text, in the system's own box where there is one.
+
+    Windows and the Mac have a real text field to borrow (`platform/textentry.py`), and that is what this
+    uses: the editing keys are then the system's, so Control plus A selects the lot, Control plus C and V
+    carry a name in and out of the game, Control plus Backspace takes back a word, and a screen reader reads
+    an edit field rather than a sentence the game decided to say.  `TextEntryScreen` is still here and is
+    still the answer anywhere there is no such box - and for a box that could not be shown, which
+    `textentry.available()` stops claiming after the first failure.
+
+    `on_done` is called with the text, or with None when it was cancelled, exactly as `TextEntryScreen`
+    calls it - so a caller cannot tell which of the two it got.  The system box is modal, so on this road
+    the call happens before this function returns rather than after an overlay closes.
+    """
+    from .. import localization
+    from ..platform import textentry
+    allowed = allowed or name_is_allowed
+    if not textentry.available():
+        screen.host.push_overlay(TextEntryScreen(screen.host, title, value=value, on_done=on_done,
+                                                 max_length=max_length, what=what, allowed=allowed))
+        return
+    # The system's box is the one place the port's text does not pass through `Speech.speak`, which is where
+    # a line is put into the player's language (speech.py) - a Win32 window caption goes to Windows as it is
+    # written.  So it is translated here instead, and a box in Russian says what the screen behind it would.
+    caption = localization.translate(title)
+    prompt = localization.translate('Type a %s, then press Enter.') % localization.translate(what)
+    typed = value
+    while True:
+        typed = textentry.ask_for_text(caption, prompt, typed, max_length)
+        if typed is None and not textentry.available():    # the box has just failed: ask the old way
+            ask_for_text(screen, title, value, on_done, max_length, what, allowed)
+            return
+        # Here rather than at each way out: every box that closes leaves the key that closed it behind,
+        # including the ones that send the box round again.
+        _drop_held_keys()
+        if typed is None:
+            screen.speak('Cancelled.')
+            break
+        text = ' '.join(typed.split())
+        refused = sorted({c for c in text if not allowed(c)})
+        if refused:
+            # The box is opened again holding what was typed, so a name is fixed rather than typed afresh.
+            screen.speak('%s cannot go in a %s.'
+                         % (', '.join(spoken_character(c) for c in refused), what))
+            continue
+        if not text:
+            screen.speak('A %s cannot be empty.' % what)
+            continue
+        if on_done is not None:
+            on_done(text)
+        return
+    if on_done is not None:
+        on_done(None)
+
+
+def _drop_held_keys() -> None:
+    """The key presses that piled up behind the system's box, thrown away.
+
+    The Enter that accepted the box arrives in pygame's queue as well, and the row the cursor is on would be
+    pressed by it a second time - the same shape as the controller bug in `_pad_input`, where one press of
+    Cross skipped the intro and then started a game.  Only the presses go: a key-up is what clears a held
+    key (`handle_event`), and the Enter that opened the box is still waiting to be let go of.
+    """
+    if pygame.display.get_init():                         # there is no queue to clear without a window
+        pygame.event.clear(pygame.KEYDOWN)
+
+
 class AlertScreen(MenuScreen):
     """UIAlertView: title, message, buttons."""
 
