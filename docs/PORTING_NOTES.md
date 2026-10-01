@@ -241,18 +241,55 @@ they were.
     offers it again without fetching it.
   * Files gone missing are not looked for: the phone unpacks the game's data from the APK at every install,
     and a release holds no zip for the phone to take single files from.
-* **Controls.**  The phone is held sideways and the whole screen is the touch area.  In the menus a swipe
-  is an arrow key, a double tap Enter, touch and hold Shift plus Enter, a two-finger tap (or the Back
-  button) Escape, and a two-finger swipe up or down the first or last item.  In a game a tap fires once and
-  touch and hold fires on; a swipe up changes weapon and a swipe down reloads; a three-finger tap or a
-  shake of the phone is melee; a two-finger tap pauses; Swipe aiming turns with a sideways swipe, Gyro and
-  Tilt with the phone's own sensors.  The Settings and the tutorial's lines describe these instead of keys.
+* **Controls** (user request, 2026-10-01: "follow the original behavior of the game").  The phone is held
+  sideways and the whole screen is the touch area.  The touches are the original's own as it was played
+  with VoiceOver running, which is the path the port always takes (`screen_reader_running`): the menus take
+  VoiceOver's gestures for the VoiceOver stand-in the desktop drives with keys, and a game gives its touches
+  to `AccessibleGameView`'s own handlers, so the game code decides what they do exactly as on the desktop.
+  `android_main.TouchInput` is the whole of it; the Java side only passes the touches on.
+  * **Menus.**  A swipe right or left is the next or previous element and up or down VoiceOver's rotor -
+    a slider up or down, or the next or previous tab or category (the cross-axis keys), so Menu layout is
+    not offered on the phone and `menu_axis` is always the default there.  A double tap is Enter, a double
+    tap and hold Shift plus Enter (a row's second action), a two-finger scrub (`accessibilityPerformEscape`)
+    or the phone's Back is Escape, a two-finger tap stops the speech, a two-finger swipe up reads the screen
+    from the top and down from the focused element, and a four-finger tap in the top or bottom half goes to
+    the first or last element.  The magic tap stays out, as on the desktop; three-finger taps and swipes
+    have nothing to do, since the port's screens do not scroll.  The hints' keys are said as these
+    gestures (`speech_android.PHONE_WORDS`).  Touch exploration - hearing what is under the finger - is not
+    copied: a single tap does nothing.
+  * **A game.**  With VoiceOver running the original covers the screen with `ADAccessibleGameView`
+    (`viewDidLoad` 0x100057fe0), whose frame is the screen's; the phone's is its size in dp, about the
+    size of an iPhone point, and the touches are given in dp, so a swipe turns as far as the same drag did
+    on the iPhone.  Its first finger is its touch (`multipleTouchEnabled` is off): `touchesBegan` 0x10008a404,
+    `touchesMoved` 0x10008a5a4 - which turns under Swipe aiming and marks a sideways drag as no shot -
+    and `touchesEnded` 0x10008a50c, whose `solveButtonPress` 0x10008a914 is a single shot under Gesture and
+    the quarter of the screen under Button, and `update:` 0x10008a754 holds it into continuous fire.  Its
+    recognizers (`initGestureRecognizers` 0x100089f64) are copied: a one-finger swipe up or down calls
+    `handleSwipeUpGesture` / `handleSwipeDownGesture` and takes the touch, and a three-finger tap calls
+    `handleTripleTap`; all three do nothing under Button mode, as there.  A shake is
+    `motionEnded:withEvent:` 0x10005a108 - melee under Gesture, nothing under Button - which is the
+    original's own.  The Pause button (#143, the one thing brought in front of the game view, 0x100058350)
+    keeps its place at the top middle of the screen: touching it reads it, as VoiceOver does, a double tap
+    on it pauses, and touches there never reach the game.  The phone's Back pauses too, as Escape does.
+  * **The intro** has no game view: its game area takes a one-finger triple tap to skip
+    (`handleSkipForAccessibleUsers`, set up in `viewDidLoad` 0x1000253c0, whose "Triple tap to skip
+    intro" is said again in its own words), and under Swipe aiming its pan turns (`handlePan` 0x100025054).
+  * DIVERGENCE: `ADAccessibleGameView` has no `touchesCancelled:withEvent:`, so a touch taken by the
+    three-finger tap, or by a swipe under Button mode, never ended in the original and left its trigger
+    down until the next touch ended.  Here such a touch is withdrawn the way `handleSwipeGesture`
+    0x10008a194 withdraws a swipe's: no shot, and the gun stopped.
+  * Before this the phone had gestures of its own (Erick's, 2026-10-01): touch and hold for a row's second
+    action, a two-finger tap for Back and to pause, a two-finger swipe for the first or last item, a
+    three-finger tap for Back in the menus, a double tap or three-finger tap to skip the intro, and a
+    vertical drag that stopped a touch firing however slowly it moved.  Those are gone; a two-finger tap in a
+    game is now what it was in the original, the first finger's tap.
 * **What the phone changes** (user requests to Erick, all behind `host.ANDROID`):
-  * No Button mode: the Controls tab offers Gesture alone, and a saved Button mode reads as Gesture.
   * A Shake sensitivity slider in the Controls tab, 1 to 10 or Off; on the Settings screen the game says
-    Shake when it feels one.
-  * Skip dialogue, first on the pause screen while a line can be skipped, since the three-finger tap is
-    melee only on the phone.
+    Shake when it feels one.  It changes how hard a shake has to be, not what a shake does.
+  * Skip dialogue, first on the pause screen while a line can be skipped: the original's Skip button lies
+    under the game view, where a touch cannot reach it.
+  * A first finger in a game waits 0.06 s (`MULTI_FINGER_GRACE`) before it is a touch, and while more
+    fingers come down it waits to see whether they are the three-finger tap, so melee fires no shot.
   * The weapons are moved on by the real time since their last update, at most 0.05 s, rather than the
     fixed 0.01 s of `update_weapons` 0x100059a48: a phone that falls behind its timers ran every gun slow.
   * With that step, holding fire passed the 0.2 s window of `-[ADAccessibleGameView update:]` 0x10008a754

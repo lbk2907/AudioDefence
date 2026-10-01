@@ -72,8 +72,8 @@ class GameplayScreen(Screen):
             if padmap.names('skip'):
                 return 'Press %s to skip intro' % padmap.text('skip')
         from ..platform import host
-        if host.ANDROID:                                  # PORT ADDITION: the phone's touch for it
-            return 'Double tap to skip intro'
+        if host.ANDROID:                                  # the original's own words, and its touch
+            return 'Triple tap to skip intro'
         return 'Press Enter to skip intro'
 
     def layout_changed(self) -> None:

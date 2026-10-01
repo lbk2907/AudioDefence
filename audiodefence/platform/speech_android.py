@@ -26,15 +26,15 @@ SAPI_DEFAULTS = {'voice': None, 'rate': None, 'boost': False, 'pitch': 0, 'volum
 
 #: PORT ADDITION: the hints and announcements were written for a keyboard - "Press Enter to play this
 #: challenge", "Shift plus Enter for the previous", "Escape to cancel".  On the phone they name the touches
-#: that do those things instead: a double tap is Enter, touch and hold is Shift + Enter, a two-finger tap is
-#: Escape, and swipes are the arrow keys.  Order matters: the longer phrases go first.
+#: that do those things instead, VoiceOver's: a double tap is Enter, a double tap and hold is Shift + Enter,
+#: a two-finger scrub is Escape, and swipes are the arrow keys.  Order matters: the longer phrases go first.
 PHONE_WORDS = (
-    (re.compile(r'\bShift (?:plus |\+ ?)?Enter\b'), 'touch and hold'),
+    (re.compile(r'\bShift (?:plus |\+ ?)?Enter\b'), 'double tap and hold'),
     (re.compile(r'\bPress Enter\b'), 'Double tap'),
     (re.compile(r'\bpress Enter\b'), 'double tap'),
-    (re.compile(r'\bEscape on the keyboard\b'), 'a two-finger tap'),
-    (re.compile(r'(^|[.!?] )Escape\b'), r'\1A two-finger tap'),
-    (re.compile(r'\bEscape\b'), 'a two-finger tap'),
+    (re.compile(r'\bEscape on the keyboard\b'), 'a two-finger scrub'),
+    (re.compile(r'(^|[.!?] )Escape\b'), r'\1A two-finger scrub'),
+    (re.compile(r'\bEscape\b'), 'a two-finger scrub'),
     (re.compile(r'\b(?:the )?arrow keys\b'), 'swipes'),
 )
 

@@ -4,26 +4,33 @@ The Java side (MainActivity, Bridge) owns the screen, the sound output and the t
 ``run(home)`` on a thread of its own; this is the desktop port's main loop (audiodefence/__main__.py) with
 pygame's events replaced by the touch events Bridge collects.
 
-CONTROLS (Android has no keyboard; the game is played with one to three fingers on the screen)
+CONTROLS - the original's own, as it was played with VoiceOver running (the phone is held sideways and the
+whole screen is the touch area; TalkBack is off and the game speaks for itself)
 
-  In the menus                                  (the accessible screens of the original, as on the desktop)
-    swipe right / left / up / down              the arrow keys: move through the screen, change tab
-                                                (Settings > Miscellaneous > Menu layout picks which pair moves)
-    double tap                                  Enter: press the button
-    touch and hold                              Shift + Enter: a row's second action
-    two-finger tap                              Escape: back
-    two-finger swipe up / down                  first / last item
-  In a game (Gesture mode, as the original's VoiceOver mode)
-    touch                                       tap = one shot, hold = continuous fire
-    swipe up / swipe down                       next weapon / reload
-    swipe left / right                          turn (Swipe aiming); Gyro and Tilt aiming use the phone's sensors
-    two-finger tap                              pause
-    three-finger tap                            melee (in the intro: skip)
-    Skip dialogue, on the pause screen          skip a line of Dr. Bastard's
-    double tap (in the intro)                   skip the intro
-  In a game (Button mode)
-    the screen is four corners: top right fires, top left is melee, bottom left changes weapon, bottom
-    right reloads; the other gestures work as above.
+  In the menus, VoiceOver's gestures (the port's menus are its VoiceOver stand-in, as on the desktop)
+    swipe right / left                          next / previous element
+    swipe up / down                             VoiceOver's rotor: a slider up or down, or the next or
+                                                previous tab or category where the screen has them
+    double tap                                  activate (Enter)
+    double tap and hold                         a row's second action (Shift + Enter)
+    two-finger scrub, or the phone's Back       accessibilityPerformEscape: back (Escape)
+    two-finger tap                              stop speaking
+    two-finger swipe up / down                  read everything from the top / from the element on
+    four-finger tap, top / bottom half          first / last element
+  In a game, ADAccessibleGameView, which with VoiceOver running covers the screen: the touches go to its
+  own handlers (touchesBegan / Moved / Ended), and its gesture recognizers are copied here
+    touch                                       Gesture: tap = one shot, hold = continuous fire;
+                                                Button: the four quarters of the screen (solveButtonPress)
+    one-finger swipe up / down                  Gesture: next weapon / reload; Button: nothing
+    three-finger tap                            Gesture: melee; Button: nothing
+    a finger moved sideways                     turns, when aiming is Swipe (touchesMoved); Gyro and Tilt
+                                                read the phone's sensors
+    a shake                                     Gesture: melee (motionEnded:withEvent:)
+    the Pause button, top middle of the screen  touch it and it is read; a double tap on it pauses
+    the phone's Back                            pause (the desktop's Escape)
+  In the intro (ADOpenerGameplayViewController, no ADAccessibleGameView)
+    one-finger triple tap                       skip it (handleSkipForAccessibleUsers)
+    a finger moved sideways                     turns, when aiming is Swipe (the weapon area's pan)
 """
 from __future__ import annotations
 
@@ -39,27 +46,32 @@ DOWN, MOVE, UP, CANCEL = 0, 1, 2, 3
 PAUSED, RESUMED, BACK, MENU_KEY = 10, 11, 20, 21
 
 SWIPE_MIN = 56.0            # dp a finger has to travel to be a swipe in a menu
-GAME_SWIPE = 48.0           # dp for a swipe up or down in a game
-GAME_SWIPE_INTENT = 18.0    # dp of mostly-vertical travel after which a touch is no longer a shot
+GAME_SWIPE = 48.0           # dp for the game area's swipe up or down (UISwipeGestureRecognizer)
 TAP_MAX_MOVE = 24.0
 DOUBLE_TAP_WINDOW = 0.40
-LONG_PRESS = 0.65
+LONG_PRESS = 0.65           # a double tap held this long is VoiceOver's double tap and hold
 MULTI_TAP_WINDOW = 0.45
+SCRUB_LEG = 30.0            # dp each stroke of a two-finger scrub has to cover
 #: FIX (user request): how long a first finger in a game waits before it counts as a shot.  Fingers of a
-#: two- or three-finger tap land a few hundredths of a second apart; the first one used to fire at once, so
-#: pausing and melee fired a shot too.  If a second finger lands inside this window, no shot is fired.
+#: three-finger tap land a few hundredths of a second apart; the first one used to fire at once, so melee
+#: fired a shot too.  If a second finger lands inside this window, the touch waits to see what the
+#: fingers are doing.
 MULTI_FINGER_GRACE = 0.06
+
+#: -[ADGameplayViewController pauseButton], nib object #143: x, y, width, height on the 568 x 320 screen.
+#: With VoiceOver running it is the one thing brought in front of the game view (0x100058350).
+PAUSE_BUTTON = (240.0, 1.0, 86.0, 31.0)
+NIB_SIZE = (568.0, 320.0)
 
 
 class _Finger:
-    __slots__ = ('x0', 'y0', 't0', 'x', 'y', 'moved', 'swiped')
+    __slots__ = ('x0', 'y0', 't0', 'x', 'y', 'moved')
 
     def __init__(self, x, y, t):
         self.x0 = self.x = x
         self.y0 = self.y = y
         self.t0 = t
         self.moved = 0.0
-        self.swiped = False
 
 
 class PhoneMotion:
@@ -80,19 +92,36 @@ class PhoneMotion:
 
 
 class TouchInput:
+    """The phone's touches, given to whatever the original gave them to.
+
+    One gesture - from the first finger down to the last one up - belongs to one place, decided as it
+    starts: a menu ('menu'), the game view ('game'), the Pause button in front of it ('pause') or the
+    intro ('opener').  A game touch that began goes on to its end in the game view it began in, even if
+    the pause screen has come up meanwhile, as a UITouch stays with its view."""
+
     def __init__(self, host, bridge):
         self.host = host
         self.b = bridge
         self.fingers: dict = {}
+        self.kind = None
         self.gesture_max = 0                               # most fingers down in this gesture
         self.gesture_moved = 0.0
         self.gesture_t0 = 0.0
-        self.pending_tap = None                            # (time, x, y) waiting for a second tap
+        self.gesture_ys: list = []                         # where each finger of the gesture came down
+        self.multi_done = False                            # a two-finger gesture has already acted
+        self.scrub = None                                  # [x, extreme, direction, strokes]
+        self.pending_tap = None                            # (time, x, y, kind) waiting for a second tap
+        self.second_tap = False                            # this touch is a double tap's second
         self.long_done = False
-        self.in_game_finger = None
-        self.game_swiped = False
-        self.multi_swipe_done = False
-        self.held_down = None                              # (pid, x, y, t): a game touch not yet begun
+        self.taps: list = []                               # the intro: the times of the taps in a row
+        self.pan_began = False                             # the intro: its pan has begun
+        # the game view's touch: ADAccessibleGameView is not multipleTouchEnabled, so it is the first finger
+        self.agv = None
+        self.view_pid = None
+        self.view_state = None                             # 'held' (not yet begun), 'began', None
+        self.view_end_due = False                          # its finger lifted while others were down
+        self.view_down = (0.0, 0.0)                        # where it came down
+        self.target = None                                 # the GameplayScreen ('pause'), the opener's controller
 
     # ------------------------------------------------------------------------------------ helpers
     def _key(self, code, mod=0) -> None:
@@ -105,20 +134,23 @@ class TouchInput:
         top = self.host.top()
         return top if isinstance(top, GameplayScreen) else None
 
+    def _screen(self):
+        return float(self.b.screenWidthDp()) or NIB_SIZE[0], float(self.b.screenHeightDp()) or NIB_SIZE[1]
+
+    def _on_pause_button(self, x, y) -> bool:
+        sw, sh = self._screen()
+        px, py = x / sw * NIB_SIZE[0], y / sh * NIB_SIZE[1]
+        bx, by, bw, bh = PAUSE_BUTTON
+        return bx <= px < bx + bw and by <= py < by + bh
+
     # ------------------------------------------------------------------------------------ events
     def handle(self, kind, pid, x, y, now) -> None:
         if kind == DOWN:
+            if not self.fingers:
+                self._start(pid, x, y, now)
             self.fingers[pid] = _Finger(x, y, now)
-            if len(self.fingers) == 1:
-                self.gesture_max = 1
-                self.gesture_moved = 0.0
-                self.gesture_t0 = now
-                self.long_done = False
-                self.multi_swipe_done = False
-                self._down_first(pid, x, y, now)
-            else:
-                self.gesture_max = max(self.gesture_max, len(self.fingers))
-                self._abort_first_finger(pid)
+            self.gesture_max = max(self.gesture_max, len(self.fingers))
+            self.gesture_ys.append(y)
         elif kind == MOVE:
             f = self.fingers.get(pid)
             if f is None:
@@ -126,107 +158,192 @@ class TouchInput:
             f.moved = max(f.moved, ((x - f.x0) ** 2 + (y - f.y0) ** 2) ** 0.5)
             f.x, f.y = x, y
             self.gesture_moved = max(self.gesture_moved, f.moved)
-            if len(self.fingers) == 1:
-                self._move_first(pid, f, now)
-            elif len(self.fingers) == 2:
-                self._move_two(now)
+            if self.kind == 'game':
+                self._move_game(pid, f)
+            elif self.kind == 'opener':
+                self._move_opener(f)
+            elif self.kind == 'menu' and len(self.fingers) == 2:
+                self._move_two()
         elif kind in (UP, CANCEL):
             f = self.fingers.pop(pid, None)
             if f is None:
                 return
             f.x, f.y = x, y
-            if kind == CANCEL:
-                self._cancel(pid, f)
-            elif not self.fingers and self.gesture_max == 1:
-                self._up_first(pid, f, now)
+            if self.kind == 'game' and pid == self.view_pid:
+                if kind == CANCEL:
+                    self._withdraw()
+                elif self.gesture_max == 1:
+                    self._end_view()
+                else:
+                    self.view_end_due = True               # UITapGestureRecognizer delaysTouchesEnded
             if not self.fingers:
-                if kind == UP and self.gesture_max >= 2 and not self.multi_swipe_done:
-                    self._multi_tap(now)
-                self.gesture_max = 0
-                self.in_game_finger = None
+                if kind == UP:
+                    self._gesture_over(f, now)
+                elif self.kind == 'game':
+                    self._withdraw()
+                self._reset()
 
-    # ------------------------------------------------------------------------------------ one finger
-    def _down_first(self, pid, x, y, now) -> None:
+    def _start(self, pid, x, y, now) -> None:
+        self.gesture_max = 0
+        self.gesture_moved = 0.0
+        self.gesture_t0 = now
+        self.gesture_ys = []
+        self.multi_done = False
+        self.scrub = None
+        self.long_done = False
+        p = self.pending_tap
+        self.second_tap = (p is not None and now - p[0] <= DOUBLE_TAP_WINDOW
+                           and abs(x - p[1]) < 60 and abs(y - p[2]) < 60)
         game = self._game()
         if game is None:
+            self.kind = 'menu'
             return
-        agv = game._agv()
         c = game.controller
-        if agv is None or getattr(c, 'paused', False) or getattr(c, 'death_overlay_visible', False):
-            return
         from .game.gameplay import OpenerGameplayController
         if isinstance(c, OpenerGameplayController):
-            return
-        self.game_swiped = False
-        self.held_down = (pid, x, y, now)                  # begun in frame(), unless more fingers come
-
-    def _begin_held(self) -> None:
-        """The held first finger is a one-finger touch after all: it begins now, where it came down."""
-        h, self.held_down = self.held_down, None
-        if h is None:
-            return
-        game = self._game()
-        agv = game._agv() if game is not None else None
-        if agv is None:
-            return
-        self.in_game_finger = h[0]
-        agv.touches_began(self._scaled(agv, h[1], h[2]))
-
-    def _scaled(self, agv, x, y):
-        w, h = agv.frame[2], agv.frame[3]
-        sw, sh = self.b.screenWidthDp(), self.b.screenHeightDp()
-        return (x / sw * w if sw else x, y / sh * h if sh else y)
-
-    def _abort_first_finger(self, pid) -> None:
-        """A second finger came down: whatever the first began in a game is over."""
-        self.held_down = None                              # it never began: no shot
-        game = self._game()
-        if game is not None and self.in_game_finger is not None:
-            agv = game._agv()
-            if agv is not None:
-                agv.touch_canceled()
-            self.in_game_finger = None
-
-    def _move_first(self, pid, f, now) -> None:
-        game = self._game()
-        if game is None:
-            return
-        if self.held_down is not None and self.held_down[0] == pid and f.moved > TAP_MAX_MOVE / 2:
-            self._begin_held()                             # a finger on the move is a swipe or a turn
-        if self.in_game_finger != pid:
+            self.kind = 'opener'
+            self.target = c
             return
         agv = game._agv()
-        if agv is None:
+        if agv is None or getattr(c, 'paused', False) or getattr(c, 'death_overlay_visible', False):
+            self.kind = None
             return
-        agv.touches_moved(self._scaled(agv, f.x, f.y))
-        dy = f.y - f.y0
-        dx = f.x - f.x0
-        vertical = abs(dy) > 1.6 * abs(dx)
-        if vertical and abs(dy) > GAME_SWIPE_INTENT:
-            # a finger on its way up or down is a swipe being made, not a shot: without this, a swipe slower
-            # than the 0.2 s after which holding starts continuous fire fired the gun before it changed weapon
-            agv.has_swiped = True
-        if not self.game_swiped and abs(dy) > GAME_SWIPE and vertical:
-            self.game_swiped = True
-            if dy < 0:
-                agv.handle_swipe_up_gesture()
-            else:
-                agv.handle_swipe_down_gesture()
-            # the swipe has taken this finger, as the swipe gesture takes the touch on iOS: nothing it does
-            # from here to when it is lifted reaches the game - lifting it used to fire a single shot
-            self.in_game_finger = None
+        if self._on_pause_button(x, y):
+            self.kind = 'pause'
+            self.target = game
+            if not (self.second_tap and p[3] == 'pause'):
+                from .ui.accessibility import BUTTON, View
+                game.speak(View('Pause', traits=BUTTON).spoken())     # VoiceOver reads what it touches
+            return
+        self.kind = 'game'
+        self.agv = agv
+        sw, sh = self._screen()
+        agv.frame = (0.0, 0.0, sw, sh)                     # initWithFrame:[self view].frame - the screen
+        self.view_pid = pid
+        self.view_down = (x, y)
+        self.view_state = 'held'                           # begun in frame(), unless more fingers come
 
-    def _up_first(self, pid, f, now) -> None:
-        game = self._game()
-        if game is not None:
-            self._up_in_game(game, pid, f, now)
+    def _reset(self) -> None:
+        self.kind = None
+        self.gesture_max = 0
+        self.agv = None
+        self.target = None
+        self.view_pid = None
+        self.view_state = None
+        self.view_end_due = False
+        self.pan_began = False
+        self.scrub = None
+
+    # ------------------------------------------------------------------------------------ the game view
+    def _view_alive(self) -> bool:
+        """The game the touch began in is still there (under the pause screen, perhaps)."""
+        from .ui.gameplay_screen import GameplayScreen
+        screen = self.host.screen
+        return isinstance(screen, GameplayScreen) and screen._agv() is self.agv
+
+    def _begin_view(self) -> None:
+        """touchesBegan:withEvent: 0x10008a404, where the finger came down."""
+        if self.view_state == 'held' and self._view_alive():
+            self.view_state = 'began'
+            self.agv.touches_began(self.view_down)
+
+    def _end_view(self) -> None:
+        """touchesEnded:withEvent: 0x10008a50c (a quick tap that was still held begins first)."""
+        self._begin_view()
+        if self.view_state == 'began' and self._view_alive():
+            self.agv.touches_ended()
+        self.view_state = None
+
+    def _withdraw(self) -> None:
+        """A recognizer that cancelsTouchesInView took the touch: it never ends in the view.
+
+        DIVERGENCE: ADAccessibleGameView does not implement touchesCancelled:withEvent:, so in the original
+        a touch taken by the three-finger tap, or by a swipe under Button mode, left the view thinking the
+        finger was still down - its trigger stuck until the next touch ended.  The touch is withdrawn the way
+        the swipe's own handler withdraws it (handleSwipeGesture 0x10008a194): no shot, the gun stopped."""
+        if self.view_state == 'began' and self._view_alive():
+            self.agv.handle_swipe_gesture()
+        self.view_state = None
+
+    def _move_game(self, pid, f) -> None:
+        if pid != self.view_pid:
+            return                                         # the view only ever has its first finger
+        if self.view_state == 'held' and len(self.fingers) == 1 and f.moved > TAP_MAX_MOVE / 2:
+            self._begin_view()                             # a finger on the move is a swipe or a turn
+        if self.view_state != 'began':
             return
-        dx, dy = f.x - f.x0, f.y - f.y0
-        dist = (dx * dx + dy * dy) ** 0.5
+        self.agv.touches_moved((f.x, f.y))                 # touchesMoved:withEvent: 0x10008a5a4
+        dy, dx = f.y - f.y0, f.x - f.x0
+        if self.gesture_max == 1 and abs(dy) > GAME_SWIPE and abs(dy) > 1.6 * abs(dx):
+            # the swipe recognizers (initGestureRecognizers 0x100089f64: one touch, up or down); their
+            # handlers do nothing under Button mode, but the recognizer has still taken the touch
+            if dy < 0:
+                self.agv.handle_swipe_up_gesture()
+            else:
+                self.agv.handle_swipe_down_gesture()
+            self._withdraw()
+
+    # ------------------------------------------------------------------------------------ the intro
+    def _move_opener(self, f) -> None:
+        """The weapon area's pan (ADButtonWithSwipe handlePan 0x100025054): it turns under Swipe aiming."""
+        if len(self.fingers) != 1 or self.gesture_max != 1:
+            return
+        if not self.pan_began and f.moved <= TAP_MAX_MOVE / 2:
+            return
+        self.target.pan_detected(f.x - f.x0, not self.pan_began)
+        self.pan_began = True
+
+    # ------------------------------------------------------------------------------------ menus
+    def _move_two(self) -> None:
+        if self.multi_done:
+            return
+        fs = list(self.fingers.values())
+        dys = [f.y - f.y0 for f in fs]
+        dxs = [f.x - f.x0 for f in fs]
+        if all(abs(dy) > SWIPE_MIN and abs(dy) > 1.5 * abs(dx) for dy, dx in zip(dys, dxs)) \
+                and dys[0] * dys[1] > 0:
+            self.multi_done = True
+            self._read_all(from_top=dys[0] < 0)            # two-finger swipe up: from the top
+            return
+        # the two-finger scrub: back and forth, a Z - three strokes, each one turning the other way
+        x = sum(f.x for f in fs) / 2
+        s = self.scrub
+        if s is None:
+            self.scrub = [x, x, 0, 0]
+            return
+        s[0] = x
+        if s[2] == 0:
+            if abs(x - s[1]) >= SCRUB_LEG:
+                s[2], s[1], s[3] = (1 if x > s[1] else -1), x, 1
+            return
+        if (x - s[1]) * s[2] > 0:
+            s[1] = x                                       # still going the same way
+        elif abs(x - s[1]) >= SCRUB_LEG:
+            s[2], s[1], s[3] = -s[2], x, s[3] + 1
+            if s[3] >= 3:
+                self.multi_done = True
+                import pygame
+                self._key(pygame.K_ESCAPE)
+
+    def _read_all(self, from_top: bool) -> None:
+        """VoiceOver's two-finger swipe: read the screen from the top, or on from the element in focus."""
+        from .ui.accessibility import AccessibleScreen
+        from .ui.screens import joined
+        top = self.host.top()
+        if not isinstance(top, AccessibleScreen):
+            return
+        elements = top.elements()
+        if not from_top and top.focus in elements:
+            elements = elements[elements.index(top.focus):]
+        if elements:
+            top.speak(joined(e.spoken() for e in elements))
+
+    def _menu_one_up(self, f, now) -> None:
         if self.long_done:
             return
-        if dist >= SWIPE_MIN:
-            import pygame
+        dx, dy = f.x - f.x0, f.y - f.y0
+        import pygame
+        if (dx * dx + dy * dy) ** 0.5 >= SWIPE_MIN:
             if abs(dx) >= abs(dy):
                 self._key(pygame.K_RIGHT if dx > 0 else pygame.K_LEFT)
             else:
@@ -235,99 +352,71 @@ class TouchInput:
             return
         if f.moved > TAP_MAX_MOVE:
             return
-        p = self.pending_tap
-        if p is not None and now - p[0] <= DOUBLE_TAP_WINDOW and abs(f.x - p[1]) < 60 and abs(f.y - p[2]) < 60:
+        if self.second_tap and self.pending_tap is not None and self.pending_tap[3] == 'menu':
             self.pending_tap = None
-            import pygame
             self._key(pygame.K_RETURN)                      # double tap: Enter
         else:
-            self.pending_tap = (now, f.x, f.y)
+            self.pending_tap = (now, f.x, f.y, 'menu')
 
-    def _up_in_game(self, game, pid, f, now) -> None:
-        if self.held_down is not None and self.held_down[0] == pid:
-            self._begin_held()                             # a quick tap: the shot, then its release
-        agv = game._agv()
-        was = self.in_game_finger == pid
-        self.in_game_finger = None
-        if agv is not None and was:
-            agv.touches_ended()
-            return
-        # the intro takes no shots, so a double tap there skips it (a three-finger tap does too)
-        from .game.gameplay import OpenerGameplayController
-        if isinstance(game.controller, OpenerGameplayController) and f.moved <= TAP_MAX_MOVE:
-            p = self.pending_tap
-            if p is not None and now - p[0] <= DOUBLE_TAP_WINDOW:
-                self.pending_tap = None
-                import pygame
-                self._key(pygame.K_RETURN)                  # the Skip key
-            else:
-                self.pending_tap = (now, f.x, f.y)
-
-    def _cancel(self, pid, f) -> None:
-        if self.held_down is not None and self.held_down[0] == pid:
-            self.held_down = None
-        game = self._game()
-        if game is not None and self.in_game_finger == pid:
-            agv = game._agv()
-            if agv is not None:
-                agv.touch_canceled()
-            self.in_game_finger = None
-
-    # ------------------------------------------------------------------------------------ more fingers
-    def _move_two(self, now) -> None:
-        if self.multi_swipe_done or len(self.fingers) != 2:
-            return
-        fs = list(self.fingers.values())
-        dys = [f.y - f.y0 for f in fs]
-        dxs = [f.x - f.x0 for f in fs]
-        if all(abs(dy) > SWIPE_MIN and abs(dy) > 1.5 * abs(dx) for dy, dx in zip(dys, dxs)) \
-                and dys[0] * dys[1] > 0:
-            self.multi_swipe_done = True
-            if self._game() is None:
-                import pygame
-                self._key(pygame.K_HOME if dys[0] < 0 else pygame.K_END)
-
-    def _triple(self, game) -> None:
-        """The three-finger tap: melee.  (It skips the intro, where there is no melee.)
-
-        CHANGED (user request): it used to skip Dr. Bastard's lines in a challenge instead of swinging, so
-        melee did nothing while he talked.  Skipping a line is now Skip dialogue, first on the pause screen
-        (two-finger tap)."""
-        from .game.gameplay import OpenerGameplayController
-        c = game.controller
-        if isinstance(c, OpenerGameplayController):
-            import pygame
-            self._key(pygame.K_RETURN)                       # the Skip key
-            return
-        agv = game._agv()
-        if agv is not None:
-            agv.handle_triple_tap()
-
-    def _multi_tap(self, now) -> None:
-        if self.gesture_moved > TAP_MAX_MOVE * 2 or now - self.gesture_t0 > MULTI_TAP_WINDOW:
-            return
-        import pygame
-        if self.gesture_max == 2:
-            self._key(pygame.K_ESCAPE)                       # back / pause
-        elif self.gesture_max >= 3:
-            game = self._game()
-            if game is not None:
-                self._triple(game)                           # three fingers: melee
-            else:
-                self._key(pygame.K_ESCAPE)
+    # ------------------------------------------------------------------------------------ the end
+    def _gesture_over(self, f, now) -> None:
+        quick = now - self.gesture_t0 <= MULTI_TAP_WINDOW and self.gesture_moved <= TAP_MAX_MOVE * 2
+        if self.kind == 'game':
+            if self.gesture_max == 3 and quick:
+                # the three-finger tap (tripleTap: three touches, cancelsTouchesInView) -> handleTripleTap
+                # 0x10008acf8, which does nothing under Button mode
+                self._withdraw()
+                self.agv.handle_triple_tap()
+            elif self.view_end_due:
+                self._end_view()                           # not a three-finger tap: the touch ends as one
+        elif self.kind == 'pause':
+            if self.gesture_max == 1 and f.moved <= TAP_MAX_MOVE:
+                p = self.pending_tap
+                if self.second_tap and p is not None and p[3] == 'pause':
+                    self.pending_tap = None
+                    self.target.press('pause', None)       # pauseButtonTouched: 0x10005b484
+                else:
+                    self.pending_tap = (now, f.x, f.y, 'pause')
+        elif self.kind == 'opener':
+            if self.gesture_max == 1 and f.moved <= TAP_MAX_MOVE:
+                if not (self.taps and now - self.taps[-1] <= DOUBLE_TAP_WINDOW):
+                    self.taps = []
+                self.taps.append(now)
+                if len(self.taps) == 3:                    # numberOfTapsRequired 3 (viewDidLoad 0x1000253c0)
+                    self.taps = []
+                    self.target.handle_skip_for_accessible_users()
+        elif self.kind == 'menu':
+            if self.gesture_max == 1:
+                self._menu_one_up(f, now)
+            elif quick and not self.multi_done:
+                if self.gesture_max == 2:                  # VoiceOver's two-finger tap: stop speaking
+                    from .platform.speech import Speech
+                    Speech.shared().stop()
+                elif self.gesture_max == 4:                # four-finger tap: first or last element
+                    import pygame
+                    y = sum(self.gesture_ys) / len(self.gesture_ys)
+                    self._key(pygame.K_HOME if y < self._screen()[1] / 2 else pygame.K_END)
 
     # ------------------------------------------------------------------------------------ per pass
     def frame(self, now) -> None:
-        if self.held_down is not None and now - self.held_down[3] >= MULTI_FINGER_GRACE \
-                and len(self.fingers) == 1:
-            self._begin_held()
-        if len(self.fingers) == 1 and self._game() is None and not self.long_done and self.gesture_max == 1:
+        if self.kind == 'game' and self.view_state == 'held' and self.view_pid in self.fingers:
+            f = self.fingers[self.view_pid]
+            if self.gesture_max == 1:
+                if now - f.t0 >= MULTI_FINGER_GRACE:
+                    self._begin_view()
+            elif self.gesture_max > 3 or now - self.gesture_t0 > MULTI_TAP_WINDOW \
+                    or self.gesture_moved > TAP_MAX_MOVE * 2:
+                self._begin_view()                         # no three-finger tap: the touch is the view's
+        if self.kind == 'menu' and self.second_tap and not self.long_done and len(self.fingers) == 1 \
+                and self.gesture_max == 1:
             f = next(iter(self.fingers.values()))
             if now - f.t0 >= LONG_PRESS and f.moved <= TAP_MAX_MOVE:
-                self.long_done = True
+                self.long_done = True                      # VoiceOver's double tap and hold
+                self.pending_tap = None
                 import pygame
                 self._key(pygame.K_RETURN, pygame.KMOD_SHIFT)        # a row's second action
-        if self.pending_tap is not None and now - self.pending_tap[0] > DOUBLE_TAP_WINDOW:
+        if self.pending_tap is not None and now - self.pending_tap[0] > DOUBLE_TAP_WINDOW \
+                and not self.fingers:
             self.pending_tap = None
 
 

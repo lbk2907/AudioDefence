@@ -496,23 +496,38 @@ a minute or two, and later starts are quick.
 
 ### Controls on the phone
 
-Hold the phone sideways; the whole screen is the touch area.
+Hold the phone sideways; the whole screen is the touch area. The touches are
+the original's own, as it was played with VoiceOver running: in the menus
+VoiceOver's gestures, and in a game the gestures the original's game view took.
 
 | in the menus | |
 |---|---|
-| swipe right, left, up or down | the arrow keys — which pair moves through a screen is set by Menu layout, in Settings → Miscellaneous |
-| double tap | Enter |
-| touch and hold | a row's second action |
-| two-finger tap, or the phone's Back | Back |
-| two-finger swipe up or down | the first or last item |
+| swipe right or left | the next or previous item |
+| swipe up or down | a slider up or down, or the next or previous tab or category where the screen has them |
+| double tap | press the item |
+| double tap and hold | a row's second action |
+| two-finger scrub (two fingers back and forth, like a Z), or the phone's Back | back |
+| two-finger tap | stop speaking |
+| two-finger swipe up | read the whole screen from the top |
+| two-finger swipe down | read the screen from the item you are on |
+| four-finger tap near the top or bottom | the first or last item |
 
-| in a game | |
-|---|---|
-| tap, or touch and hold | one shot, or continuous fire with the automatic weapons |
-| swipe up / swipe down | next weapon / reload |
-| three-finger tap, or a shake | melee — how hard a shake has to be is Shake sensitivity, in Settings → Controls |
-| swipe left or right | turn, when the aiming is set to Swipe; Gyro and Tilt use the phone's sensors |
-| two-finger tap | pause — and in a challenge, Skip dialogue is the first button on the pause screen |
+In a game, Settings → Controls chooses between two modes, as the original did.
+
+| in a game | Gesture mode | Button mode |
+|---|---|---|
+| tap | one shot | the corner you tap: top right fires, top left melee, bottom left next weapon, bottom right reload |
+| touch and hold | continuous fire with the automatic weapons | continuous fire, in the top right corner |
+| one-finger swipe up | next weapon | nothing |
+| one-finger swipe down | reload | nothing |
+| three-finger tap | melee | nothing |
+| a shake | melee — how hard a shake has to be is Shake sensitivity, in Settings → Controls | nothing |
+| a finger moved sideways | turns, when the aiming is set to Swipe; Gyro and Tilt use the phone's sensors | the same |
+| the Pause button, at the top of the screen in the middle | touch it and it is read; double tap it to pause | the same |
+| the phone's Back | pause | the same |
+
+In a challenge, Skip dialogue is the first button on the pause screen while
+there is a line to skip. In the intro, a triple tap with one finger skips it.
 
 ### Building the app
 

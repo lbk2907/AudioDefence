@@ -177,7 +177,8 @@ class ControlSchemePanel:
             else:
                 axis_hint = ('Press Enter to move through menus with the other pair; Control with an arrow, '
                              'or with Tab, jumps to the first or last.')
-            t.cell('Menu layout', self.menu_axis_text(), hint=axis_hint, action=self.toggle_menu_axis)
+            if not system.ANDROID:                        # the phone moves with VoiceOver's swipes
+                t.cell('Menu layout', self.menu_axis_text(), hint=axis_hint, action=self.toggle_menu_axis)
             t.cell('Remember cursor position', 'ON' if params.remember_focus() else 'OFF',
                    hint='Press Enter to toggle: when on, going back to a screen returns the cursor to the '
                         'row you left it on instead of the first one.',

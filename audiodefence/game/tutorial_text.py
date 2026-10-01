@@ -77,10 +77,10 @@ PHONE_LINES = {
     'shoot': ('Listen carefully and turn until you feel the zombie is right in front of you, then tap the '
               'screen to fire, or touch and hold for continuous fire.'),
     'reload': 'Swipe down with one finger to reload your weapon.',
-    'changeControl': ('You can change your aim control at any time in the pause menu. '
-                      'Tap with two fingers to pause.'),
+    'changeControl': ('You can change your aim control at any time in the pause menu. To pause, double '
+                      "tap the Pause button at the top middle of the screen, or use the phone's Back."),
     'switch': 'Swipe up with one finger to switch between weapons.',
-    'skip': 'To skip a dialog, tap with two fingers to pause, then choose Skip dialogue.',
+    'skip': 'To skip a dialog, pause the game, then choose Skip dialogue.',
     'melee': ('To use the melee weapon, turn to face the zombies first. Then tap with three fingers, '
               'or shake the phone.'),
 }

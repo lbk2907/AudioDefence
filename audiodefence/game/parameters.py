@@ -152,6 +152,9 @@ class GameParameters:
     DEFAULT_MENU_AXIS = 'horizontal'
 
     def menu_axis(self) -> str:
+        from ..platform import host
+        if host.ANDROID:                                  # VoiceOver's swipes: right and left move, always
+            return self.DEFAULT_MENU_AXIS
         value = self.defaults.object('menuAxis')
         return value if value in dict(self.MENU_AXES) else self.DEFAULT_MENU_AXIS
 
