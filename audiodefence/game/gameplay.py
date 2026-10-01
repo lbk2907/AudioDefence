@@ -478,6 +478,25 @@ class ReviveController:
             no.play()
 
 
+class StoryController:
+    """PORT ADDITION (user request, 2026-10-01): a part of the Extra mode's story, told in text when the wave
+    that carries it (`Story`) begins.  The game is paused under it (`pause_game`, as the pause menu pauses
+    it), the screen reader reads it, and Continue plays on from the start of the wave."""
+
+    def __init__(self, gameplay, text: str):
+        self.gameplay_view_controller = gameplay          # weak
+        self.text = text
+
+    def continue_pressed(self) -> None:
+        gvc, self.gameplay_view_controller = self.gameplay_view_controller, None
+        if gvc is None:                                   # pressed twice
+            return
+        if gvc.host is not None:
+            gvc.host.dismiss_story()
+        gvc.story_view = None
+        gvc.resume_game()
+
+
 # ======================================================================================= controller
 class GameplayController:
     """ADGameplayViewController (endless mode)."""
@@ -925,6 +944,8 @@ class ChallengeGameplayController(GameplayController):
         super().__init__(host)
         self.challenge_dictionary = challenge_dictionary
         self.check_skip_button_counter = 0
+        self.stories_told = set()                         # PORT ADDITION: see tell_story_if_due
+        self.story_view = None
 
     def view_did_load(self) -> None:                      # 0x1000da420
         self.init_challenge_modifiers()                   # PORT ADDITION: see below
@@ -970,6 +991,8 @@ class ChallengeGameplayController(GameplayController):
         BrickManager.shared().skip_skippable_sounds()
 
     def update(self) -> None:                             # 0x1000da794
+        if self.tell_story_if_due():                      # PORT ADDITION
+            return
         self.check_skip_button_counter = self.check_skip_button_counter + 1
         if self.check_skip_button_counter == 20:
             self.check_skip_button_counter = 0
@@ -1003,6 +1026,23 @@ class ChallengeGameplayController(GameplayController):
     #: PORT ADDITION: how many times a revive's price skipping the wave costs instead (user request, "5X or
     #: 10X" - ten, so that a skip stays the exception it is meant to be)
     REVIVE_SKIP_FACTOR = 10
+
+    def tell_story_if_due(self) -> bool:
+        """PORT ADDITION (user request, 2026-10-01): a wave that carries `Story` - the Extra mode's story, in
+        text - pauses the game as it begins and shows it (`StoryController`), and the wave is played when
+        the player goes on.  Each part is told once a game: a wave fought again after a revive does not tell
+        it twice.  With no screen to read it on (a run with none, as the referee plays) it is passed over."""
+        b = BrickManager.shared().current_brick()
+        text = (b.brick_dictionary or {}).get('Story') if b is not None else None
+        if not text or b.name in self.stories_told:
+            return False
+        self.stories_told.add(b.name)
+        if self.host is None:
+            return False
+        self.pause_game()
+        self.story_view = StoryController(self, text)
+        self.host.present_story(self.story_view)
+        return True
 
     def allows_revive(self) -> bool:
         """PORT ADDITION (user request, 2026-10-01): an arena of the Extra mode offers the revive that Endless

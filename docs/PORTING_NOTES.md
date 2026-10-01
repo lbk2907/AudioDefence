@@ -2177,6 +2177,15 @@ The heading itself goes through the original scroll-view model: a 430-point `lin
   10, and the skip went on to the third with the first wave's guns full and read out; deaths in the third
   offered no skip and revives for 2 and 4, the second refused to the failed screen with 8 of 20 diamonds
   left; and an arena outside the Extra mode went to the failed screen at the first death, as before.
+* PORT ADDITION: the Extra mode tells a story, in text, between waves (user request, 2026-10-01).  A wave
+  that carries `Story` pauses the game as it begins - `pause_game`, as the pause menu pauses it - and shows
+  the text on a screen of its own (`StoryScreen`), where the screen reader reads it first; Continue, or
+  Back, plays the wave from its start (`ChallengeGameplayController.tell_story_if_due`).  The original's
+  challenges talk through Dr. Bastard's recordings (`Sounds`), which no arena of the port's has; a story in
+  text needs no recordings and can be translated, so `tools/verify_localization.py` offers a wave's
+  `Story` to translators as it offers an arena's title.  Each part is told once a game: a wave fought again
+  after a revive does not tell it twice.  Checked headless: two waves each told their part before
+  anything moved, the wave's clock stood still for the three seconds the text was up, and both played on.
 * PORT ADDITION: a challenge that names several melees makes only the last.  `initWithChallengeWeaponArray:`
   0x1000a80f4 makes each and keeps the last, releasing the one before as it is replaced - and the playlist
   the released one deactivates has not finished the activation it asked for a moment earlier, so that

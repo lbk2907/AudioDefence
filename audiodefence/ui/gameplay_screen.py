@@ -97,6 +97,14 @@ class GameplayScreen(Screen):
         if isinstance(top, ReviveScreen):
             self.host.pop_overlay()
 
+    def present_story(self, story_controller) -> None:   # PORT ADDITION: see StoryScreen
+        self.host.push_overlay(StoryScreen(self.host, story_controller))
+
+    def dismiss_story(self) -> None:
+        top = self.host.top_overlay()
+        if isinstance(top, StoryScreen):
+            self.host.pop_overlay()
+
     # --- lifecycle -------------------------------------------------------------------------------
     def on_present(self) -> None:
         MotionManager.shared().source = self.motion
@@ -333,3 +341,25 @@ class ReviveScreen(AccessibleScreen):
             self.host.show_no_diamonds_alert()
 
     # REMOVED (user request): the magic tap 0x100021cb4 pressed Game over, ending the run.
+
+
+class StoryScreen(AccessibleScreen):
+    """PORT ADDITION (user request, 2026-10-01): the Extra mode's story, told in text between waves
+    (`StoryController`).  The game is paused under it.  The text is read first, and Continue - or Back,
+    which here means the same - plays on."""
+
+    def __init__(self, host, story):
+        super().__init__(host)
+        self.story = story
+
+    def load_view(self) -> None:
+        v = View('', (0, 0, 568, 320), accessible=False, name='story')
+        self.text_view = View(self.story.text, (60, 30, 448, 210), parent=v, name='story text')
+        Button('Continue', (202, 251, 164, 50), parent=v, actions=[self.story.continue_pressed],
+               name='continue')
+        self.first_accessible_element = self.text_view
+        self.roots = [v]
+
+    def accessibility_perform_escape(self) -> bool:
+        self.story.continue_pressed()
+        return True

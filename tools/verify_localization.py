@@ -37,7 +37,8 @@ TEMPLATE = localization.TEMPLATE
 #: Phrase fields of the original game's data that the player reads or hears.  Compared without case: the
 #: same field is spelt differently from file to file (Tips and tip, Description and description, Bio).
 FIELDS = {'title', 'subtitle', 'description', 'objective', 'tip', 'tips', 'displayname', 'upgradetext',
-          'name', 'text', 'bio'}
+          'name', 'text', 'bio',
+          'story'}                                  # the Extra mode's story, on its waves (port addition)
 
 #: Lines the port speaks that are not phrases from the table, and are meant to stay as they are: screen
 #: reader names, key names, the two states of a switch.
