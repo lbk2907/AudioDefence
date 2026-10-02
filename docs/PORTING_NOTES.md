@@ -802,6 +802,22 @@ they were.
   the others - along with `WeaponManager.stop_firing_after_player_was_killed` for the gun, since the trigger
   is still down, no release is coming, and the gun fired on into the death overlay (user request).  It matters more since the gun loops (above): played once through it fell quiet by itself.
 
+  Until 2026-10-02 that call went to the shared manager, `+sharedWeaponManager`, which holds no weapons: a
+  game's guns are on its own manager, made by `initWithWeaponsFromArmory` 0x1000a76c4 or
+  `initWithChallengeWeaponArray:` (`GameplayController.weapon_manager`).  So the gun was never stopped -
+  with the trigger held as the player died, the Micro SMG stayed in state 3 with its loop playing and fired
+  eight more rounds in the next second and a half.  It is the mistake d9b9fbf put right for the pause the
+  other way round.  The death handler stops the game's own manager's guns now
+  (`gameplay_view_controller.weapon_manager`), and the power-up, which does live on the shared manager,
+  as before.  Every other caller of `WeaponManager.shared()` was looked at: the power-up's (`init_power_up`,
+  `use_power_up`, `set_power_up`, `update:`, `pause`, `resume`) belong there, and the rest - the armory,
+  the challenge overview, the statistics, enemy damage, a power-up's own settings, the names of handed-over
+  weapons - only look things up in Weapons.plist.  Checked through the real GameplayController, the trigger
+  held with Space at the moment a zombie's `attack` killed the player: in Endless with the Micro SMG in the
+  first armory slot, and in maya_2, whose first gun it is, the gun went from Continuous to Idle at once, its
+  loop stopped, and no round was fired in the 1.5 s after with the key still down; on the code before, both
+  fired on.
+
 * The Minigun power-up's gun is heard for as long as it fires (user request).  `-[ADMinigunPowerUp use]`
   0x1000b2850 plays `minigun_fire` with `play:0`, once through, and the recording is 10 seconds
   (`minigun_fire_a` 10.03, `_b` 9.98) against a duration of 5, 7.5, 10 or 12.5 seconds by upgrade (Weapons

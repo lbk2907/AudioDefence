@@ -530,8 +530,13 @@ class BrickManager:
             d.stop_after_player_was_killed()
         for p in list(self.passer_by_manager.all_passer_by()):
             p.stop_after_player_was_killed()
-        from .weapon_manager import WeaponManager                # PORT ADDITION: and the gun and the
-        WeaponManager.shared().stop_firing_after_player_was_killed()   # power-up in hand
+        # PORT ADDITION: and the gun and the power-up in hand.  The gun is the game's own manager's
+        # (initWithWeaponsFromArmory / initWithChallengeWeaponArray:); the shared manager holds no weapons, so
+        # asking it, as this did until 2026-10-02, never reached the gun.  The power-up is the shared one's.
+        from .weapon_manager import WeaponManager
+        weapons = getattr(gvc, 'weapon_manager', None)
+        if weapons is not None:
+            weapons.stop_firing_after_player_was_killed()
         power_up = WeaponManager.shared().power_up
         if power_up is not None:
             power_up.stop_after_player_was_killed()
