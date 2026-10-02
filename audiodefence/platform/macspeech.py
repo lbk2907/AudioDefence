@@ -262,6 +262,16 @@ class SystemVoice:
             self.voice.startSpeakingString_(self._pending.pop(0))
         RunLoop.main().call_later(0.05, self._pump)
 
+    def busy(self):
+        """PORT ADDITION: whether the voice is still saying something, or has lines waiting to (speech.py's
+        `_Sapi.busy`); None where there is no voice to ask."""
+        if self.voice is None:
+            return None
+        try:
+            return bool(self._pending) or bool(self.voice.isSpeaking())
+        except Exception:
+            return None
+
     def stop(self) -> None:
         self._pending = []
         if self.voice is not None:

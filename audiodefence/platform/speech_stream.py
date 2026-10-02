@@ -37,6 +37,8 @@ BITS = 8 * BYTES_PER_FRAME // CHANNELS
 E_FAIL = -2147467259
 E_NOTIMPL = 0x80004001
 S_FALSE = 1
+#: SPEI_END_INPUT_STREAM: SAPI has written the whole of a line (SpeechSink.ISpEventSink_AddEvents)
+END_INPUT_STREAM = 2
 #: PyDLL rather than windll: see the module's own notes
 _ole32 = ctypes.PyDLL('ole32.dll')
 _ole32.CoTaskMemAlloc.restype = ctypes.c_void_p
@@ -105,6 +107,7 @@ def _build():
             self.written = 0
             self.trimming = True                          # the silence at the front of a line goes
             self.event = ctypes.windll.kernel32.CreateEventW(None, True, False, None)
+            self.ended = 0                                # PORT ADDITION: see ISpEventSink_AddEvents
 
         def starting(self) -> None:
             """A new line is about to be spoken."""
@@ -229,8 +232,21 @@ def _build():
         def IStream_RemoteCopyTo(self, this, other, count, read, written):
             return 0
 
-        # --- what SAPI tells a card, none of which the game listens to --------------------------------
+        # --- what SAPI tells a card, of which the game listens to one thing ----------------------------
         def ISpEventSink_AddEvents(self, this, events, count):
+            """SAPI hands a card the events of a line as it writes it, for the card to give back as it
+            plays them; this card never gives them back, so the voice's RunningState says it is speaking
+            for ever after the first line.  One of them is the end of the line's stream, though, and SAPI
+            adds it once the line is written: its number is kept, so the game can tell the line is all
+            here (speech._SapiThread._still_saying).  Only the numbers are read - nothing of an event is
+            kept - so whatever SAPI owns in it stays SAPI's."""
+            try:
+                for i in range(int(count)):
+                    event = events[i]
+                    if event.eEventId == END_INPUT_STREAM:
+                        self.ended = max(self.ended, int(event.ulStreamNum))
+            except Exception:
+                log.exception('the speech stream could not read what SAPI told it')
             return 0
 
         def ISpEventSink_GetEventInterest(self, this, interest):

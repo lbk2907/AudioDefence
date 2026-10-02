@@ -2364,6 +2364,30 @@ they were.
   headless: two waves each told their part before anything moved, the wave's clock stood still for the
   three seconds the text was up, and both played on; an epilogue came between the last wave and the
   completed screen.  The story itself, The Long Way Home, is `additions.STORY` and `EPILOGUES`.
+
+  It carries on by itself once it has been read (user request, 2026-10-02), and an epilogue goes on to the
+  completed screen the same way; Continue, Enter wherever the cursor is, and Back still go on at once.  The
+  game's own voice says when it has finished, and the story goes on once it has been quiet for
+  `STORY_QUIET`, a second.  SAPI 5 says it through its thread (`_Sapi.busy`): spoken to Windows, by the
+  voice's `RunningState` (measured: done 8.66 s into a line 8.52 s long); written into the game, by the end
+  of the line's stream going past the game's stream object (`ISpEventSink_AddEvents`), since that object
+  keeps the events SAPI hands it and the voice therefore reports itself speaking for ever after its first
+  line - and then by what the game still has to play of it (measured: done 8.79 s after the line was
+  handed over, 8.42 s of it written).  The Mac's system voice says it through `isSpeaking`, and the phone's
+  through the Bridge's `speechBusy`: the last utterance not yet done, said or stopped (an
+  `UtteranceProgressListener`), with `isSpeaking` behind it.
+  A screen reader cannot be asked: NVDA's controller client exports speakText, cancelSpeech, testIfRunning
+  and brailleMessage and nothing else, and Prism and VoiceOver's Apple Event only hand a line over.  For
+  those the reading is timed, the words at `STORY_WORDS_PER_MINUTE` (180, an ordinary speaking pace, which
+  a player listening faster than that waits a little longer than they need) and `STORY_MARGIN` (1.5 s) on
+  top - so 15 words go on after 6.5 seconds and 55 after 19.8.  All three are in `ui/gameplay_screen.py`.
+  The game's update timers are stopped under the story, so the screen waits on a run-loop timer of its own.
+  Any key but Enter and Back hands the screen to the player, and it then waits for Continue: moving through
+  the text is reading it item by item, which the go-on would cut off, and every key on this screen cuts the
+  speech (`ui/host.py`, as screen readers do), after which there is no telling what was heard.  The phone's
+  two-finger tap and two-finger swipe, which stop and reread, count as keys here.  Leaving the game's window,
+  or the app going into the background, makes it wait too (`App.pause_game`), so the game never plays on
+  with nobody there.  With no screen at all - the referee - the story is passed over as before.
 * PORT ADDITION: Extra holds campaigns, and a campaign holds chapters (user request, 2026-10-01).  Play,
   Extra opens on a list of campaigns (`additions.CAMPAIGNS`, `ExtraMenuScreen`), each row its name and the
   stars won of the stars it holds - "The Long Way Home, 30 of 147 stars" - and each opening its chapters

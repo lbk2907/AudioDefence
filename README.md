@@ -1290,8 +1290,10 @@ replacing them.
   weapon in the armory, every power-up a crate can hold and every kind of zombie; from chapter 4 on some
   want guns upgraded with diamonds, so a player may have to play Endless before going on. They tell a
   story, *The Long Way Home*, in text between waves, and end with **Reprise**, every chapter again in one
-  long arena with the weapons changing hands between acts. A death offers a revive for diamonds, which
-  plays the wave again, or a skip to the next wave for ten times as much.
+  long arena with the weapons changing hands between acts. The game waits while a part of the story is
+  read and goes on by itself when it has been; Enter goes on sooner, and moving through the text waits for
+  Continue. A death offers a revive for diamonds, which plays the wave again, or a skip to the next wave
+  for ten times as much.
 - **Game controllers**: a DualSense, DualShock, Xbox, Switch Pro or most other pads, in the menus and in
   play, with a stick that turns as fast as it is pushed, vibration for the heartbeat, hits, kills,
   explosions and your death, the phone's shake, and a DualSense's triggers that feel like a gun, each at

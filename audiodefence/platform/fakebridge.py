@@ -217,12 +217,20 @@ class FakeBridge:
               'com.example.other': 'o1\tEnglish (United Kingdom), o1\no2\tRussian (Russia), o2\n'}
     DEFAULT_ENGINE = 'com.example.fake'
 
+    #: how long each line "takes to say", for speechBusy: a test sets it, and None is a voice that is never busy
+    speaking_seconds = None
+
     def speak(self, text, interrupt):
         self.spoken.append(text)
+        if self.speaking_seconds is not None:
+            self.speaking_until = time.perf_counter() + self.speaking_seconds
         return True
 
     def stopSpeech(self):
-        pass
+        self.speaking_until = 0.0
+
+    def speechBusy(self):
+        return time.perf_counter() < getattr(self, 'speaking_until', 0.0)
 
     def voiceList(self):
         if not self.speech_ready:

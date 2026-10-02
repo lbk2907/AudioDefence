@@ -177,6 +177,14 @@ class AndroidVoice:
         except Exception:
             pass
 
+    def busy(self):
+        """PORT ADDITION: whether the phone's voice is still saying what it was given, or has it still to
+        say (the Bridge's `speechBusy`); None if the Bridge cannot be asked."""
+        try:
+            return bool(bridge().speechBusy())
+        except Exception:
+            return None
+
     def shutdown(self) -> None:
         self.stop()
 
@@ -228,6 +236,11 @@ class Speech:
 
     def speak_automatic(self, text, interrupt: bool = True) -> None:
         self.speak(text, interrupt)
+
+    def still_speaking(self):
+        """PORT ADDITION: whether the last line is still being said (speech.py's `Speech.still_speaking`):
+        the phone's voice is the game's own, so it can always be asked."""
+        return self._sapi.busy()
 
     def automatic_output(self) -> str:
         return 'sapi'

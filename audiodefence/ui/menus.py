@@ -590,7 +590,9 @@ class InfoScreen(ViewControllerScreen):
                 'Dr. Bastard has had a long time to think about them.\n \nNone of them tells you how it is '
                 'won. Survive one and the next opens. Earn enough stars, and another chapter is waiting.\n \n'
                 'They tell a story, The Long Way Home, in text: now and then a wave waits while a part of it '
-                'is read, and goes on when you do.\n \nA death need not be the end of an arena. Diamonds buy '
+                'is read, and goes on by itself when the reading is done. Press Enter to go on sooner. If you '
+                'move through the text, the wave waits until you press Continue.\n \nA death need not be the '
+                'end of an arena. Diamonds buy '
                 'a revive, which plays the wave again, or, for ten times as much, a skip to the next wave, '
                 'though never past the last.')
         # [[self view] bringSubviewToFront:statusBar view] does not change the reading order

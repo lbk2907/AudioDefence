@@ -346,23 +346,121 @@ class ReviveScreen(AccessibleScreen):
     # REMOVED (user request): the magic tap 0x100021cb4 pressed Game over, ending the run.
 
 
+#: PORT ADDITION (user request, 2026-10-02): how the story screen knows that it has been read (StoryScreen).
+#:
+#: The game's own voice - SAPI 5, the Mac's system voice, the phone's - says when it has finished
+#: (`Speech.still_speaking`), and the story goes on once it has been quiet for STORY_QUIET seconds: long
+#: enough to be heard as the end of the reading and not a cut, short enough not to be sat through.
+STORY_QUIET = 1.0
+#: A screen reader cannot be asked - NVDA's controller client can only speak, cancel, braille and say whether
+#: NVDA is running, and Prism and VoiceOver's Apple Event only hand a line over - so the reading is timed:
+#: the words at STORY_WORDS_PER_MINUTE, an ordinary speaking pace (the pace of an audiobook, and about what
+#: a screen reader's default rate reads English at; a player who listens faster waits a little, which is the
+#: side to err on), and STORY_MARGIN on top for the reader to start and for the pauses at full stops.
+STORY_WORDS_PER_MINUTE = 180.0
+STORY_MARGIN = 1.5
+#: how often the screen looks
+STORY_POLL = 0.1
+
+
+def reading_seconds(text: str) -> float:
+    """How long a screen reader is given to read this, at STORY_WORDS_PER_MINUTE plus STORY_MARGIN."""
+    return len(str(text).split()) * 60.0 / STORY_WORDS_PER_MINUTE + STORY_MARGIN
+
+
 class StoryScreen(AccessibleScreen):
     """PORT ADDITION (user request, 2026-10-01): the Extra mode's story, told in text between waves
-    (`StoryController`).  The game is paused under it.  The text is read first, and Continue - or Back,
-    which here means the same - plays on."""
+    (`StoryController`).  The game is paused under it.  The text is read first, and the game plays on by
+    itself once it has been (user request, 2026-10-02): when the game's own voice has finished with it, a
+    moment later, and with a screen reader, which cannot say when it has finished, once the time it takes to
+    read has passed (`reading_seconds`).  Continue, Enter wherever the cursor is, and Back go on at once.
+
+    Any other key hands the screen to the player, and then only those go on.  Moving through the text is
+    reading it item by item, which the go-on would cut off; and every key here cuts the speech (ui/host.py,
+    as a screen reader does too), after which the game cannot tell what has been heard.  The phone's
+    two-finger tap and two-finger swipe, which stop and reread, do the same (android_main.py)."""
 
     def __init__(self, host, story):
         super().__init__(host)
         self.story = story
+        self._listening = None                            # the timer that waits for the reading to end
+        self._read_at = None                              # when the text was handed to the speech
+        self._reading_time = 0.0
+        self._quiet_since = None
 
     def load_view(self) -> None:
         v = View('', (0, 0, 568, 320), accessible=False, name='story')
         self.text_view = View(self.story.text, (60, 30, 448, 210), parent=v, name='story text')
-        Button('Continue', (202, 251, 164, 50), parent=v, actions=[self.story.continue_pressed],
-               name='continue')
+        self.continue_button = Button('Continue', (202, 251, 164, 50), parent=v,
+                                      actions=[self.story.continue_pressed], name='continue')
         self.first_accessible_element = self.text_view
         self.roots = [v]
 
     def accessibility_perform_escape(self) -> bool:
+        self._stop_listening()
         self.story.continue_pressed()
         return True
+
+    # --- going on by itself ----------------------------------------------------------------------------
+    def frame(self) -> None:
+        reading = self._pending_focus is not None and self.host.top() is self
+        super().frame()
+        if reading and self._pending_focus is None and self._read_at is None:
+            # the text has just been handed to the speech, as the screen opened: from here it is being read
+            self._listen(self.focus.spoken() if self.focus is not None else self.story.text)
+
+    def _listen(self, spoken: str) -> None:
+        loop = RunLoop.main()
+        self._read_at = loop.now()
+        self._reading_time = reading_seconds(spoken)
+        self._quiet_since = None
+        # the game's own timers are stopped while it is paused; the run loop's are not
+        self._listening = loop.schedule_timer(STORY_POLL, self._check_reading, True)
+
+    def _stop_listening(self) -> None:
+        if self._listening is not None:
+            self._listening.invalidate()
+            self._listening = None
+
+    def _check_reading(self) -> None:
+        from ..platform.speech import Speech
+        if not self.presented or self.story.waits_for_player or self.story.gameplay_view_controller is None:
+            self._stop_listening()
+            return
+        if self.host.top() is not self:                   # something over it: wait for it to go
+            self._quiet_since = None
+            return
+        now = RunLoop.main().now()
+        speaking = Speech.shared().still_speaking()
+        if speaking is None:                              # a screen reader: the time it takes to read
+            done = now - self._read_at >= self._reading_time
+        elif speaking:
+            self._quiet_since = None
+            done = False
+        else:
+            if self._quiet_since is None:
+                self._quiet_since = now
+            done = now - self._quiet_since >= STORY_QUIET
+        if done:
+            log.info('the story has been read: going on')
+            self._stop_listening()
+            self.story.continue_pressed()
+
+    def key_down(self, event) -> None:
+        import pygame
+        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            # Enter goes on wherever the cursor is, the text included, as Continue does
+            self._stop_listening()
+            self.continue_button.activate()
+            return
+        if event.key not in (pygame.K_ESCAPE, pygame.K_BACKSPACE):
+            self.player_took_over()
+        super().key_down(event)
+
+    def player_took_over(self) -> None:
+        """The player is reading the screen for themselves: it waits for Continue from now on."""
+        self.story.wait_for_player()
+        self._stop_listening()
+
+    def dealloc(self) -> None:
+        self._stop_listening()

@@ -22,6 +22,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
 import android.util.Log;
 import android.view.Surface;
@@ -80,6 +81,36 @@ public final class Bridge implements SensorEventListener {
     private volatile int pitchSetting = 0;
     private volatile int volumeSetting = 100;
     private int utterance;
+    // PORT ADDITION (user request): the utterance asked for last, until it is done with - said, stopped or
+    // failed - so that Python can tell when the voice has finished reading (speechBusy).  Null when there is
+    // none.  Older ones are not waited for: each line the game says is the one that matters.
+    private String unfinished;
+    private final UtteranceProgressListener progress = new UtteranceProgressListener() {
+        @Override
+        public void onStart(String id) {
+        }
+
+        @Override
+        public void onDone(String id) {
+            doneWith(id);
+        }
+
+        @Override
+        @Deprecated
+        public void onError(String id) {
+            doneWith(id);
+        }
+
+        @Override
+        public void onError(String id, int code) {
+            doneWith(id);
+        }
+
+        @Override
+        public void onStop(String id, boolean interrupted) {
+            doneWith(id);
+        }
+    };
     // PORT ADDITION (Settings > Speech > Android speech engine, user request): the engine Python asked for, by
     // package ("" is the one set in the phone's settings), and the one started for it - "" too when the one
     // asked for is not installed or would not start.  Each start of the speech is numbered, so that a late
@@ -317,6 +348,7 @@ public final class Bridge implements SensorEventListener {
             old = tts;
             tts = null;
             start = ++speechStart;
+            unfinished = null;                          // the old engine will not say it has finished
         }
         if (old != null) {
             try {
@@ -379,6 +411,7 @@ public final class Bridge implements SensorEventListener {
             return;
         }
         speakTheLanguage(t);
+        t.setOnUtteranceProgressListener(progress);
         List<Object[]> waiting;
         synchronized (spokenBeforeReady) {
             if (start != speechStart) {
@@ -471,23 +504,59 @@ public final class Bridge implements SensorEventListener {
             return false;
         }
         TextToSpeech t;
+        String id;
         synchronized (spokenBeforeReady) {
             if (!ttsReady || tts == null) {
                 spokenBeforeReady.add(new Object[]{text, interrupt});
                 return true;
             }
             t = tts;
+            id = "ad" + (utterance++);
+            unfinished = id;                            // before it is spoken: it may finish at once
         }
         Bundle params = new Bundle();
         params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, Math.max(0f, Math.min(1f, volumeSetting / 100f)));
         int mode = interrupt ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD;
-        return t.speak(text, mode, params, "ad" + (utterance++)) == TextToSpeech.SUCCESS;
+        if (t.speak(text, mode, params, id) == TextToSpeech.SUCCESS) {
+            return true;
+        }
+        doneWith(id);
+        return false;
+    }
+
+    private void doneWith(String id) {
+        synchronized (spokenBeforeReady) {
+            if (id != null && id.equals(unfinished)) {
+                unfinished = null;
+            }
+        }
+    }
+
+    /**
+     * PORT ADDITION (user request): Python - whether the voice is still saying what it was given last, or has
+     * it still to say: a line waiting for the engine to start, the utterance not yet done with, or the engine
+     * speaking.  The Extra mode's story goes on by itself once this has been false for a moment.
+     */
+    public boolean speechBusy() {
+        TextToSpeech t;
+        synchronized (spokenBeforeReady) {
+            if (!spokenBeforeReady.isEmpty() || unfinished != null) {
+                return true;
+            }
+            t = ttsReady ? tts : null;
+        }
+        try {
+            return t != null && t.isSpeaking();
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 
     public void stopSpeech() {
         TextToSpeech t;
         synchronized (spokenBeforeReady) {
             spokenBeforeReady.clear();
+            unfinished = null;                          // stopped is done with
             t = ttsReady ? tts : null;
         }
         if (t != null) {

@@ -392,6 +392,11 @@ class App:
         # Windows - every alt-tab - so the port pauses real gameplay only, never the opener.
         if isinstance(vc, OpenerGameplayController):
             return
+        story = getattr(vc, 'story_view', None)
+        if story is not None:
+            # PORT ADDITION: the Extra mode's story goes on by itself once it is read (StoryScreen), and
+            # nobody is there to hear it while the game is in the background - it waits for Continue.
+            story.wait_for_player()
         if isinstance(vc, GameplayController) and not vc.paused:
             vc.pause_button_touched()
 

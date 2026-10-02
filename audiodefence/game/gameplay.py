@@ -491,12 +491,20 @@ class ReviveController:
 class StoryController:
     """PORT ADDITION (user request, 2026-10-01): a part of the Extra mode's story, told in text when the wave
     that carries it (`Story`) begins.  The game is paused under it (`pause_game`, as the pause menu pauses
-    it), the screen reader reads it, and Continue plays on from the start of the wave."""
+    it) while it is read, and then plays on from the start of the wave by itself (user request, 2026-10-02):
+    the screen (`StoryScreen`) goes on once the reading is done, and Continue goes on at once.  Once the
+    player takes the screen over, or leaves the game's window, it waits for Continue instead
+    (`wait_for_player`).  An epilogue is told the same way, and goes on to the completed screen (`after`)."""
 
     def __init__(self, gameplay, text: str, after=None):
         self.gameplay_view_controller = gameplay          # weak
         self.text = text
         self.after = after                                # what Continue does instead of playing on
+        self.waits_for_player = False                     # no longer goes on by itself
+
+    def wait_for_player(self) -> None:
+        """The story is no longer carried on by itself: only Continue (or Back) plays on."""
+        self.waits_for_player = True
 
     def continue_pressed(self) -> None:
         gvc, self.gameplay_view_controller = self.gameplay_view_controller, None
@@ -1099,9 +1107,10 @@ class ChallengeGameplayController(GameplayController):
 
     def tell_story_if_due(self) -> bool:
         """PORT ADDITION (user request, 2026-10-01): a wave that carries `Story` - the Extra mode's story, in
-        text - pauses the game as it begins and shows it (`StoryController`), and the wave is played when
-        the player goes on.  Each part is told once a game: a wave fought again after a revive does not tell
-        it twice.  With no screen to read it on (a run with none, as the referee plays) it is passed over."""
+        text - pauses the game as it begins and shows it (`StoryController`), and the wave is played once it
+        has been read, or sooner if the player goes on.  Each part is told once a game: a wave fought again
+        after a revive does not tell it twice.  With no screen to read it on (a run with none, as the referee
+        plays) it is passed over."""
         b = BrickManager.shared().current_brick()
         text = (b.brick_dictionary or {}).get('Story') if b is not None else None
         if not text or b.name in self.stories_told:
