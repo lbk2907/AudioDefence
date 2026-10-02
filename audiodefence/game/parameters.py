@@ -242,6 +242,20 @@ class GameParameters:
         self.defaults.set_float(min(self.HINT_PAUSES, key=lambda pause: abs(pause - float(value))), 'hintPause')
         self.defaults.synchronize()
 
+    #: PORT ADDITION (user request, 2026-10-02): Settings -> Speech -> Speech calibration: the seconds a word
+    #: took the player's screen reader, measured (ui/settings.py, ui/reading.py).  None until it has been, and
+    #: the hints and the Extra mode's story then time a screen reader at reading.DEFAULT_WORDS_PER_MINUTE.
+    def speech_word_time(self):
+        value = self.defaults.object('speechWordTime')
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+            return None
+        return float(value)
+
+    def set_speech_word_time(self, value) -> None:
+        """The measured seconds a word, or None to forget it."""
+        self.defaults.set_object(None if value is None else float(value), 'speechWordTime')
+        self.defaults.synchronize()
+
     #: PORT ADDITION: whether the main menu looks for a new build when it opens.  The App Store did this
     #: for the phone game; on Windows the game has to ask.  On by default, because a player who never
     #: opens Settings is exactly the one who would otherwise never hear that a fix exists.  The check is

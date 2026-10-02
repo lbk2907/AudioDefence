@@ -2401,7 +2401,8 @@ they were.
   those the reading is timed, the words at `DEFAULT_WORDS_PER_MINUTE` (180, an ordinary speaking pace, which
   a player listening faster than that waits a little longer than they need) and `STORY_MARGIN` (1.5 s) on
   top - so 15 words go on after 6.5 seconds and 55 after 19.8.  `STORY_QUIET` and `STORY_MARGIN` are in
-  `ui/gameplay_screen.py`; the pace moved to `ui/reading.py` when the hints came to be timed by it too.
+  `ui/gameplay_screen.py`; the pace moved to `ui/reading.py` when the hints came to be timed by it too, and
+  once the player has measured their screen reader's own (Speech calibration) the story waits by that.
   The game's update timers are stopped under the story, so the screen waits on a run-loop timer of its own.
   Any key but Enter and Back hands the screen to the player, and it then waits for Continue: moving through
   the text is reading it item by item, which the go-on would cut off, and every key on this screen cuts the
@@ -2812,6 +2813,30 @@ they were.
   stepped and held at 0 and 3, were saved in settings.json and were put back by Reset all settings; on the
   Android build's Python with the fake Bridge the hint, in the phone's words, came 0.87 s after a 0.3 s line
   with a 0.5 s pause, and a touch before then took it away.
+* Settings -> Speech -> Speech calibration measures how fast the player's screen reader reads (user request,
+  2026-10-02; the idea is the game Top Speed's).  The game cannot know when a screen reader has finished: NVDA's
+  controller client exports speakText, cancelSpeech, testIfRunning and brailleMessage and nothing else, JAWS
+  and the others are reached through Prism, which only hands a line over, and VoiceOver on the Mac through an
+  Apple Event that does the same.  The hints and the Extra mode's story therefore time a screen reader from
+  the words of a line, and a pace guessed for everyone is right for nobody.  Enter on the row reads a sample
+  through whatever speaks the game (`ControlSchemePanel.calibration_sample`): one translatable phrase of 38
+  words, an instruction and then a sentence of the game's world, every word of it counted as it is read, in
+  the player's language.  The player presses Enter the moment it ends, and the time taken over the number of
+  words is the time a word (`speechWordTime` in settings.json, `GameParameters.speech_word_time`), which
+  `reading.seconds_per_word` hands to the hints and the story in place of `DEFAULT_WORDS_PER_MINUTE`.  The
+  reader's own start and the player's reaction are in the time, spread over the 38 words, which is right for
+  the lines it times since those have them too.  A result faster than 1,200 words a minute or slower than 60
+  (`FASTEST_WORDS_PER_MINUTE`, `SLOWEST_WORDS_PER_MINUTE`) cannot be a press at the end of the reading, and is
+  turned away with a plain word that nothing was changed.  Escape, or any key but Enter and a modifier held
+  alone, cancels: a key in the middle of the sentence may well have cut the reading short.  The row shows the
+  pace in words a minute, and is there only while a screen reader speaks - not while SAPI 5 or the Mac's
+  system voice does, and never on the phone, whose voice is always the game's own and says when it is done.
+  Reset all settings forgets the measurement.  There is nothing in the original to depart from: VoiceOver knew
+  when it had finished.  Checked headless on a fake clock with a stand-in NVDA: Enter after 38 words at 240 a
+  minute saved 0.2497 s and said "240 words a minute"; a hint then followed a five-word row by 2.25 s with the
+  1 s pause, and the story's 15 words waited 5.25 s; a press after a second and one after 46 s were turned
+  away; Escape and an arrow cancelled, Shift alone did not, and Settings stayed open; the row went with SAPI
+  5 speaking and on the Android build's Python with the fake Bridge; Reset all settings forgot it.
 
 
 ## Original quirks kept on purpose

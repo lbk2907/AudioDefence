@@ -63,8 +63,18 @@ quarters of a second, 1 second by default. A key, a touch, or a move to
 another item before the hint comes takes it away. With SAPI 5, the Mac's
 system voice or the phone's own speech the game knows when the item has been
 read; a screen reader cannot tell it, so the game allows the time the item's
-words take at an ordinary pace, 180 words a minute. A braille display shows
-the item and its hint together, at once.
+words take at an ordinary pace, 180 words a minute, until you measure your own.
+A braille display shows the item and its hint together, at once.
+
+To measure it, use **Speech calibration**, the last row of the Speech tab
+while a screen reader speaks the game. Press Enter and a sentence is read;
+press Enter again the moment it ends, and the game works out how long your
+screen reader takes for a word and says the pace in words a minute. Escape,
+or any other key, cancels, and a press far too early or far too late is
+turned away without changing anything. The Extra mode's story waits by the
+same measure. The row is not there while SAPI 5 or the Mac's system voice
+speaks, nor on the phone: the game can tell when those have finished. Reset
+all settings forgets the measurement.
 
 On the Mac the same page lists **Automatic**, **VoiceOver** and **System
 voice**: VoiceOver when it is on, the system voice when it is not, and the
@@ -378,7 +388,7 @@ Settings, saves and the log live in `%APPDATA%\AudioDefence` (on the Mac,
 | file | what is in it |
 |---|---|
 | `save.json` | progress: coins, diamonds, weapons, power-ups, missions, challenges, statistics |
-| `settings.json` | control scheme, button mode, turn sensitivity, menu arrows, cursor memory, tutorial text, the announcer, the game volume, menu music volume, the update check and a version you skipped, how strong the vibration and the trigger feel are, and whether hints name keys or controller buttons, and which controller's, the speech output and SAPI 5's voice, rate, rate boost, pitch and volume, and whether hints are read and the pause before them; on the phone, the speech engine and the shake sensitivity too |
+| `settings.json` | control scheme, button mode, turn sensitivity, menu arrows, cursor memory, tutorial text, the announcer, the game volume, menu music volume, the update check and a version you skipped, how strong the vibration and the trigger feel are, and whether hints name keys or controller buttons, and which controller's, the speech output and SAPI 5's voice, rate, rate boost, pitch and volume, whether hints are read and the pause before them, and your screen reader's measured pace; on the phone, the speech engine and the shake sensitivity too |
 | `keys.json` | the key bindings, and each kind of controller's, by its name |
 
 Deleting the folder starts a fresh profile — the first run then begins on Gyro
@@ -1114,7 +1124,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **172 divergences** and **15 original quirks kept on purpose** in the notes, of which 78 are
+There are **173 divergences** and **15 original quirks kept on purpose** in the notes, of which 78 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -1289,8 +1299,8 @@ replacing them.
   **Settings → Miscellaneous → Tutorial text** chooses when, or turns it off: Enter steps to the next
   setting, Shift+Enter to the previous.
 - **Settings → Speech**: Speech output — Automatic, or one screen reader or voice only — SAPI 5's
-  voice, rate, rate boost, pitch and volume, and whether hints are read and how long after their item.
-  See [Accessibility](#accessibility).
+  voice, rate, rate boost, pitch and volume, whether hints are read and how long after their item, and a
+  calibration that measures how fast your screen reader reads. See [Accessibility](#accessibility).
 - **Settings → Miscellaneous → Remember cursor position** (off by default) returns the cursor to the row
   you left a screen on.
 - **A menu music volume**: Page Up and Page Down, on any menu, in steps of 10% from 100% — the original's

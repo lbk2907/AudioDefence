@@ -16,8 +16,9 @@ When the item has been read is known for the game's own voice: SAPI 5, the Mac's
 phone's text-to-speech say when they have finished (`Speech.still_speaking`, built for the Extra mode's
 story).  A screen reader cannot be asked - NVDA's controller client only speaks, cancels, brailles and says
 whether NVDA is running, and Prism and VoiceOver's Apple Event only hand a line over - so its reading is
-timed from the words in the line (`reading_seconds`).  The story's screen uses the same timing
-(ui/gameplay_screen.StoryScreen).
+timed from the words in the line (`reading_seconds`), at the pace the player measured in the Speech tab's
+Speech calibration row, or at DEFAULT_WORDS_PER_MINUTE until they have.  The story's screen uses the same
+timing (ui/gameplay_screen.StoryScreen).
 
 A braille display is read at the reader's own pace, so it is given the item and its hint together, at once,
 the way NVDA puts an object's description beside its name; the hint said later is not brailled again, which
@@ -32,8 +33,13 @@ log = logging.getLogger('ui.reading')
 #: How fast a screen reader is taken to read: an ordinary speaking pace (the pace of an audiobook, and about
 #: what a screen reader's default rate reads English at).  A player who listens faster waits a little longer
 #: than they need, which is the side to err on.  The Extra mode's story and the hints both time a screen
-#: reader by it.
+#: reader by it until the player has measured their own (Speech calibration, ui/settings.py).
 DEFAULT_WORDS_PER_MINUTE = 180.0
+#: A measured pace outside these cannot be a press at the end of the reading, and is turned away: faster
+#: than even the fastest listeners set a screen reader with its rate boost, or slower than one at its
+#: slowest rate.
+FASTEST_WORDS_PER_MINUTE = 1200.0
+SLOWEST_WORDS_PER_MINUTE = 60.0
 #: how often a waiting hint looks to see whether it is due
 POLL = 0.05
 
@@ -43,8 +49,21 @@ def word_count(text) -> int:
 
 
 def seconds_per_word() -> float:
-    """The time a screen reader is taken to need for one word."""
-    return 60.0 / DEFAULT_WORDS_PER_MINUTE
+    """The time a screen reader is taken to need for one word: as measured, or at the default pace."""
+    from ..game.parameters import GameParameters
+    measured = GameParameters.shared().speech_word_time()
+    return measured if measured is not None else 60.0 / DEFAULT_WORDS_PER_MINUTE
+
+
+def measured_pace(seconds: float, words: int):
+    """A calibration's result: seconds a word, or 'early' or 'late' when the press cannot have been at the
+    end of the reading (FASTEST_WORDS_PER_MINUTE, SLOWEST_WORDS_PER_MINUTE)."""
+    per_word = seconds / max(1, words)
+    if per_word < 60.0 / FASTEST_WORDS_PER_MINUTE:
+        return 'early'
+    if per_word > 60.0 / SLOWEST_WORDS_PER_MINUTE:
+        return 'late'
+    return per_word
 
 
 def reading_seconds(text) -> float:

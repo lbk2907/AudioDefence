@@ -119,6 +119,7 @@ class ControlSchemePanel:
         self.sapi_shown = False                           # Speech: whether SAPI 5's rows are listed
         self._engine_settled = 0                          # Android: the engine start the rows were made after
         self.choosing = None                              # a row's choices, shown as a list of their own
+        self.calibrating = None                           # Speech calibration timing: (when, words)
         self._trigger_sample = None                       # the Trigger feel being tried on the pad
         self._speech_due = 0.0
         frame = (center[0] - 220.0, center[1] - 122.0, 440.0, 244.0)
@@ -254,6 +255,17 @@ class ControlSchemePanel:
                    hint="How long the game waits after reading a row before it reads the row's hint, from 0 to "
                         '3 seconds. ' + self.SAPI_STEP_HINT,
                    action=self.step_hint_pause, shift_action=self.step_hint_pause_back)
+            if not system.ANDROID and not self.sapi_shown:
+                # PORT ADDITION (user request, 2026-10-02): a screen reader cannot say when it has finished, so
+                # how fast it reads is measured (ui/reading.py).  Not while the game's own voice speaks, which
+                # says so itself - and so never on the phone, whose voice always does.
+                word_time = params.speech_word_time()
+                t.cell('Speech calibration',
+                       '%i words a minute' % round(60.0 / word_time) if word_time else 'not done yet',
+                       hint='How fast your screen reader reads. The game cannot ask it, so it measures it, to know '
+                            'when a row has been read and its hint can follow. Press Enter and a sentence is '
+                            'read; press Enter again the moment it ends, or Escape to cancel.',
+                       action=self.start_calibration)
         elif self.category == 'keyboard':                 # PORT ADDITION: the key bindings
             keymap = KeyMap.shared()
             scheme = mode_text(keymap.mode())
@@ -553,6 +565,7 @@ class ControlSchemePanel:
         params.set_sapi(voice=None, rate=None, boost=False, pitch=0, volume=None)
         params.set_speak_hints(params.DEFAULT_SPEAK_HINTS)
         params.set_hint_pause(params.DEFAULT_HINT_PAUSE)
+        params.set_speech_word_time(None)                 # the pace measured is forgotten
         App.apply_menu_music_volume()
         self.reload_data()
         self.announce('All settings reset to default. Your key and controller bindings are unchanged.')
@@ -676,7 +689,8 @@ class ControlSchemePanel:
     def follow_speech(self) -> None:
         """On the Speech category, SAPI 5's rows come and go as it starts or stops being what speaks - a
         screen reader started or closed while the list is open - looked at once a second."""
-        if self.category != 'speech' or self.capturing is not None or self.choosing is not None:
+        if (self.category != 'speech' or self.capturing is not None or self.choosing is not None
+                or self.calibrating is not None):
             return
         now = time.monotonic()
         if now < self._speech_due:
@@ -773,6 +787,58 @@ class ControlSchemePanel:
 
     def step_hint_pause_back(self) -> None:
         self.step_hint_pause(-1)
+
+    # --- speech calibration (PORT ADDITION, user request) ---------------------------------------
+    @staticmethod
+    def calibration_sample() -> str:
+        """What is read to be timed: the one thing to do, then a sentence of the game's world - in the
+        player's language, and in a controller's words when those are chosen.  Every word of it is counted."""
+        from ..platform.pad import menu_words
+        return menu_words(localization.translate(
+            'Press Enter as soon as this ends. Somewhere past the fence a gate creaks open, the first footsteps '
+            'come out of the dark, slow and uneven, and you check your clip and wait for them to come closer.'))
+
+    def start_calibration(self) -> None:
+        """Read the sample through whatever speaks the game, and time it until Enter."""
+        from ..platform.runloop import RunLoop
+        from .reading import word_count
+        sample = self.calibration_sample()
+        self.announce(sample)
+        self.calibrating = (RunLoop.main().now(), word_count(sample))
+
+    #: keys only ever held with another, which do not end a calibration by themselves - NVDA's own among them
+    CALIBRATION_IGNORES = (pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_LALT, pygame.K_RALT, pygame.K_LGUI,
+                           pygame.K_RGUI, pygame.K_CAPSLOCK, pygame.K_NUMLOCK, pygame.K_INSERT)
+
+    def calibration_key(self, event) -> None:
+        """Every key while a calibration is timing.  Enter is the end of the reading; Escape, or any other
+        key, cancels, since a key in the middle of the sentence may well have cut the reading short."""
+        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            self.finish_calibration()
+        elif event.key not in self.CALIBRATION_IGNORES:
+            self.cancel_calibration()
+
+    def finish_calibration(self) -> None:
+        from ..platform.runloop import RunLoop
+        from .reading import measured_pace
+        started, words = self.calibrating
+        self.calibrating = None
+        pace = measured_pace(RunLoop.main().now() - started, words)
+        if pace == 'early':
+            self.announce('Too early: the sentence cannot have been read yet. Nothing was changed. Try again, and '
+                          'press Enter as soon as the reading stops.')
+            return
+        if pace == 'late':
+            self.announce('Too late: the sentence ended long before that. Nothing was changed. Try again, and '
+                          'press Enter as soon as the reading stops.')
+            return
+        GameParameters.shared().set_speech_word_time(pace)
+        self.reload_data()
+        self.announce('Speech calibrated: %i words a minute.' % round(60.0 / pace))
+
+    def cancel_calibration(self) -> None:
+        self.calibrating = None
+        self.announce('Calibration cancelled. Nothing was changed.')
 
     def toggle_modern_audio(self) -> None:
         """PORT ADDITION: whether the game plays SAPI 5 itself (speech_audio.py) or Windows does."""
@@ -1037,6 +1103,9 @@ class SettingsScreen(ViewControllerScreen):
 
     # --- keys ------------------------------------------------------------------------------------
     def key_down(self, event) -> None:
+        if self.control_scheme.calibrating is not None:   # PORT ADDITION: Speech calibration is timing
+            self.control_scheme.calibration_key(event)
+            return
         if self.control_scheme.capturing is not None:     # setting a binding: every key goes to the panel
             # PORT ADDITION: a controller button stands for a key in the menus; here it cancels, as Escape
             # does, rather than binding the key it stands for
