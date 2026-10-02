@@ -239,6 +239,13 @@ they were.
     own text-to-speech.  Use modern output - whether the game plays SAPI 5 itself or leaves it to Windows -
     means nothing on the phone and is not offered there.  Nothing else in the tab names Windows, NVDA, SAPI
     or Control Panel on the phone; the desktop's words are as they were.
+  * **The speech rate** (user request, 2026-10-02).  An app that sets a rate replaces the speed set in the
+    phone's text-to-speech settings rather than adding to it, and the first builds set 1.12 to the power of
+    the rate - 0 the engine's normal speed whatever the phone said, and 10 only about three times it, too
+    slow for a player used to a fast voice.  The rate now starts from the phone's own speed
+    (`Settings.Secure.TTS_DEFAULT_RATE`, read again whenever the rate is applied, the game coming back to
+    the front among them), and each step multiplies it by the tenth root of 6: ten steps up is six times as
+    fast, the most Android's own setting offers, and ten down a sixth.  An engine may stop sooner.
 * **Updating** (user request, 2026-10-01).  The desktop's updater and its screens, as far as Android allows.
   `updater_android` checks the same repository's latest release at the same moments - quietly when the main
   menu opens, with Check for updates on the main menu, which the phone now has too - and compares it with

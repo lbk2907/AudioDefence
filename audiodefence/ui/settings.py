@@ -711,7 +711,9 @@ class ControlSchemePanel:
                         % (VOICE_NAME, VOICE_DEFAULT_HINT) + 'Press Enter for the list.',
                    action=self.choose_sapi_voice, shift_action=self.choose_sapi_voice)
             voice = config['voice'] if config['voice'] in names else None
-        t.cell(VOICE_NAME + ' rate', str(sapi.rate()), hint='How fast %s speaks, from -10 to 10. ' % VOICE_NAME + self.SAPI_STEP_HINT,
+        t.cell(VOICE_NAME + ' rate', str(sapi.rate()), hint='How fast %s speaks, from -10 to 10. ' % VOICE_NAME
+               + ("At 0 it speaks at the speed set in the phone's text-to-speech settings. " if system.ANDROID else '')
+               + self.SAPI_STEP_HINT,
                action=self.step_sapi_rate, shift_action=self.step_sapi_rate_back)
         if sapi.boost_supported(voice):
             t.cell(VOICE_NAME + ' rate boost', 'ON' if config['boost'] else 'OFF',

@@ -499,7 +499,8 @@ use another engine installed on the phone, choose it in the Android speech
 engine row of the Speech tab in Settings. Each engine speaks with the voice set
 in its own settings on the phone, so a voice is chosen there, not in the game;
 the rate, pitch and volume rows below the engine row work with whichever engine
-speaks.
+speaks. A rate of 0 is the speed set in the phone's text-to-speech settings,
+and 10 is six times that, as far as the engine allows.
 
 ### Controls on the phone
 

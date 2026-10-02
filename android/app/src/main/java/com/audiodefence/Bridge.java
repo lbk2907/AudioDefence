@@ -230,6 +230,7 @@ public final class Bridge implements SensorEventListener {
         events.add(new float[]{11, 0, 0, 0, 0});
         audio.setPaused(false);
         startSensors();
+        applySpeechSettings();                          // the phone's own speed may have changed meanwhile
     }
 
     public void shutdown() {
@@ -448,6 +449,23 @@ public final class Bridge implements SensorEventListener {
         }
     }
 
+    /** How much one step of the Speech tab's rate changes the speed: ten steps up from the phone's own speed
+     *  is six times as fast, the most Android's own speech-rate setting offers (and ten down, a sixth). */
+    private static final double RATE_STEP = Math.pow(6.0, 1.0 / 10.0);
+
+    /** The speed set in the phone's text-to-speech settings, 1 being normal.  An app that sets a rate
+     *  replaces that speed rather than adding to it, so the Speech tab's rate starts from it: 0 is the
+     *  speed the player already listens at.  Read again whenever the rate is applied, the game coming back
+     *  to the front among them, so a change made there is taken up. */
+    private float phoneSpeechRate() {
+        try {
+            int percent = Settings.Secure.getInt(context.getContentResolver(), Settings.Secure.TTS_DEFAULT_RATE, 100);
+            return percent > 0 ? percent / 100f : 1f;
+        } catch (RuntimeException e) {
+            return 1f;
+        }
+    }
+
     /** The rate and pitch, on the engine speaking; the volume goes with each line (speak). */
     private void applySpeechSettings() {
         TextToSpeech t;
@@ -458,7 +476,7 @@ public final class Bridge implements SensorEventListener {
             t = tts;
         }
         try {
-            t.setSpeechRate((float) Math.pow(1.12, rateSetting));
+            t.setSpeechRate(phoneSpeechRate() * (float) Math.pow(RATE_STEP, rateSetting));
             t.setPitch((float) Math.pow(1.05, pitchSetting));
         } catch (RuntimeException e) {
             Log.w(TAG, "could not apply the speech settings", e);

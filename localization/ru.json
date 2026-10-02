@@ -140,6 +140,7 @@
  "As the announcer speaks": "Как говорит диктор",
  "Asks again the next time the game starts": "Спросит снова при следующем запуске игры",
  "Asks again the next time the game starts.": "Спросит снова при следующем запуске игры.",
+ "At 0 it speaks at the speed set in the phone's text-to-speech settings.": "",
  "At the crossroads a man sits on an upturned bucket, playing a banjo to nobody. He sells it to you for everything in your pockets and walks away humming. The crowd he was playing for has not left.": "",
  "Audio Defence could not start. The error is %s.": "Audio Defence не удалось запустить. Ошибка: %s.",
  "Audio Defence could not start. The error is in crash.txt, in the AudioDefence folder in AppData.": "Аудио Дефенс не удалось запустить. Ошибка записана в crash.txt, в папке AudioDefence в AppData.",
