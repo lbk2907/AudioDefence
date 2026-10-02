@@ -1340,10 +1340,9 @@ class SpeechCalibration:
 @register('Port_SpeechCalibrationViewController')
 class SpeechCalibrationScreen(MenuScreen):
     """The game asks for a Speech calibration (`calibration_wanted`), rather than leave the Speech tab's row
-    saying "not done yet" to a player who may never open it.  It asks once the screens a player meets first
-    are done - the logo, a first run's control scheme and the opener - before the main menu
-    (`App.finish_starting`), and in the Speech tab as soon as Speech output is changed to a screen reader
-    (`ControlSchemePanel.take_speech_output`).
+    saying "not done yet" to a player who may never open it.  It asks at start-up after the logo (and a
+    first run's control scheme), before the opener (`App.go_to_opener`), and in the Speech tab as soon as
+    Speech output is changed to a screen reader (`ControlSchemePanel.take_speech_output`).
 
     It says what the calibration is for and how it goes, and lands on Start calibration.  Enter starts it,
     and from there it is the Speech tab's own (`SpeechCalibration`): Enter at the end of the sentence, the

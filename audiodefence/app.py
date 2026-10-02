@@ -112,6 +112,18 @@ class App:
         self.load_view_controller_named('ADInitialControlSchemeViewController')
 
     def go_to_opener(self) -> None:                       # 0x100081584
+        """PORT ADDITION (user request, 2026-10-02): while a screen reader speaks the game and how fast it
+        reads has never been measured, the game asks for a Speech calibration first
+        (ui/settings.SpeechCalibrationScreen), and plays the opener from there, calibrated or skipped.  It
+        asks before the opener rather than after it, so the Enter that skips the opener cannot start the
+        calibration as well."""
+        from .ui.settings import calibration_wanted
+        if self.host is not None and calibration_wanted():
+            self.load_view_controller_named('Port_SpeechCalibrationViewController', then=self.play_opener)
+            return
+        self.play_opener()
+
+    def play_opener(self) -> None:                        # the rest of 0x100081584
         from .game.gameplay import OpenerGameplayController
         self.load_view_controller(OpenerGameplayController(self.host))
 
@@ -233,18 +245,6 @@ class App:
         self.in_play = False                              # out of Play: no coins or diamonds (StatusBar)
         self.start_menu_music('main_menu_theme')
         self.load_view_controller_named('ADMainMenuViewController')
-
-    def finish_starting(self) -> None:
-        """PORT ADDITION (user request, 2026-10-02): the screens a player meets first are done - the logo, a
-        first run's control scheme and the opener, which goes to the main menu in the original (0x100025e48,
-        0x100025ef8).  While a screen reader speaks the game and how fast it reads has never been measured,
-        the game asks for a Speech calibration first (ui/settings.SpeechCalibrationScreen), and goes on to the
-        main menu from there, calibrated or skipped."""
-        from .ui.settings import calibration_wanted
-        if self.host is not None and calibration_wanted():
-            self.load_view_controller_named('Port_SpeechCalibrationViewController', then=self.go_to_main_menu)
-            return
-        self.go_to_main_menu()
 
     def go_to_extra_menu(self) -> None:                   # PORT ADDITION: the port's own campaigns
         self.start_menu_music('main_menu_theme')

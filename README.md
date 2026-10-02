@@ -77,8 +77,8 @@ same measure. The row is not there while SAPI 5 or the Mac's system voice
 speaks, nor on the phone: the game can tell when those have finished. Reset
 all settings forgets the measurement.
 
-Until you have measured it, the game asks you to: when it starts, once the
-intro is over and before the main menu, and in the Speech tab as soon as you
+Until you have measured it, the game asks you to: when it starts, after the
+logo and before the intro, and in the Speech tab as soon as you
 change Speech output to a screen reader. It says what the measurement is for,
 and Enter starts it just as the row does. Escape skips it for now, and the
 game asks again the next time it starts. It never asks while SAPI 5 or the

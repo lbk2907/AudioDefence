@@ -2898,12 +2898,13 @@ they were.
   5 speaking and on the Android build's Python with the fake Bridge; Reset all settings forgot it.
 
   Until a pace is saved the game asks for one (user request, 2026-10-02), rather than leave the row saying
-  "not done yet" to a player who may never open the Speech tab.  It asks when the screens a player meets
-  first are done and before the main menu: the logo, then the opener, whose two ways out - its end,
-  `goToScoreScreen` 0x100025e48, and the skip, `skipButtonPressed` 0x100025ef8 - go to the main menu in the
-  original and to `App.finish_starting` here.  The first-run control scheme screen comes before the opener
-  in the original, but the port never shows it (it starts on Gyro, `last_control_scheme`), and the update
-  check and the offer to put back missing files belong to the main menu, so they come after.  It asks again
+  "not done yet" to a player who may never open the Speech tab.  It asks at start-up after the logo and
+  before the opener (`goToOpener` 0x100081584, which `App.go_to_opener` now asks in front of): asked after
+  the opener at first, the Enter that skipped it could start the calibration too, and the user asked for it
+  to come first.  The opener's two ways out still go to the main menu as in the original.  The first-run
+  control scheme screen comes before the opener in the original, but the port never shows it (it starts on
+  Gyro, `last_control_scheme`), and the update check and the offer to put back missing files belong to the
+  main menu, so they come after.  It asks again
   in the Speech tab the moment Speech output is changed to a screen reader with nothing saved
   (`ControlSchemePanel.take_speech_output`), over the tab, with the choice said first so the question does not
   cut it off; choosing the output already in use is not a change and does not ask.  Whether to ask is

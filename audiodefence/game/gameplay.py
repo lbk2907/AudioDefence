@@ -1405,9 +1405,9 @@ class OpenerGameplayController(GameplayController):
     def go_to_score_screen(self) -> None:                 # 0x100025e48
         from ..app import App
         self.kill_gameplay()
-        App.delegate().finish_starting()                  # PORT ADDITION: the main menu, or a calibration first
+        App.delegate().go_to_main_menu()
 
     def skip_button_pressed(self) -> None:                # 0x100025ef8
         from ..app import App
         self.kill_gameplay()
-        App.delegate().finish_starting()                  # PORT ADDITION: the main menu, or a calibration first
+        App.delegate().go_to_main_menu()
