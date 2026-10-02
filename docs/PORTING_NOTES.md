@@ -2922,7 +2922,7 @@ they were.
   cancels, and each leaves the player on the screen to try again.  It cannot be skipped (user request, the
   same day): it first had Skip for now and Escape, which went on with nothing saved, and a skipped question
   left the hints and the story timed at the guessed pace - the very thing it asks to end.  Escape starts it
-  as Enter does, unless no screen reader speaks the game any more, when it goes on.  A pace saved is said, and the game goes on - to the
+  as Enter does (a screen reader closed meanwhile leaves the question audible: Automatic goes over to SAPI 5).  A pace saved is said, and the game goes on - to the
   main menu, or back to the Speech output row - once that line has been read at the pace just measured, with
   half a second over (`GO_ON_MARGIN`): the next screen's first line interrupts, and would have cut the result
   off.  A key in that time goes on at once.  The screen plays no music, so the end of the sentence is heard

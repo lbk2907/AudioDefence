@@ -1358,8 +1358,7 @@ class SpeechCalibrationScreen(MenuScreen):
     result turned away when it is far too early or far too late, and any other key cancelling - after which
     it can be tried again.  It cannot be skipped (user request, 2026-10-02): skipped, the game went on timing
     a screen reader at a guessed pace, which is what the question is there to end.  Escape starts it as Enter
-    does - unless no screen reader speaks the game any more (it was closed, and Automatic went over to
-    SAPI 5), when nothing is wanted and it goes on.  A pace saved is said, and the game goes on once that has
+    does.  A pace saved is said, and the game goes on once that has
     been read: the next screen's first line would otherwise cut it off.  `then` is where it goes on to - the
     opener, or back to Settings."""
 
@@ -1391,13 +1390,10 @@ class SpeechCalibrationScreen(MenuScreen):
         play_button_click()
 
     def escape_pressed(self) -> None:
-        """Not a way out: the calibration is needed while a screen reader speaks the game, so Escape starts
-        it as Enter does (user request, 2026-10-02).  If no screen reader speaks the game any more, nothing
-        is wanted, and the game goes on."""
-        if calibration_wanted():
-            self.start_pressed()
-        else:
-            self.go_on()
+        """Not a way out: Escape starts the calibration as Enter does (user request, 2026-10-02).  A screen
+        reader closed meanwhile leaves no one unable to hear it: Automatic goes over to SAPI 5, which reads
+        the question and the sample instead."""
+        self.start_pressed()
 
     def key_down(self, event) -> None:
         if self.gone:
@@ -1420,7 +1416,7 @@ class SpeechCalibrationScreen(MenuScreen):
         self.going_on = RunLoop.main().schedule_timer(wait, self.go_on, False)
 
     def go_on(self) -> None:
-        """On to the opener, or back to Settings: calibrated, or no longer wanted."""
+        """On to the opener, or back to Settings, once calibrated."""
         if self.gone:
             return
         self.gone = True
