@@ -926,6 +926,13 @@ def _ns_int(text) -> int:
     return ns_int_value(text)
 
 
+def _arsenal(weapon_manager) -> list:
+    """PORT ADDITION: the guns and the melee weapon a manager holds, by name and in order (see
+    `ChallengeGameplayController.hand_over_weapons`)."""
+    melee = weapon_manager.melee_weapon
+    return [w.name for w in weapon_manager.weapons_array or []] + [melee.name if melee is not None else None]
+
+
 # ============================================================================================ pause
 class PauseController:
     """ADPauseViewController (the settings part lives in the settings screen port)."""
@@ -1232,10 +1239,26 @@ class ChallengeGameplayController(GameplayController):
         immediate, so the old gun releases only the playlists nothing new is using.  A reload in progress
         and a held trigger are stopped first, as a switch of weapon stops them.  The first new gun is drawn
         as a switch draws it - its deploy sound, and its name if the announcer is on - and the new set is
-        read out."""
+        read out.
+
+        A hand-over of the set already in hand says nothing and leaves the gun that was in hand there, fresh
+        (user request, 2026-10-02): that is a revive or its skip giving the wave its weapons back
+        (`BrickManager.hand_back_weapons`), which used to read out "New weapons" for the same wave while
+        the announcer named the first gun.  The original's revive (`revive` 0x10005bec0, and the brick
+        manager's 0x1000c7558) sends nothing to the weapons, and `deploy` 0x1000166e4 is sent by
+        `selectNextWeapon` 0x1000a9e04 alone, so nothing is drawn or named as play resumes.  A set that
+        differs from the one in hand - a wave that changes the weapons, a skip to it included - is drawn
+        and read out as before."""
         from .weapon_manager import WeaponManager
         old = self.weapon_manager
         new = WeaponManager.with_challenge_weapon_array(entries)
+        same = old is not None and _arsenal(old) == _arsenal(new)
+        if same and old.current_weapon is not None:       # the gun in hand stays in hand
+            for index, w in enumerate(new.weapons_array):
+                if w.name == old.current_weapon.name:
+                    new.current_weapon_index = index
+                    new.set_current_weapon(w)
+                    break
         if old is not None:
             kept = {id(w.playlist) for w in list(new.weapons_array) + [new.melee_weapon]
                     if w is not None and w.playlist is not None}
@@ -1252,7 +1275,7 @@ class ChallengeGameplayController(GameplayController):
         self._attach_touch_objects()
         if getattr(self, 'accessible_game_view', None) is not None:
             self.accessible_game_view.weapon_manager = new
-        if not announce:
+        if not announce or same:
             return
         new.current_weapon.deploy()
         if self.host is not None:

@@ -559,7 +559,8 @@ class BrickManager:
         a challenge it is a skip bought with diamonds - past the hardest wave, or, from the last one, past
         `challenge_is_over` to the first wave again, since `scenario_brick_name_for_wave_number` wraps.  So
         the wave is loaded again from its beginning; the skip is a choice of its own, dearer and never from
-        the last wave (`skip_current_brick`)."""
+        the last wave (`skip_current_brick`).  The weapons are given back fresh and without a word
+        (`hand_back_weapons`)."""
         self.clear_current_brick()
         self.current_wave -= 1
         self.load_next_brick()
@@ -568,7 +569,8 @@ class BrickManager:
     def skip_current_brick(self) -> None:
         """PORT ADDITION (user request, 2026-10-01): the revive's other choice in the Extra mode - the wave
         died in is cleared and the next one starts, as Endless's revive does.  `revive_skip_cost` offers it
-        only while there is a next wave."""
+        only while there is a next wave.  A next wave with weapons of its own hands them over as it loads,
+        read out like any wave's that changes the weapons; otherwise they are handed back without a word."""
         self.clear_current_brick()
         self.load_next_brick()
         self.hand_back_weapons()
@@ -576,7 +578,10 @@ class BrickManager:
     def hand_back_weapons(self) -> None:
         """PORT ADDITION: after a revive the wave is fought with the weapons it was begun with, fresh - its
         own `Weapons` if it hands some over (handed over as it loaded), or else the last set handed over
-        before it, or else the challenge's own."""
+        before it, or else the challenge's own.  Handed back, they are the set already in hand, so nothing is
+        drawn or read out and the gun that was in hand stays there, as the original's revive leaves the
+        weapons alone (`ChallengeGameplayController.hand_over_weapons`).  Only a skip to a wave with a set of
+        its own is a change of weapons, and that is announced as the wave loads, as any other."""
         gvc = self.gameplay_view_controller
         brick = self.current_brick()
         if gvc is None or not hasattr(gvc, 'hand_over_weapons'):
@@ -585,7 +590,7 @@ class BrickManager:
             return
         weapons = next((b.brick_dictionary.get('Weapons') for b in reversed(self.bricks)
                         if (b.brick_dictionary or {}).get('Weapons')), None)
-        gvc.hand_over_weapons(weapons or gvc.challenge_dictionary.get('weapons'))
+        gvc.hand_over_weapons(weapons or gvc.challenge_dictionary.get('weapons'), announce=False)
 
     def game_over(self) -> None:                                # 0x1000c75b0
         from .missions import MissionManager

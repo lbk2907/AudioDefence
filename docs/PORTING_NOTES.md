@@ -2348,7 +2348,8 @@ they were.
   (`BrickManager.load_brick_with_name` to `ChallengeGameplayController.hand_over_weapons`): the guns in hand
   are taken away and the new ones given, the first of them drawn as a switch draws it (its deploy sound,
   and its name if the announcer is on), and the set read out - "New weapons: Police Shotgun, Revolver,
-  Golf".  The first wave's is handed over before anything is heard, and says nothing.  The challenge's
+  Golf".  The first wave's is handed over before anything is heard, and says nothing, and so does one that
+  gives back the set already in hand, as a revive does (below).  The challenge's
   own `weapons` lists every gun any wave hands over, because that is what the overview checks
   (`hasWeaponForChallengeWithName:` 0x10001f868) and names when one is not bought.  The new guns are made
   before the old are let go, since a gun of the same name shares its playlist and activating one again is
@@ -2371,6 +2372,19 @@ they were.
   10, and the skip went on to the third with the first wave's guns full and read out; deaths in the third
   offered no skip and revives for 2 and 4, the second refused to the failed screen with 8 of 20 diamonds
   left; and an arena outside the Extra mode went to the failed screen at the first death, as before.
+
+  Given back, the weapons are not read out, and the gun that was in hand stays in hand (user request,
+  2026-10-02).  Handing them back said "New weapons: Bazooka, Police Shotgun, Wok" for the wave the player
+  had just died in, while the announcer named the first gun as it was drawn.  The original's revive leaves
+  the weapons alone: `revive` 0x10005bec0 and the brick manager's 0x1000c7558 send them nothing, and
+  `deploy` 0x1000166e4, which plays the draw and the name, is sent by `selectNextWeapon` 0x1000a9e04 alone -
+  not on a revive, and not as a game starts.  So a hand-over of the set already in hand draws nothing and
+  says nothing (`hand_over_weapons`), and the fresh set is handed with the same gun in hand rather than the
+  first, since nothing now says which.  A skip to a wave that hands over a set of its own is a change of
+  weapons, and is announced as one.  Checked headless in Titans and Reprise: a revive and a skip announced
+  nothing and played no deploy or voice, the same gun in hand with full ammunition; a revive in Reprise's
+  ninth wave and in its tenth kept the Police Shotgun, Bazooka and Wok; a skip from the eighth to the ninth
+  read out the new set and drew the Police Shotgun, as reaching it by winning does.
 * PORT ADDITION: the Extra mode tells a story, in text, between waves (user request, 2026-10-01).  A wave
   that carries `Story` pauses the game as it begins - `pause_game`, as the pause menu pauses it - and shows
   the text on a screen of its own (`StoryScreen`), where the screen reader reads it first; Continue, or
