@@ -32,6 +32,7 @@ The Speech tab in Settings has a Speech calibration row, which measures how fast
 Your gun stops firing when you die, even with the trigger still held.
 A short burst from a continuous-fire gun is no longer cut off when you let go of the trigger.
 Switching to another window after you die no longer opens the pause menu over the death or revive screen.
+The Speech tab in Settings can give the tutorial and what is said during a game a second voice of its own.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.

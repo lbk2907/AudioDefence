@@ -165,10 +165,12 @@ class ADSound:
         text = text_for(getattr(self.sound, 'key', None))
         if text is None:
             return
+        # PORT ADDITION (user request, 2026-10-03): in-game text, read by the second speech while Settings ->
+        # Speech -> Use second speech is on (Speech.speak_in_game)
         if mode == 'after':
-            self.sound.add_3d_sound_end_callback(lambda _s, t=text: Speech.shared().speak(t, False))
+            self.sound.add_3d_sound_end_callback(lambda _s, t=text: Speech.shared().speak_in_game(t, False))
         else:
-            Speech.shared().speak(text, False)
+            Speech.shared().speak_in_game(text, False)
 
     def stop_with_no_callback(self) -> None:                  # 0x1000b4438
         if self._state in (2, 1):

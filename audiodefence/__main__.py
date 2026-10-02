@@ -84,6 +84,7 @@ def main(argv=None) -> int:
     if no_speech:
         Speech.shared().speak = lambda *a, **k: None
         Speech.shared().speak_automatic = lambda *a, **k: None
+        Speech.shared().speak_second = lambda *a, **k: None
     if free_cards:
         from .ui import tarot
         tarot.UNLOCK_CARDS_FOR_TESTING = True
@@ -92,6 +93,9 @@ def main(argv=None) -> int:
     GameParameters.screen_reader_running = Speech.shared().screen_reader_running()
     Speech.shared().choice = GameParameters.shared().speech_output()   # Settings -> Miscellaneous
     Speech.shared().configure_sapi(**GameParameters.shared().sapi_config())
+    Speech.shared().second_on = GameParameters.shared().second_speech()          # PORT ADDITION: Settings ->
+    Speech.shared().second_choice = GameParameters.shared().second_speech_output()   # Speech -> the second
+    Speech.shared().configure_second_sapi(**GameParameters.shared().second_sapi_config())   # speech
 
     from .platform.pad import Pads, set_hints
     set_hints()                                         # before SDL's joystick layer starts, in pygame.init()

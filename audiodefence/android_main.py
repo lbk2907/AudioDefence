@@ -477,6 +477,10 @@ def run(home: str, fake: bool = False) -> int:
     params.forget_saved_voice()                          # PORT ADDITION (user request): each engine's own voice
     Speech.shared().configure_sapi(**params.sapi_config())
     Speech.shared().set_engine(params.speech_engine())   # PORT ADDITION (user request): Settings > Speech
+    Speech.shared().second_on = params.second_speech()  # PORT ADDITION (user request): the second speech,
+    Speech.shared().second_choice = params.second_speech_output()   # made only once it first speaks
+    Speech.shared().configure_second_sapi(**params.second_sapi_config())
+    Speech.shared().set_second_engine(params.second_speech_engine())
 
     host = ScreenManager()
     running = [True]
@@ -509,6 +513,9 @@ def run(home: str, fake: bool = False) -> int:
             if params.settle_speech_engine():             # PORT ADDITION: the speech engine has started
                 Speech.shared().speak("The speech engine chosen in Settings could not be started, so the phone's "
                                       'default engine speaks instead.', False)
+            if params.settle_second_speech_engine():      # PORT ADDITION: and the second speech's
+                Speech.shared().speak_second("The engine chosen for the second speech could not be started, so "
+                                             "the phone's default engine speaks it instead.", False)
             top = host.top()
             from .ui.gameplay_screen import GameplayScreen
             if isinstance(top, GameplayScreen) and top is not motion_screen[0]:

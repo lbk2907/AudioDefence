@@ -28,7 +28,8 @@ closed while the game runs is followed within a few seconds. The game is the
 same whichever speaks: with SAPI 5 you get every screen and the spoken game
 exactly as an NVDA player does.
 
-That choice is automatic. **Settings → Speech → Speech output** picks one
+That choice is automatic. **Speech output**, the first row of **First speech
+settings** in the Speech tab of Settings, picks one
 instead — NVDA, JAWS, ZDSR, Narrator, ZoomText, System Access, Window-Eyes,
 PC-Talker, Boy PC Reader, Sense Reader or SAPI 5 — with Enter for the next and
 Shift+Enter for the previous, and Automatic, the default, at the start of the
@@ -39,7 +40,7 @@ cannot speak ("JAWS is not running, so the game will be silent until it is"),
 so you can step on to another without being left in silence.
 
 While SAPI 5 is what speaks — chosen, or Automatic with no screen reader
-running — five more rows follow it in the same tab, for SAPI 5 itself. They
+running — more rows follow it on the same page, for SAPI 5 itself. They
 come and go by themselves as a screen reader starts or closes:
 
 | row | what it does |
@@ -70,7 +71,7 @@ with **Speech calibration**, and starts the pause from there. The Extra mode's
 story waits the same way before it goes on. Until the speech has been
 measured, the game allows an ordinary pace, 180 words a minute.
 
-**Speech calibration** is the last row of the Speech tab, on Windows, the Mac
+**Speech calibration** is a row of each speech's page, on Windows, the Mac
 and the phone, and it says the pace measured, such as "240 words a minute".
 Press Enter and a sentence is read; press Enter again the moment it ends, and
 the game works out how long a word takes. Escape, or any other key, cancels,
@@ -84,9 +85,50 @@ after the logo and before the intro, and straight after Reset all settings. It
 asks whatever speaks the game, the phone included, where a double tap does
 what Enter does. It says what the measurement is for, and Enter starts it just
 as the row does, and so does Escape. It cannot be skipped: it is needed once,
-and the Speech calibration row can do it again later.
+and the Speech calibration row can do it again later. It measures the first
+speech.
 
-On the Mac the same page lists **Automatic**, **VoiceOver** and **System
+### A second speech
+
+The Speech tab has these rows: **Use second speech**, **First speech
+settings**, **Second speech settings**, **Hints** and **Pause before hints**.
+Enter on one of the two settings rows opens that speech's own page, and Escape
+comes back to the row.
+
+The first speech reads everything: the menus, the hints, Settings and the
+pause menu. With **Use second speech** on (it is off by default), the second
+speech reads what is read out during a game instead: the Extra mode's story
+and its epilogue, the tutorial's lines, the game's announcements such as "New
+weapons", and the challenge timer. So the game's text can have a voice of its
+own, or a screen reader of its own, apart from the menus. With it off,
+everything is read as before.
+
+Second speech settings has the same rows as the first speech's page: Speech
+output, the voice, rate, rate boost, pitch and volume while SAPI 5 speaks it
+(the system voice on the Mac; on the phone, its own Android speech engine,
+rate, pitch and volume), and Speech calibration. It can be set up while Use
+second speech is off, and each change is said in the second speech's voice.
+
+Each speech has its own calibration, and the second's sentence is read in the
+second speech's voice. Second speech settings also has **Follow the first
+speech's calibration**, on by default. While it is on, the second speech uses
+the first's measurement, and calibrating the first speech calibrates both.
+Turning it on puts the first's measurement in place of the second's own;
+turning it off leaves the second speech with that measurement until you
+calibrate it, and calibrating the second speech turns it off. The very first
+calibration, the one the game asks for when it starts, turns it on. Changing a
+voice keeps its speech's measurement. Each line is timed by the measurement of
+the speech that reads it, and hints are always the first speech's.
+
+The two speeches can speak at once. A screen reader that both of them use is
+the same one, so their lines simply go to it. Two SAPI 5 voices are two
+voices, each with its own settings, and a line cuts off only what its own
+speech is saying; Use modern output, on the first speech's page, is for both
+SAPI 5 voices. A key in the menus still stops both SAPI 5 voices, and Control
+stops both speeches. Reset all settings turns the second speech off
+and puts its settings back.
+
+On the Mac each speech's page lists **Automatic**, **VoiceOver** and **System
 voice**: VoiceOver when it is on, the system voice when it is not, and the
 system voice's own five rows — voice, rate, pitch and volume, with no rate
 boost — in place of SAPI 5's. See [On the Mac](#on-the-mac).
@@ -398,7 +440,7 @@ Settings, saves and the log live in `%APPDATA%\AudioDefence` (on the Mac,
 | file | what is in it |
 |---|---|
 | `save.json` | progress: coins, diamonds, weapons, power-ups, missions, challenges, statistics |
-| `settings.json` | control scheme, button mode, turn sensitivity, menu arrows, cursor memory, tutorial text, the announcer, the game volume, menu music volume, the update check and a version you skipped, how strong the vibration and the trigger feel are, and whether hints name keys or controller buttons, and which controller's, the speech output and SAPI 5's voice, rate, rate boost, pitch and volume, whether hints are read and the pause before them, and how fast the speech was measured to read; on the phone, the speech engine and the shake sensitivity too |
+| `settings.json` | control scheme, button mode, turn sensitivity, menu arrows, cursor memory, tutorial text, the announcer, the game volume, menu music volume, the update check and a version you skipped, how strong the vibration and the trigger feel are, and whether hints name keys or controller buttons, and which controller's, the speech output and SAPI 5's voice, rate, rate boost, pitch and volume, whether hints are read and the pause before them, whether the second speech is used and its own output, voice, rate, rate boost, pitch and volume, whether it follows the first speech's calibration, and how fast each speech was measured to read; on the phone, each speech's engine and the shake sensitivity too |
 | `keys.json` | the key bindings, and each kind of controller's, by its name |
 
 Deleting the folder starts a fresh profile — the first run then begins on Gyro
@@ -449,8 +491,9 @@ them: if the arrows seem to do nothing, press Left and Right arrow together to
 turn Quick Nav off.
 
 With VoiceOver off, the game speaks with the system voice — the one set in
-**System Settings → Accessibility → Spoken Content** — and Settings → Speech
-lists its voice, rate, pitch and volume, as it lists SAPI 5's on Windows.
+**System Settings → Accessibility → Spoken Content** — and each speech's page
+in the Speech tab lists its voice, rate, pitch and volume, as it lists SAPI
+5's on Windows. The second speech has a system voice of its own.
 
 In the menus Command works as Control does with the arrows: Command with the
 menu's arrows goes to the first or last element, and with the other pair to
@@ -528,11 +571,13 @@ a minute or two, and later starts are quick.
 
 The game speaks with the text-to-speech engine set in the phone's settings. To
 use another engine installed on the phone, choose it in the Android speech
-engine row of the Speech tab in Settings. Each engine speaks with the voice set
-in its own settings on the phone, so a voice is chosen there, not in the game;
-the rate, pitch and volume rows below the engine row work with whichever engine
-speaks. A rate of 0 is the speed set in the phone's text-to-speech settings,
-and 10 is six times that, as far as the engine allows.
+engine row of First speech settings, in the Speech tab in Settings. Each
+engine speaks with the voice set in its own settings on the phone, so a voice
+is chosen there, not in the game; the rate, pitch and volume rows below the
+engine row work with whichever engine speaks. A rate of 0 is the speed set in the phone's text-to-speech settings,
+and 10 is six times that, as far as the engine allows. The second speech has
+an engine, rate, pitch and volume of its own, in Second speech settings; the
+phone starts it only once it has something to say.
 
 ### Controls on the phone
 
@@ -1134,7 +1179,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **175 divergences** and **15 original quirks kept on purpose** in the notes, of which 78 are
+There are **176 divergences** and **15 original quirks kept on purpose** in the notes, of which 78 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -1311,7 +1356,8 @@ replacing them.
 - **Settings → Speech**: Speech output — Automatic, or one screen reader or voice only — SAPI 5's
   voice, rate, rate boost, pitch and volume, whether hints are read and how long after their item, and a
   calibration that measures how fast the speech reads, which the game asks for when it starts until it has
-  been done. See [Accessibility](#accessibility).
+  been done. A second speech, with its own output, voice and calibration, can read what is said during a
+  game. See [Accessibility](#accessibility) and [A second speech](#a-second-speech).
 - **Settings → Miscellaneous → Remember cursor position** (off by default) returns the cursor to the row
   you left a screen on.
 - **A menu music volume**: Page Up and Page Down, on any menu, in steps of 10% from 100% — the original's

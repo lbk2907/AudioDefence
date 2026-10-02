@@ -55,6 +55,8 @@ LEFT_ALONE = {
 TEXT_CALLS = {'View', 'Button', 'MenuItem', 'MenuScreen', 'AlertScreen', 'Cell', 'Header', 'Row', 'Item',
               'cell', 'view', 'button', 'label', 'item', 'speak', 'announce', 'set_title', 'setText',
               'say', 'localized', 'AlertScreen',
+              #: the second speech's lines, and in-game text (platform/speech.py)
+              'speak_second', 'speak_in_game',
               #: the Speech tab's lines said by the voice being set (ui/settings.py), translated there
               '_sapi_say',
               #: a phrase the code hands to the layer by name is text for the player by definition.  It is

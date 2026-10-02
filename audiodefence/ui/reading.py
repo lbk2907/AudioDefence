@@ -53,12 +53,23 @@ def word_count(text) -> int:
     return len(str(text or '').split())
 
 
-def seconds_per_word() -> float:
-    """The time the speech is taken to need for one word, whatever speaks the game: as measured for the
-    speech, or at the default pace."""
+def seconds_per_word(speech=None) -> float:
+    """The time a speech is taken to need for one word, whatever speaks it: as measured for that speech, or at
+    the default pace.  `speech` is GameParameters.FIRST_SPEECH (None) or SECOND_SPEECH (user request,
+    2026-10-03): a line is timed by the measurement of the speech that reads it."""
     from ..game.parameters import GameParameters
-    measured = GameParameters.shared().speech_word_time()
+    params = GameParameters.shared()
+    measured = params.speech_word_time(speech or params.FIRST_SPEECH)
     return measured if measured is not None else 60.0 / DEFAULT_WORDS_PER_MINUTE
+
+
+def in_game_speech() -> str:
+    """PORT ADDITION (user request, 2026-10-03): the speech that reads text during a game
+    (`Speech.speak_in_game`): the second while Settings -> Speech -> Use second speech is on, else the first -
+    so that a line read that way is timed by that speech's measurement."""
+    from ..game.parameters import GameParameters
+    from ..platform.speech import Speech
+    return GameParameters.SECOND_SPEECH if Speech.shared().second_on else GameParameters.FIRST_SPEECH
 
 
 def measured_pace(seconds: float, words: int):
@@ -72,9 +83,9 @@ def measured_pace(seconds: float, words: int):
     return per_word
 
 
-def reading_seconds(text) -> float:
-    """How long the speech is taken to need to read this."""
-    return word_count(text) * seconds_per_word()
+def reading_seconds(text, speech=None) -> float:
+    """How long the speech is taken to need to read this: the first speech, or the one named."""
+    return word_count(text) * seconds_per_word(speech)
 
 
 def hint_for(element) -> str:

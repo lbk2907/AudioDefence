@@ -171,6 +171,14 @@ class FakeBridge:
         self.engine_starting = ''
         self.engine_in_use = ''
         self.engines_asked = []
+        self.spoken_second = []                           # the second speech, as `spoken` is the first's
+        self.second_config = None
+        self.second_ready = False
+        self.second_begun = False
+        self.second_engine_asked = ''
+        self.second_starting = ''
+        self.second_engine_in_use = ''
+        self.second_engines_asked = []
         self.events = []
         self.quit_at = None
         self.started = time.perf_counter()
@@ -250,6 +258,50 @@ class FakeBridge:
 
     def speechEngine(self):
         return self.engine_in_use
+
+    # The second speech (Settings > Speech > Use second speech): a TextToSpeech of its own, made by its first
+    # line, as the Bridge makes it.  `second_begun` says whether it has been.
+    def speakSecond(self, text, interrupt):
+        if not self.second_begun:
+            self.second_begun = True
+            self.second_starting = self.second_engine_asked
+            if self.starts_at_once:
+                self.finish_second_start()
+        self.spoken_second.append(text)
+        return True
+
+    def stopSecondSpeech(self):
+        pass
+
+    def configureSecondSpeech(self, rate, pitch, volume):
+        self.second_config = (rate, pitch, volume)
+
+    def secondSpeechReady(self):
+        return self.second_ready
+
+    def setSecondSpeechEngine(self, engine):
+        self.second_engines_asked.append(engine)
+        if engine == self.second_engine_asked:
+            return
+        self.second_engine_asked = engine
+        if not self.second_begun:
+            return
+        self.second_ready = False
+        self.second_starting = engine
+        if self.starts_at_once:
+            self.finish_second_start()
+
+    def finish_second_start(self):
+        engine = self.second_starting
+        if engine and (engine not in self.ENGINES or engine in self.broken):
+            if self.second_engine_asked == engine:
+                self.second_engine_asked = ''
+            engine = ''
+        self.second_engine_in_use = engine
+        self.second_ready = True
+
+    def secondSpeechEngine(self):
+        return self.second_engine_in_use
 
     # --- input / lifecycle ----------------------------------------------------------------------------
     def pollEvents(self):

@@ -33,7 +33,11 @@ SETTINGS_KEYS = frozenset({'buttonMode', 'controlScheme', 'sensivity', 'menuAxis
                           'keyNamesController', 'speechOutput', 'fineHaptics', 'sapiVoice', 'sapiRate',
                           'sapiRateBoost',
                           'sapiPitch', 'sapiVolume', 'sapiModernAudio', 'sapiEngine', 'announcer', 'masterGain',
-                          'language', 'shakeSensitivity', 'speakHints', 'hintPause', 'speechWordTime'})
+                          'language', 'shakeSensitivity', 'speakHints', 'hintPause', 'speechWordTime',
+                          # PORT ADDITION (user request, 2026-10-03): the second speech
+                          'secondSpeech', 'secondSpeechOutput', 'secondSapiVoice', 'secondSapiRate',
+                          'secondSapiRateBoost', 'secondSapiPitch', 'secondSapiVolume', 'secondSapiEngine',
+                          'secondSpeechFollows'})
 INPUT_KEYS = frozenset({'keymap', 'padmap', 'padmaps'})
 #: PORT ADDITION: settings that were saved with the progress before they were named in SETTINGS_KEYS, and
 #: whose value is moved to settings.json the first time the profile is opened, so the player keeps it (user

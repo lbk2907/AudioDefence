@@ -68,22 +68,12 @@ public final class Bridge implements SensorEventListener {
     private volatile boolean quit;
     private volatile Runnable onEnded;
 
-    // speech.  spokenBeforeReady is also the lock for tts, ttsReady and the engine fields below.
-    private TextToSpeech tts;
-    private volatile boolean ttsReady;
-    private final List<Object[]> spokenBeforeReady = new ArrayList<>();
-    private volatile int rateSetting = 0;
-    private volatile int pitchSetting = 0;
-    private volatile int volumeSetting = 100;
-    private int utterance;
-    // PORT ADDITION (Settings > Speech > Android speech engine, user request): the engine Python asked for, by
-    // package ("" is the one set in the phone's settings), and the one started for it - "" too when the one
-    // asked for is not installed or would not start.  Each start of the speech is numbered, so that a late
-    // answer from an engine already replaced is ignored.  The starts are made on the main thread.
-    private String engineAsked = "";
-    private volatile String engineInUse = "";
-    private int speechStart;
-    private int readyStart;
+    // speech: the first speech, which says everything unless the second is used, and the second (PORT ADDITION,
+    // Settings > Speech > Use second speech, user request, 2026-10-03), which then reads the story, the tutorial
+    // and what is said during a game.  Each is a TextToSpeech of its own, with its own engine, rate, pitch and
+    // volume.  The second is only its settings until it is first asked to speak: its TextToSpeech is made then.
+    private final Voice first = new Voice("ad");
+    private final Voice second = new Voice("ad2-");
     private final Handler main = new Handler(Looper.getMainLooper());
     /** How long a chosen engine has to start before the phone's default takes its place. */
     private static final long ENGINE_START_LIMIT_MS = 10000;
@@ -143,7 +133,7 @@ public final class Bridge implements SensorEventListener {
         this.al = mixer;
         this.audio = new AudioOut(mixer);
         audio.start(ctx);
-        startSpeech("");
+        first.start("");
         startSensors();
     }
 
@@ -199,24 +189,16 @@ public final class Bridge implements SensorEventListener {
         events.add(new float[]{11, 0, 0, 0, 0});
         audio.setPaused(false);
         startSensors();
-        applySpeechSettings();                          // the phone's own speed may have changed meanwhile
+        first.applySettings();                          // the phone's own speed may have changed meanwhile
+        second.applySettings();
     }
 
     public void shutdown() {
         quit = true;
         audio.stop();
         main.removeCallbacksAndMessages(null);          // no engine start or time limit left to run
-        TextToSpeech t;
-        synchronized (spokenBeforeReady) {
-            t = tts;
-            tts = null;
-            ttsReady = false;
-            speechStart++;
-        }
-        if (t != null) {
-            t.stop();
-            t.shutdown();
-        }
+        first.shutdown();
+        second.shutdown();
         if (sensors != null) {
             sensors.unregisterListener(this);
         }
@@ -294,111 +276,261 @@ public final class Bridge implements SensorEventListener {
 
     // ------------------------------------------------------------------------------------ speech
     /**
-     * Start the text-to-speech engine with this package, or the phone's default for "" - on the main thread.
-     * Until it has started, what the game says waits in spokenBeforeReady, as it always did at start-up.
+     * One text-to-speech voice: a TextToSpeech with its own engine, rate, pitch and volume.  The game has two,
+     * `first` and `second` (see their declaration); the second is made only once it is first asked to speak.
+     * spokenBeforeReady is also the lock for tts, ready and the engine fields.
      */
-    private void startSpeech(String engine) {
-        if (!engine.isEmpty() && !engineInstalled(engine)) {
-            Log.w(TAG, "speech engine " + engine + " is not installed; the phone's default speaks instead");
-            forgetEngine(engine);
-            engine = "";
-        }
-        TextToSpeech old;
-        final int start;
-        synchronized (spokenBeforeReady) {
-            ttsReady = false;
-            old = tts;
-            tts = null;
-            start = ++speechStart;
-        }
-        if (old != null) {
-            try {
-                old.stop();
-                old.shutdown();
-            } catch (RuntimeException e) {
-                Log.w(TAG, "the last speech engine would not shut down", e);
-            }
-        }
-        engineInUse = engine;
-        final String using = engine;
-        // Its answer is handled on the next pass of the main thread, after the constructor has returned: a
-        // TextToSpeech that cannot bind to anything answers from inside its constructor.
-        TextToSpeech.OnInitListener listener = status -> main.post(() -> speechStarted(start, using, status));
-        TextToSpeech made = null;
-        try {
-            // With a package, Android itself falls back to the default engine when that one cannot be bound.
-            made = engine.isEmpty() ? new TextToSpeech(context, listener)
-                    : new TextToSpeech(context, listener, engine);
-        } catch (RuntimeException e) {
-            Log.e(TAG, "text-to-speech could not be made for " + (engine.isEmpty() ? "the default" : engine), e);
-        }
-        synchronized (spokenBeforeReady) {
-            if (start == speechStart) {
-                tts = made;
-            } else if (made != null) {
-                made.shutdown();                        // replaced while it was being made
-            }
-        }
-        if (!using.isEmpty()) {
-            main.postDelayed(() -> {
-                boolean waiting;
-                synchronized (spokenBeforeReady) {
-                    waiting = start == speechStart && readyStart != start;
-                }
-                if (waiting) {
-                    Log.w(TAG, "speech engine " + using + " did not start in time");
-                    engineFailed(using);
-                }
-            }, ENGINE_START_LIMIT_MS);
-        } else if (made == null) {
-            Log.e(TAG, "text-to-speech could not start");
-        }
-    }
+    private final class Voice {
+        private final String prefix;                    // of its utterance ids, and of its lines in the log
+        private TextToSpeech tts;
+        private volatile boolean ready;
+        private boolean begun;                          // whether a TextToSpeech has been asked for yet
+        private final List<Object[]> spokenBeforeReady = new ArrayList<>();
+        private volatile int rateSetting = 0;
+        private volatile int pitchSetting = 0;
+        private volatile int volumeSetting = 100;
+        private int utterance;
+        // PORT ADDITION (Settings > Speech > Android speech engine, user request): the engine Python asked for,
+        // by package ("" is the one set in the phone's settings), and the one started for it - "" too when the
+        // one asked for is not installed or would not start.  Each start of the speech is numbered, so that a
+        // late answer from an engine already replaced is ignored.  The starts are made on the main thread.
+        private String engineAsked = "";
+        private volatile String engineInUse = "";
+        private int speechStart;
+        private int readyStart;
 
-    /** The answer of the engine of one start, on the main thread. */
-    private void speechStarted(int start, String engine, int status) {
-        TextToSpeech t;
-        synchronized (spokenBeforeReady) {
-            if (start != speechStart) {
-                return;                                 // a later start has replaced this engine
-            }
-            t = tts;
+        Voice(String prefix) {
+            this.prefix = prefix;
         }
-        if (status != TextToSpeech.SUCCESS || t == null) {
-            Log.e(TAG, "text-to-speech could not start: " + status + (engine.isEmpty() ? "" : " (" + engine + ")"));
-            if (!engine.isEmpty()) {
-                engineFailed(engine);
+
+        /**
+         * Start the text-to-speech engine with this package, or the phone's default for "" - on the main
+         * thread.  Until it has started, what the game says waits in spokenBeforeReady, as it always did at
+         * start-up.
+         */
+        void start(String engine) {
+            if (!engine.isEmpty() && !engineInstalled(engine)) {
+                Log.w(TAG, "speech engine " + engine + " is not installed; the phone's default speaks instead");
+                forgetEngine(engine);
+                engine = "";
             }
-            return;
+            TextToSpeech old;
+            final int start;
+            synchronized (spokenBeforeReady) {
+                begun = true;
+                ready = false;
+                old = tts;
+                tts = null;
+                start = ++speechStart;
+            }
+            if (old != null) {
+                try {
+                    old.stop();
+                    old.shutdown();
+                } catch (RuntimeException e) {
+                    Log.w(TAG, "the last speech engine would not shut down", e);
+                }
+            }
+            engineInUse = engine;
+            final String using = engine;
+            // Its answer is handled on the next pass of the main thread, after the constructor has returned: a
+            // TextToSpeech that cannot bind to anything answers from inside its constructor.
+            TextToSpeech.OnInitListener listener = status -> main.post(() -> started(start, using, status));
+            TextToSpeech made = null;
+            try {
+                // With a package, Android itself falls back to the default engine when that one cannot be bound.
+                made = engine.isEmpty() ? new TextToSpeech(context, listener)
+                        : new TextToSpeech(context, listener, engine);
+            } catch (RuntimeException e) {
+                Log.e(TAG, "text-to-speech could not be made for " + (engine.isEmpty() ? "the default" : engine), e);
+            }
+            synchronized (spokenBeforeReady) {
+                if (start == speechStart) {
+                    tts = made;
+                } else if (made != null) {
+                    made.shutdown();                    // replaced while it was being made
+                }
+            }
+            if (!using.isEmpty()) {
+                main.postDelayed(() -> {
+                    boolean waiting;
+                    synchronized (spokenBeforeReady) {
+                        waiting = start == speechStart && readyStart != start;
+                    }
+                    if (waiting) {
+                        Log.w(TAG, "speech engine " + using + " did not start in time");
+                        engineFailed(using);
+                    }
+                }, ENGINE_START_LIMIT_MS);
+            } else if (made == null) {
+                Log.e(TAG, "text-to-speech could not start");
+            }
         }
-        speakTheLanguage(t);                            // and with it the engine's own voice for that language
-        List<Object[]> waiting;
-        synchronized (spokenBeforeReady) {
-            if (start != speechStart) {
+
+        /** The answer of the engine of one start, on the main thread. */
+        private void started(int start, String engine, int status) {
+            TextToSpeech t;
+            synchronized (spokenBeforeReady) {
+                if (start != speechStart) {
+                    return;                             // a later start has replaced this engine
+                }
+                t = tts;
+            }
+            if (status != TextToSpeech.SUCCESS || t == null) {
+                Log.e(TAG, "text-to-speech could not start: " + status + (engine.isEmpty() ? "" : " (" + engine + ")"));
+                if (!engine.isEmpty()) {
+                    engineFailed(engine);
+                }
                 return;
             }
-            readyStart = start;
-            ttsReady = true;
-            waiting = new ArrayList<>(spokenBeforeReady);
-            spokenBeforeReady.clear();
+            speakTheLanguage(t);                        // and with it the engine's own voice for that language
+            List<Object[]> waiting;
+            synchronized (spokenBeforeReady) {
+                if (start != speechStart) {
+                    return;
+                }
+                readyStart = start;
+                ready = true;
+                waiting = new ArrayList<>(spokenBeforeReady);
+                spokenBeforeReady.clear();
+            }
+            applySettings();
+            for (Object[] w : waiting) {
+                speak((String) w[0], (Boolean) w[1]);
+            }
         }
-        applySpeechSettings();
-        for (Object[] w : waiting) {
-            speak((String) w[0], (Boolean) w[1]);
+
+        /** A chosen engine that would not start: the phone's default takes its place, so the game keeps speaking. */
+        private void engineFailed(String engine) {
+            forgetEngine(engine);
+            start("");
         }
-    }
 
-    /** A chosen engine that would not start: the phone's default takes its place, so the game keeps speaking. */
-    private void engineFailed(String engine) {
-        forgetEngine(engine);
-        startSpeech("");
-    }
+        /** The engine asked for could not be had: what is asked for is now what speaks, the phone's default. */
+        private void forgetEngine(String engine) {
+            synchronized (spokenBeforeReady) {
+                if (engine.equals(engineAsked)) {
+                    engineAsked = "";
+                }
+            }
+        }
 
-    /** The engine asked for could not be had: what is asked for is now what speaks, the phone's default. */
-    private void forgetEngine(String engine) {
-        synchronized (spokenBeforeReady) {
-            if (engine.equals(engineAsked)) {
-                engineAsked = "";
+        /** The rate and pitch, on the engine speaking; the volume goes with each line (speak). */
+        void applySettings() {
+            TextToSpeech t;
+            synchronized (spokenBeforeReady) {
+                if (!ready || tts == null) {
+                    return;
+                }
+                t = tts;
+            }
+            try {
+                t.setSpeechRate(phoneSpeechRate() * (float) Math.pow(RATE_STEP, rateSetting));
+                t.setPitch((float) Math.pow(1.05, pitchSetting));
+            } catch (RuntimeException e) {
+                Log.w(TAG, "could not apply the speech settings", e);
+            }
+        }
+
+        boolean speak(String text, boolean interrupt) {
+            if (text == null || text.isEmpty()) {
+                return false;
+            }
+            TextToSpeech t;
+            final String engine;
+            boolean beginNow = false;
+            synchronized (spokenBeforeReady) {
+                if (!ready || tts == null) {
+                    spokenBeforeReady.add(new Object[]{text, interrupt});
+                    if (!begun) {                       // the second speech's first line: it is made now
+                        begun = true;
+                        beginNow = true;
+                    }
+                    engine = engineAsked;
+                    t = null;
+                } else {
+                    t = tts;
+                    engine = null;
+                }
+            }
+            if (t == null) {
+                if (beginNow) {
+                    main.post(() -> start(engine));
+                }
+                return true;
+            }
+            Bundle params = new Bundle();
+            params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, Math.max(0f, Math.min(1f, volumeSetting / 100f)));
+            int mode = interrupt ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD;
+            return t.speak(text, mode, params, prefix + (utterance++)) == TextToSpeech.SUCCESS;
+        }
+
+        void stop() {
+            TextToSpeech t;
+            synchronized (spokenBeforeReady) {
+                spokenBeforeReady.clear();
+                t = ready ? tts : null;
+            }
+            if (t != null) {
+                t.stop();
+            }
+        }
+
+        void configure(int rate, int pitch, int volume) {
+            rateSetting = rate;
+            pitchSetting = pitch;
+            volumeSetting = volume;
+            if (ready) {
+                applySettings();
+            }
+        }
+
+        boolean isReady() {
+            return ready;
+        }
+
+        /**
+         * Speak with the engine of this package from now on, or with the one set in the phone's settings for "".
+         * The engine in use is shut down and the new one started; until it has, what is said waits for it.  A
+         * voice not made yet only remembers it, for when it is.
+         */
+        void setEngine(String engine) {
+            final String want = engine == null ? "" : engine;
+            synchronized (spokenBeforeReady) {
+                if (want.equals(engineAsked)) {
+                    return;
+                }
+                engineAsked = want;
+                if (!begun) {
+                    return;
+                }
+                ready = false;                          // from now on what is said waits for the new engine
+            }
+            main.post(() -> start(want));
+        }
+
+        String engine() {
+            return engineInUse;
+        }
+
+        /** The TextToSpeech speaking now, or null between two engines or before one is made. */
+        TextToSpeech current() {
+            synchronized (spokenBeforeReady) {
+                return tts;
+            }
+        }
+
+        void shutdown() {
+            TextToSpeech t;
+            synchronized (spokenBeforeReady) {
+                t = tts;
+                tts = null;
+                ready = false;
+                speechStart++;
+            }
+            if (t != null) {
+                t.stop();
+                t.shutdown();
             }
         }
     }
@@ -433,64 +565,62 @@ public final class Bridge implements SensorEventListener {
         }
     }
 
-    /** The rate and pitch, on the engine speaking; the volume goes with each line (speak). */
-    private void applySpeechSettings() {
-        TextToSpeech t;
-        synchronized (spokenBeforeReady) {
-            if (!ttsReady || tts == null) {
-                return;
-            }
-            t = tts;
-        }
-        try {
-            t.setSpeechRate(phoneSpeechRate() * (float) Math.pow(RATE_STEP, rateSetting));
-            t.setPitch((float) Math.pow(1.05, pitchSetting));
-        } catch (RuntimeException e) {
-            Log.w(TAG, "could not apply the speech settings", e);
-        }
-    }
-
+    // --- the first speech: what Python and MainActivity have always called
     public boolean speak(String text, boolean interrupt) {
-        if (text == null || text.isEmpty()) {
-            return false;
-        }
-        TextToSpeech t;
-        synchronized (spokenBeforeReady) {
-            if (!ttsReady || tts == null) {
-                spokenBeforeReady.add(new Object[]{text, interrupt});
-                return true;
-            }
-            t = tts;
-        }
-        Bundle params = new Bundle();
-        params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, Math.max(0f, Math.min(1f, volumeSetting / 100f)));
-        int mode = interrupt ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD;
-        return t.speak(text, mode, params, "ad" + (utterance++)) == TextToSpeech.SUCCESS;
+        return first.speak(text, interrupt);
     }
 
     public void stopSpeech() {
-        TextToSpeech t;
-        synchronized (spokenBeforeReady) {
-            spokenBeforeReady.clear();
-            t = ttsReady ? tts : null;
-        }
-        if (t != null) {
-            t.stop();
-        }
+        first.stop();
     }
 
     /** Python: the Speech tab's rate and pitch (-10 to 10) and volume (0 to 100), for whichever engine speaks. */
     public void configureSpeech(int rate, int pitch, int volume) {
-        rateSetting = rate;
-        pitchSetting = pitch;
-        volumeSetting = volume;
-        if (ttsReady) {
-            applySpeechSettings();
-        }
+        first.configure(rate, pitch, volume);
     }
 
     public boolean speechReady() {
-        return ttsReady;
+        return first.isReady();
+    }
+
+    /**
+     * Python: speak with the engine of this package from now on, or with the one set in the phone's settings
+     * for "".  The engine in use is shut down and the new one started; until it has, what is said waits for
+     * it.  One that is not installed, does not start or takes too long gives way to the phone's default.
+     */
+    public void setSpeechEngine(String engine) {
+        first.setEngine(engine);
+    }
+
+    /** Python: the package of the engine started for what was asked, or "" for the phone's default. */
+    public String speechEngine() {
+        return first.engine();
+    }
+
+    // --- the second speech (PORT ADDITION, user request, 2026-10-03): the same, for its own TextToSpeech
+    public boolean speakSecond(String text, boolean interrupt) {
+        return second.speak(text, interrupt);
+    }
+
+    public void stopSecondSpeech() {
+        second.stop();
+    }
+
+    public void configureSecondSpeech(int rate, int pitch, int volume) {
+        second.configure(rate, pitch, volume);
+    }
+
+    /** False until the second speech has been made, which its first line does. */
+    public boolean secondSpeechReady() {
+        return second.isReady();
+    }
+
+    public void setSecondSpeechEngine(String engine) {
+        second.setEngine(engine);
+    }
+
+    public String secondSpeechEngine() {
+        return second.engine();
     }
 
     /**
@@ -512,34 +642,12 @@ public final class Bridge implements SensorEventListener {
         return sb.toString();
     }
 
-    /**
-     * Python: speak with the engine of this package from now on, or with the one set in the phone's settings
-     * for "".  The engine in use is shut down and the new one started; until it has, what is said waits for
-     * it.  One that is not installed, does not start or takes too long gives way to the phone's default.
-     */
-    public void setSpeechEngine(String engine) {
-        final String want = engine == null ? "" : engine;
-        synchronized (spokenBeforeReady) {
-            if (want.equals(engineAsked)) {
-                return;
-            }
-            engineAsked = want;
-            ttsReady = false;                           // from now on what is said waits for the new engine
-        }
-        main.post(() -> startSpeech(want));
-    }
-
-    /** Python: the package of the engine started for what was asked, or "" for the phone's default. */
-    public String speechEngine() {
-        return engineInUse;
-    }
-
     /** {package, name} of each text-to-speech engine on the phone. */
     private List<String[]> installedEngines() {
         List<String[]> out = new ArrayList<>();
-        TextToSpeech t;
-        synchronized (spokenBeforeReady) {
-            t = tts;
+        TextToSpeech t = first.current();
+        if (t == null) {
+            t = second.current();
         }
         if (t != null) {
             for (TextToSpeech.EngineInfo e : t.getEngines()) {

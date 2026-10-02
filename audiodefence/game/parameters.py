@@ -249,13 +249,14 @@ class GameParameters:
     #:
     #: A measurement belongs to a speech, not to a voice: changing Speech output, or the voice, keeps it, so a
     #: voice of much the same speed needs no new one, and the player calibrates again when they choose (user
-    #: request).  There is one speech now, FIRST_SPEECH, the one the game speaks with.  They are kept as one
-    #: map, `speechWordTime` in settings.json - {"first": seconds a word} - so that a second speech can be
-    #: added beside it with a measurement of its own (and a key of its own for a switch that has it follow
-    #: the first's).  The key held the first speech's number alone before it was a map, and a number found
-    #: there is read as the first speech's: the measurement is carried over, and the next one saved writes the
-    #: map.
+    #: request).  They are kept as one map, `speechWordTime` in settings.json - {"first": seconds a word,
+    #: "second": seconds a word} - one for each speech: FIRST_SPEECH, the one the game speaks with, and
+    #: SECOND_SPEECH, which reads in-game text while Use second speech is on (user request, 2026-10-03; see
+    #: `second_follows` for how the second's can follow the first's).  The key held the first speech's number
+    #: alone before it was a map, and a number found there is read as the first speech's: the measurement is
+    #: carried over, and the next one saved writes the map.
     FIRST_SPEECH = 'first'
+    SECOND_SPEECH = 'second'
 
     def speech_word_times(self) -> dict:
         """Every speech's measured seconds a word, by speech; a speech not yet measured is not in it."""
@@ -266,7 +267,10 @@ class GameParameters:
                 if not isinstance(seconds, bool) and isinstance(seconds, (int, float)) and seconds > 0}
 
     def speech_word_time(self, speech: str = FIRST_SPEECH):
-        """The measured seconds a word for this speech, or None until it has been measured."""
+        """The measured seconds a word for this speech, or None until it has been measured.  The second speech's
+        is the first's while it follows the first's calibration (`second_follows`)."""
+        if speech == self.SECOND_SPEECH and self.second_follows():
+            speech = self.FIRST_SPEECH
         return self.speech_word_times().get(speech)
 
     def set_speech_word_time(self, value, speech: str = FIRST_SPEECH) -> None:
@@ -283,6 +287,47 @@ class GameParameters:
         """Every speech's measurement forgotten (Reset all settings)."""
         self.defaults.set_object(None, 'speechWordTime')
         self.defaults.synchronize()
+
+    def save_calibration(self, seconds: float, speech: str = FIRST_SPEECH) -> None:
+        """PORT ADDITION (user request, 2026-10-03): a Speech calibration's result, for the speech calibrated.
+
+        The very first calibration - nothing measured yet for either speech, as at start-up or after Reset all
+        settings - turns Follow the first speech's calibration on, so the second speech starts out with the
+        first's measurement.  While it follows, a calibration of the first is the second's too.  Calibrating the
+        second gives it a measurement of its own, so it no longer follows."""
+        if speech == self.SECOND_SPEECH:
+            self.set_second_follows(False)
+            self.set_speech_word_time(seconds, self.SECOND_SPEECH)
+            return
+        first_ever = not self.speech_word_times()
+        self.set_speech_word_time(seconds, self.FIRST_SPEECH)
+        if first_ever:
+            self.set_second_follows(True)                 # which copies the measurement just made
+        elif self.second_follows():
+            self.set_speech_word_time(seconds, self.SECOND_SPEECH)
+
+    #: PORT ADDITION (user request, 2026-10-03): Settings -> Speech -> Second speech settings -> Follow the first
+    #: speech's calibration.  While it is on, the second speech is timed by the first's measurement, and its own
+    #: is a copy of the first's, kept up to date: turned on, the first's replaces whatever the second had;
+    #: turned off, the second keeps that copy until it is calibrated itself.  On by default, so the second
+    #: starts with the measurement a player already has, and the first calibration of all turns it on anyway
+    #: (`save_calibration`).
+    DEFAULT_SECOND_FOLLOWS = True
+
+    def second_follows(self) -> bool:
+        value = self.defaults.object('secondSpeechFollows')
+        return self.DEFAULT_SECOND_FOLLOWS if value is None else self.defaults.bool('secondSpeechFollows')
+
+    def set_second_follows(self, value: bool) -> None:
+        # the first's measurement is copied to the second whenever it is turned on, replacing the second's own, and
+        # when it is turned off, so the second keeps the one it was following (a profile from before the second
+        # speech, which follows by default, has no copy yet)
+        was = self.second_follows()
+        self.defaults.set_bool(bool(value), 'secondSpeechFollows')
+        if value or was:
+            self.set_speech_word_time(self.speech_word_times().get(self.FIRST_SPEECH), self.SECOND_SPEECH)
+        else:
+            self.defaults.synchronize()
 
     #: PORT ADDITION: whether the main menu looks for a new build when it opens.  The App Store did this
     #: for the phone game; on Windows the game has to ask.  On by default, because a player who never
@@ -456,34 +501,81 @@ class GameParameters:
         self.defaults.synchronize()
         Speech.shared().choice = self.speech_output()
 
+    #: PORT ADDITION (user request, 2026-10-03): Settings -> Speech -> Use second speech: whether the second
+    #: speech reads the story, the tutorial and what is said during a game (platform/speech.py
+    #: `Speech.speak_in_game`).  Off by default, when the first speech reads everything, as it always did.  The
+    #: second speech's own settings are kept, and can be changed, whether it is used or not.
+    DEFAULT_SECOND_SPEECH = False
+
+    def second_speech(self) -> bool:
+        value = self.defaults.object('secondSpeech')
+        return self.DEFAULT_SECOND_SPEECH if value is None else self.defaults.bool('secondSpeech')
+
+    def set_second_speech(self, value: bool) -> None:
+        from ..platform.speech import Speech
+        self.defaults.set_bool(bool(value), 'secondSpeech')
+        self.defaults.synchronize()
+        Speech.shared().second_on = self.second_speech()
+
+    def second_speech_output(self) -> str:
+        """The second speech's Speech output, from the same choices as the first's; Automatic by default."""
+        from ..platform.speech import OUTPUTS
+        value = self.defaults.object('secondSpeechOutput')
+        return value if value in dict(OUTPUTS) else self.DEFAULT_SPEECH_OUTPUT
+
+    def set_second_speech_output(self, value: str) -> None:
+        from ..platform.speech import Speech
+        self.defaults.set_object(value, 'secondSpeechOutput')
+        self.defaults.synchronize()
+        Speech.shared().second_choice = self.second_speech_output()
+
     #: PORT ADDITION: Settings -> Miscellaneous -> SAPI 5 voice, rate, rate boost, pitch and volume
     #: (platform/speech.py _Sapi).  Nothing stored is Control Panel's voice, rate and volume.
     SAPI_KEYS = {'voice': 'sapiVoice', 'rate': 'sapiRate', 'boost': 'sapiRateBoost', 'pitch': 'sapiPitch',
                  'volume': 'sapiVolume'}
+    #: PORT ADDITION (user request, 2026-10-03): the second speech's, in Settings -> Speech -> Second speech
+    #: settings, kept the same way
+    SECOND_SAPI_KEYS = {'voice': 'secondSapiVoice', 'rate': 'secondSapiRate', 'boost': 'secondSapiRateBoost',
+                        'pitch': 'secondSapiPitch', 'volume': 'secondSapiVolume'}
 
     def sapi_config(self) -> dict:
+        return self._voice_config(self.SAPI_KEYS)
+
+    def second_sapi_config(self) -> dict:
+        return self._voice_config(self.SECOND_SAPI_KEYS)
+
+    def _voice_config(self, keys: dict) -> dict:
         from ..platform import host
         # PORT ADDITION (Android, user request): the phone has no voice row - each engine speaks with the voice
         # set in its own settings - so a voice saved there is never handed on (see forget_saved_voice)
-        voice = None if host.ANDROID else self.defaults.object('sapiVoice')
-        rate = self.defaults.object('sapiRate')
-        pitch = self.defaults.object('sapiPitch')
-        volume = self.defaults.object('sapiVolume')
+        voice = None if host.ANDROID else self.defaults.object(keys['voice'])
+        rate = self.defaults.object(keys['rate'])
+        pitch = self.defaults.object(keys['pitch'])
+        volume = self.defaults.object(keys['volume'])
         return {'voice': voice if isinstance(voice, str) and voice else None,
                 'rate': max(-10, min(10, int(rate))) if isinstance(rate, (int, float)) else None,
-                'boost': self.defaults.object('sapiRateBoost') is True,
+                'boost': self.defaults.object(keys['boost']) is True,
                 'pitch': max(-10, min(10, int(pitch))) if isinstance(pitch, (int, float)) else 0,
                 'volume': max(0, min(100, int(volume))) if isinstance(volume, (int, float)) else None}
 
     def set_sapi(self, **changes) -> None:
         """Change some of them - None (or False, 0 for pitch) puts one back - and tell the voice."""
         from ..platform.speech import Speech
+        self._set_voice(self.SAPI_KEYS, changes)
+        Speech.shared().configure_sapi(**self.sapi_config())
+
+    def set_second_sapi(self, **changes) -> None:
+        """The second speech's, as `set_sapi`."""
+        from ..platform.speech import Speech
+        self._set_voice(self.SECOND_SAPI_KEYS, changes)
+        Speech.shared().configure_second_sapi(**self.second_sapi_config())
+
+    def _set_voice(self, keys: dict, changes: dict) -> None:
         for key, value in changes.items():
             # compared by identity: 0 == False, and a rate or volume of 0 is a setting, not Control Panel's
             unset = value is None or value is False or (key == 'pitch' and value == 0)
-            self.defaults.set_object(None if unset else value, self.SAPI_KEYS[key])
+            self.defaults.set_object(None if unset else value, keys[key])
         self.defaults.synchronize()
-        Speech.shared().configure_sapi(**self.sapi_config())
 
     def forget_saved_voice(self) -> None:
         """PORT ADDITION (Android, user request, 2026-10-02): the Speech tab chooses the engine and not the
@@ -519,6 +611,31 @@ class GameParameters:
             return False
         if self.speech_engine() is not None and sapi.engine_in_use() != self.speech_engine():
             self.set_speech_engine(None)
+            return True
+        return False
+
+    #: PORT ADDITION (Android, user request, 2026-10-03): the second speech's engine, in Settings -> Speech ->
+    #: Second speech settings.  Nothing stored is the one set in the phone's settings.
+    SECOND_SPEECH_ENGINE_KEY = 'secondSapiEngine'
+
+    def second_speech_engine(self):
+        value = self.defaults.object(self.SECOND_SPEECH_ENGINE_KEY)
+        return value if isinstance(value, str) and value else None
+
+    def set_second_speech_engine(self, package) -> None:
+        from ..platform.speech import Speech
+        self.defaults.set_object(package or None, self.SECOND_SPEECH_ENGINE_KEY)
+        self.defaults.synchronize()
+        Speech.shared().set_second_engine(self.second_speech_engine())
+
+    def settle_second_speech_engine(self) -> bool:
+        """As `settle_speech_engine`, for the second speech, once it has been made (its first line makes it)."""
+        from ..platform.speech import Speech
+        sapi = Speech.shared().made_second()
+        if sapi is None or not sapi.settle():
+            return False
+        if self.second_speech_engine() is not None and sapi.engine_in_use() != self.second_speech_engine():
+            self.set_second_speech_engine(None)
             return True
         return False
 

@@ -61,9 +61,13 @@ class GameplayScreen(Screen):
 
     def announce(self, text) -> None:
         from ..platform.speech import Speech
-        self.speak(text)
-        # PORT ADDITION: remembered, so that the Extra mode's story waits for it (still_announcing)
-        self._announced = (str(text), Speech.shared().lines, RunLoop.main().now())
+        from .reading import in_game_speech
+        # PORT ADDITION (user request, 2026-10-03): said by the second speech while Settings -> Speech -> Use
+        # second speech is on (Speech.speak_in_game), and by the first, as it always was, otherwise
+        Speech.shared().speak_in_game(text)
+        # PORT ADDITION: remembered, so that the Extra mode's story waits for it (still_announcing), with the
+        # speech that read it
+        self._announced = (str(text), Speech.shared().lines, RunLoop.main().now(), in_game_speech())
 
     def still_announcing(self) -> bool:
         """PORT ADDITION: whether the speech is still reading what the game last announced - the weapons a
@@ -75,7 +79,7 @@ class GameplayScreen(Screen):
         said = getattr(self, '_announced', None)
         if said is None or Speech.shared().lines != said[1]:
             return False
-        return RunLoop.main().now() < said[2] + reading_seconds(said[0])
+        return RunLoop.main().now() < said[2] + reading_seconds(said[0], said[3])
 
     @staticmethod
     def skip_intro_announcement() -> str:
@@ -172,7 +176,8 @@ class GameplayScreen(Screen):
                 c.skip_button_pressed()
             return
         if action == 'timer' and isinstance(c, ChallengeGameplayController):
-            self.speak(c.timer_label_text)
+            from ..platform.speech import Speech          # PORT ADDITION: in-game text (Speech.speak_in_game)
+            Speech.shared().speak_in_game(c.timer_label_text)
             return
         if c.paused or getattr(c, 'death_overlay_visible', False):
             # DIVERGENCE: showDeathOverlay brings the death overlay to the front of the gameplay view and
@@ -373,11 +378,12 @@ STORY_MARGIN = 1.5
 STORY_POLL = 0.1
 
 
-def story_reading_seconds(text: str) -> float:
+def story_reading_seconds(text: str, speech=None) -> float:
     """How long the speech is given to read the story: the time its words take (ui/reading.py), plus
-    STORY_MARGIN."""
-    from .reading import reading_seconds
-    return reading_seconds(text) + STORY_MARGIN
+    STORY_MARGIN.  By the measurement of the speech that reads it (user request, 2026-10-03): the second while
+    Use second speech is on (`reading.in_game_speech`), else the first."""
+    from .reading import in_game_speech, reading_seconds
+    return reading_seconds(text, speech or in_game_speech()) + STORY_MARGIN
 
 
 class StoryScreen(AccessibleScreen):
@@ -411,6 +417,21 @@ class StoryScreen(AccessibleScreen):
         self._stop_listening()
         self.story.continue_pressed()
         return True
+
+    def speak_element(self, element, prefix=None) -> None:
+        """PORT ADDITION (user request, 2026-10-03): the story's text is in-game text, read by the second speech
+        while Settings -> Speech -> Use second speech is on (`Speech.speak_in_game`); Continue is read by the first
+        as every button is.  With it off this is `Screen.speak_element`, line for line."""
+        if element is not self.text_view:
+            super().speak_element(element, prefix)
+            return
+        from ..platform.speech import Speech
+        from .reading import Hints, hint_for
+        from .screens import joined
+        said = joined([prefix or '', element.spoken()])
+        hint = hint_for(element)
+        Speech.shared().speak_in_game(said, braille=joined([said, hint]) if hint else None)
+        Hints.shared().follow(said, hint)
 
     # --- going on by itself ----------------------------------------------------------------------------
     def frame(self) -> None:

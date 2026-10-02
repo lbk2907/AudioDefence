@@ -11,6 +11,11 @@ engine row names another installed one.  Changing it starts the speech again wit
 that is gone or will not start gives way to the phone's default.  There is no voice row on the phone (user
 request, 2026-10-02): each engine speaks with the voice set in its own settings on the phone, and a voice
 saved by an earlier build is cleared (GameParameters.forget_saved_voice).
+
+PORT ADDITION (user request, 2026-10-03): a second speech, a TextToSpeech of its own in the Bridge with its own
+engine, rate, pitch and volume, which reads the story, the tutorial and what is said during a game while the
+Speech tab's Use second speech is on (`Speech.speak_in_game`; platform/speech.py says what it reads and why).
+The Bridge makes it only when it is first asked to speak.
 """
 from __future__ import annotations
 
@@ -71,9 +76,19 @@ def _pairs(text) -> list:
 
 
 class AndroidVoice:
-    """TextToSpeech with the player's engine, rate, pitch and volume: the phone's SAPI 5."""
+    """TextToSpeech with the player's engine, rate, pitch and volume: the phone's SAPI 5.  `second` is the second
+    speech's, which the Bridge keeps apart under names of its own (BRIDGE_CALLS)."""
 
-    def __init__(self):
+    #: the Bridge's calls for each speech: speak, stop, configure, ready, set the engine, the engine in use
+    BRIDGE_CALLS = {False: ('speak', 'stopSpeech', 'configureSpeech', 'speechReady', 'setSpeechEngine',
+                            'speechEngine'),
+                    True: ('speakSecond', 'stopSecondSpeech', 'configureSecondSpeech', 'secondSpeechReady',
+                           'setSecondSpeechEngine', 'secondSpeechEngine')}
+
+    def __init__(self, second: bool = False):
+        self.second = second
+        (self._speak, self._stop, self._configure, self._ready, self._set_engine,
+         self._engine) = self.BRIDGE_CALLS[second]
         self.voice = True                                 # settings asks: is there a voice at all?
         self.thread = None
         self.config = dict(SAPI_DEFAULTS)
@@ -98,7 +113,7 @@ class AndroidVoice:
         self.engine = package
         self.settling = True
         try:
-            bridge().setSpeechEngine(package or '')
+            getattr(bridge(), self._set_engine)(package or '')
         except Exception:
             log.exception('could not change the speech engine')
 
@@ -106,13 +121,13 @@ class AndroidVoice:
         """The package of the engine speaking, or None for the phone's default - which is also what speaks when
         the one asked for is not installed or would not start."""
         try:
-            return str(bridge().speechEngine()) or None
+            return str(getattr(bridge(), self._engine)()) or None
         except Exception:
             return None
 
     def ready(self) -> bool:
         try:
-            return bool(bridge().speechReady())
+            return bool(getattr(bridge(), self._ready)())
         except Exception:
             return False
 
@@ -130,7 +145,7 @@ class AndroidVoice:
         self.config = {'voice': None, 'rate': rate, 'boost': bool(boost), 'pitch': int(pitch or 0),
                        'volume': volume}
         try:
-            bridge().configureSpeech(self.rate(), int(pitch or 0), self.volume())
+            getattr(bridge(), self._configure)(self.rate(), int(pitch or 0), self.volume())
         except Exception:
             log.exception('speech settings not applied')
 
@@ -147,14 +162,14 @@ class AndroidVoice:
 
     def speak(self, text: str, interrupt: bool) -> bool:
         try:
-            return bool(bridge().speak(str(text), bool(interrupt)))
+            return bool(getattr(bridge(), self._speak)(str(text), bool(interrupt)))
         except Exception:
             log.exception('speech failed')
             return False
 
     def stop(self) -> None:
         try:
-            bridge().stopSpeech()
+            getattr(bridge(), self._stop)()
         except Exception:
             pass
 
@@ -181,6 +196,12 @@ class Speech:
         self.sapi_config = dict(SAPI_DEFAULTS)
         self.nvda = None
         self.lines = 0                                    # PORT ADDITION: as speech.py's Speech.lines
+        # PORT ADDITION (user request, 2026-10-03): the second speech, as speech.py's
+        self.second_on = False
+        self.second_choice = 'auto'
+        self.second_config = dict(SAPI_DEFAULTS)
+        self.second_engine = None
+        self._second_sapi = None
 
     @property
     def readers(self):
@@ -197,6 +218,48 @@ class Speech:
     def set_engine(self, package) -> None:
         """PORT ADDITION: Settings -> Speech -> Android speech engine (see AndroidVoice.set_engine)."""
         self._sapi.set_engine(package)
+
+    # --- the second speech (PORT ADDITION, user request, 2026-10-03) -----------------------------------------
+    @property
+    def second_sapi(self) -> AndroidVoice:
+        """The second speech's voice, given its settings as it is made.  The Bridge makes its TextToSpeech only
+        once it is asked to speak."""
+        if self._second_sapi is None:
+            self._second_sapi = AndroidVoice(second=True)
+            self._second_sapi.configure(**self.second_config)
+            self._second_sapi.set_engine(self.second_engine)
+        return self._second_sapi
+
+    def made_second(self):
+        """The second speech's voice if it has been made, else None - asking makes nothing."""
+        return self._second_sapi
+
+    def configure_second_sapi(self, **config) -> None:
+        self.second_config = dict(SAPI_DEFAULTS, **config)
+        if self._second_sapi is not None:
+            self._second_sapi.configure(**self.second_config)
+
+    def set_second_engine(self, package) -> None:
+        self.second_engine = package or None
+        if self._second_sapi is not None:
+            self._second_sapi.set_engine(self.second_engine)
+
+    def speak_in_game(self, text, interrupt: bool = True, braille=None) -> None:
+        """As speech.py's: the story, the tutorial and what is said during a game - by the second speech while Use
+        second speech is on, else by the first, exactly as `speak`."""
+        if self.second_on:
+            self.speak_second(text, interrupt, braille)
+        else:
+            self.speak(text, interrupt, braille)
+
+    def speak_second(self, text, interrupt: bool = True, braille=None) -> None:
+        """A line for the second speech, whether Use second speech is on or not (its settings and calibration)."""
+        if not text:
+            return
+        self.lines += 1
+        text = phone_words(localization.translate(str(text)))
+        log.debug('speak (second): %s', text)
+        self.second_sapi.speak(text, interrupt)
 
     def screen_reader_running(self) -> bool:
         return True                                       # the accessible screens are the only ones there are
@@ -221,6 +284,8 @@ class Speech:
 
     def shutdown(self) -> None:
         self._sapi.shutdown()
+        if self._second_sapi is not None:
+            self._second_sapi.shutdown()
 
     def modern_audio_changed(self) -> None:
         pass
@@ -231,3 +296,5 @@ class Speech:
     def stop(self) -> None:
         self.lines += 1                                   # PORT ADDITION: a hint waiting is not read now
         self._sapi.stop()
+        if self._second_sapi is not None:                 # PORT ADDITION: and the second speech
+            self._second_sapi.stop()

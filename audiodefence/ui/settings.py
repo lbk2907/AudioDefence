@@ -94,9 +94,9 @@ def _mode_words(action: str, mode: str) -> str:
         return button_words(action, mode) or 'no button'
     return KeyMap.shared().keys_text(action, mode)
 
-# PORT UI: Speech holds who speaks the game - Speech output - and SAPI 5's own voice while SAPI 5 is what
-# speaks.  Keyboard holds the key bindings alone, and Joystick a game controller's buttons.  Miscellaneous is
-# last and holds the rest: how the cursor moves through a screen, when the tutorial's lines are shown as
+# PORT UI: Speech holds who speaks the game and how - each speech's output, its voice and its calibration, on a
+# page of its own (SPEECH_PAGES) - and the hints.  Keyboard holds the key bindings alone, and Joystick a game
+# controller's buttons.  Miscellaneous is last and holds the rest: how the cursor moves through a screen, when the tutorial's lines are shown as
 # text and what they name, how a controller vibrates and how a DualSense's triggers feel, whether the game
 # looks for updates, and the one button that puts every setting back.
 CATEGORIES = (('aiming', 'Aiming'), ('controls', 'Controls'), ('sound', 'Sound'), ('speech', 'Speech'),
@@ -104,6 +104,10 @@ CATEGORIES = (('aiming', 'Aiming'), ('controls', 'Controls'), ('sound', 'Sound')
 PAD_BINDING_HINT = ('Press Enter to add a button, Shift Enter to replace them all, '
                     'Delete to remove the last one.')
 SELECT_HINT = 'Press Enter to select.'
+#: PORT ADDITION (user request, 2026-10-03): the Speech tab's two pages, one for each speech's own settings -
+#: the first speech, which reads everything, and the second, which reads in-game text while Use second speech is
+#: on.  A page is a list of its own, opened from its row, as a row's choices are (`open_page`).
+SPEECH_PAGES = (('first', 'First speech settings'), ('second', 'Second speech settings'))
 
 
 class ControlSchemePanel:
@@ -118,6 +122,7 @@ class ControlSchemePanel:
         self.pad_capturing_replaces = False
         self.pad_capturing_model = None                   # and the controller whose profile it goes to
         self.sapi_shown = False                           # Speech: whether SAPI 5's rows are listed
+        self.page = None                                  # Speech: the speech whose page is open (SPEECH_PAGES)
         self._engine_settled = 0                          # Android: the engine start the rows were made after
         self.choosing = None                              # a row's choices, shown as a list of their own
         self.calibration = SpeechCalibration(self.announce)   # Speech: the Speech calibration row
@@ -228,25 +233,29 @@ class ControlSchemePanel:
                    hint='Press Enter to put every setting back to its default. Your key and controller '
                         'bindings stay as they are.',
                    action=self.reset_all_settings)
-        elif self.category == 'speech':                   # PORT ADDITION: who speaks, and SAPI 5's voice
-            from ..platform.speech import OUTPUTS
-            t.cell('Speech output', dict(OUTPUTS)[params.speech_output()],
-                   # PORT ADDITION (Android): the phone has no screen reader to choose, and both its choices
-                   # are its own text-to-speech
-                   hint=("Which voice speaks the game. On the phone, Automatic and Android speech are the same: "
-                         "the phone's own text-to-speech, set in the rows below. Press Enter for the list."
-                         if system.ANDROID else
-                         'Which screen reader or voice speaks the game. Automatic uses %s. Choose one and only '
-                         'that one speaks: the game is silent while it is not running. Press Enter for the '
-                         'list.'
-                         % ('VoiceOver, or the system voice when VoiceOver is off' if system.MAC else
-                            'NVDA, or another screen reader that is running, or SAPI 5 when none is')),
-                   action=self.choose_speech_output, shift_action=self.choose_speech_output)
-            self.sapi_shown = self.sapi_speaking()
-            if self.sapi_shown:                           # only while SAPI 5 is what speaks
-                self.sapi_rows(t, params)
+        elif self.category == 'speech' and self.page is not None:   # PORT ADDITION: a speech's own page
+            self.speech_page_rows(t, params, self.page == 'second')
+        elif self.category == 'speech':                   # PORT ADDITION: who speaks, and how
+            self.sapi_shown = False                       # the voices' rows are on the pages
+            # PORT ADDITION (user request, 2026-10-03): the second speech, used or not, and a page of settings
+            # for each speech, which can be changed whether the second is used or not
+            t.cell('Use second speech', 'ON' if params.second_speech() else 'OFF',
+                   hint='Press Enter to toggle: when on, the second speech reads the story in Extra, the tutorial '
+                        'and what is said during a game, and the first speech reads everything else. The second '
+                        "speech's voice is set in Second speech settings.",
+                   action=self.toggle_second_speech, shift_action=self.toggle_second_speech)
+            t.cell('First speech settings',
+                   hint='The speech that reads the menus, the hints and Settings, and everything else while Use '
+                        'second speech is off: its output, voice, rate, pitch, volume and calibration. Press Enter '
+                        'to open them, and Escape to come back.',
+                   action=lambda: self.open_page('first'))
+            t.cell('Second speech settings',
+                   hint='The speech that reads the story in Extra, the tutorial and what is said during a game '
+                        'while Use second speech is on: its output, voice, rate, pitch, volume and calibration, '
+                        'which can be set while it is off. Press Enter to open them, and Escape to come back.',
+                   action=lambda: self.open_page('second'))
             # PORT ADDITION (user request, 2026-10-02): a row's hint, read on its own after a pause, as
-            # VoiceOver reads one (ui/reading.py).  After the voice's rows, which come and go above them.
+            # VoiceOver reads one (ui/reading.py).
             t.cell('Hints', 'ON' if params.speak_hints() else 'OFF',
                    hint='Press Enter to toggle: when on, each row is read first and its hint, like this one, '
                         'follows after a pause.',
@@ -256,17 +265,6 @@ class ControlSchemePanel:
                    hint="How long the game waits after reading a row before it reads the row's hint, from 0 to "
                         '3 seconds. ' + self.SAPI_STEP_HINT,
                    action=self.step_hint_pause, shift_action=self.step_hint_pause_back)
-            # PORT ADDITION (user request, 2026-10-02): how fast the speech reads, measured, by which the game
-            # predicts when a line has been read, whatever speaks it (ui/reading.py).  On every platform and for
-            # every output: the measurement is the speech's, and stays when the output or the voice changes.
-            word_time = params.speech_word_time()
-            t.cell('Speech calibration',
-                   '%i words a minute' % round(60.0 / word_time) if word_time else 'not done yet',
-                   hint='How fast the speech reads. The game works out from it when each row has been read, so '
-                        'that its hint, and the story in Extra, come at the right moment. Calibrate again after '
-                        "changing the voice or its speed, a screen reader's or the game's own. Press Enter and a "
-                        'sentence is read; press Enter again the moment it ends, or Escape to cancel.',
-                   action=self.start_calibration)
         elif self.category == 'keyboard':                 # PORT ADDITION: the key bindings
             keymap = KeyMap.shared()
             scheme = mode_text(keymap.mode())
@@ -341,6 +339,96 @@ class ControlSchemePanel:
     def announce(self, text: str) -> None:
         self.screen.speak(text)
 
+    # --- a speech's own page (PORT ADDITION, user request, 2026-10-03) ----------------------------------
+    def speech_page_rows(self, t, params, second: bool) -> None:
+        """One speech's settings: its Speech output, its voice's rows while SAPI 5 (the Mac's system voice, the
+        phone's text-to-speech) is what it speaks with, and its Speech calibration - and, for the second, whether
+        it follows the first's calibration."""
+        from ..platform.speech import OUTPUTS
+        output = params.second_speech_output() if second else params.speech_output()
+        # the hints are written out where the rows are made, so the translators' list finds them
+        t.cell('Speech output', dict(OUTPUTS)[output],
+               hint=(("Which voice the second speech uses. On the phone, Automatic and Android speech are the "
+                      "same: the phone's own text-to-speech, set in the rows below. Press Enter for the list."
+                      if second else
+                      "Which voice speaks the game. On the phone, Automatic and Android speech are the same: the "
+                      "phone's own text-to-speech, set in the rows below. Press Enter for the list.")
+                     if system.ANDROID else
+                     ('Which screen reader or voice the second speech uses. Automatic uses %s. Choose one and only '
+                      'that one speaks: the second speech is silent while it is not running. Press Enter for the '
+                      'list.' if second else
+                      'Which screen reader or voice speaks the game. Automatic uses %s. Choose one and only that '
+                      'one speaks: the game is silent while it is not running. Press Enter for the list.')
+                     % ('VoiceOver, or the system voice when VoiceOver is off' if system.MAC else
+                        'NVDA, or another screen reader that is running, or SAPI 5 when none is')),
+               action=self.choose_speech_output, shift_action=self.choose_speech_output)
+        self.sapi_shown = self.sapi_speaking(second)
+        if self.sapi_shown:                               # only while SAPI 5 is what this speech speaks with
+            self.sapi_rows(t, params, second)
+        # PORT ADDITION (user request, 2026-10-02): how fast the speech reads, measured, by which the game
+        # predicts when a line has been read, whatever speaks it (ui/reading.py).  For every output: the
+        # measurement is the speech's, and stays when the output or the voice changes.  Each speech has its own
+        # (user request, 2026-10-03).
+        word_time = params.speech_word_time(params.SECOND_SPEECH if second else params.FIRST_SPEECH)
+        t.cell('Speech calibration',
+               '%i words a minute' % round(60.0 / word_time) if word_time else 'not done yet',
+               hint=('How fast the second speech reads. While Use second speech is on, the game works out from it '
+                     "when the story in Extra has been read. Calibrating it turns Follow the first speech's "
+                     'calibration off. Press Enter and the second speech reads a sentence; press Enter again the '
+                     'moment it ends, or Escape to cancel.' if second else
+                     'How fast the first speech reads. The game works out from it when each row has been read, so '
+                     'that its hint comes at the right moment, and the story in Extra too while Use second speech '
+                     "is off. Calibrate again after changing the voice or its speed, a screen reader's or the "
+                     "game's own. Press Enter and a sentence is read; press Enter again the moment it ends, or "
+                     'Escape to cancel.'),
+               action=self.start_calibration)
+        if second:
+            t.cell("Follow the first speech's calibration", 'ON' if params.second_follows() else 'OFF',
+                   hint="Press Enter to toggle: when on, the second speech uses the first speech's calibration, and "
+                        'calibrating the first speech calibrates both. Turned off, the second speech keeps that '
+                        'calibration until you calibrate it.',
+                   action=self.toggle_follow, shift_action=self.toggle_follow)
+
+    def open_page(self, page: str) -> None:
+        """A speech's page, as a list of its own: its first row named after the page.  Escape or Back goes back
+        to the row it was opened from (`close_page`)."""
+        self.page = page
+        self._show_ok(False)                              # see _show_ok: a page is on top of the settings too
+        self.table_view.children.clear()
+        self.reload_data()
+        self.focus_first_row(dict(SPEECH_PAGES)[page])
+
+    def close_page(self) -> bool:
+        """Escape or Back: a row's list of choices closes first, and then a speech's page, back to its row in the
+        Speech tab.  True when one of them was open, so the screen knows the key was used here."""
+        if self.close_choices():
+            return True
+        if self.page is None:
+            return False
+        title = dict(SPEECH_PAGES)[self.page]
+        self.page = None
+        self._show_ok(True)
+        self.table_view.children.clear()
+        self.reload_data()
+        self._focus_row(title)
+        return True
+
+    def on_a_page(self) -> bool:
+        """Whether a row's list or a speech's page is open: the arrows that change category are theirs then."""
+        return self.choosing is not None or self.page is not None
+
+    def toggle_second_speech(self) -> None:
+        params = GameParameters.shared()
+        params.set_second_speech(not params.second_speech())
+        self.reload_data()
+        self.announce('Use second speech %s' % ('ON' if params.second_speech() else 'OFF'))
+
+    def toggle_follow(self) -> None:
+        params = GameParameters.shared()
+        params.set_second_follows(not params.second_follows())
+        self.reload_data()
+        self.announce("Follow the first speech's calibration %s" % ('ON' if params.second_follows() else 'OFF'))
+
     # --- choosing from a list (PORT ADDITION) -----------------------------------------------------
     def open_choices(self, title: str, options, current, apply) -> None:
         """Show a row's choices as a list of their own, the way the aiming and the control rows are listed.
@@ -380,7 +468,7 @@ class ControlSchemePanel:
     def take_choice(self, value) -> None:
         title, _options, _current, apply = self.choosing
         self.choosing = None
-        self._show_ok(True)
+        self._show_ok(self.page is None)
         self.table_view.children.clear()
         apply(value)                                      # which says what was chosen, in the new voice
         self.reload_data()
@@ -393,7 +481,7 @@ class ControlSchemePanel:
             return False
         title = self.choosing[0]
         self.choosing = None
-        self._show_ok(True)
+        self._show_ok(self.page is None)
         self.table_view.children.clear()
         self.reload_data()
         self._focus_row(title)
@@ -401,12 +489,14 @@ class ControlSchemePanel:
 
     def _focus_row(self, title: str) -> None:
         rows = [row for row in self.table_view.children if row.traits == CELL]
-        row = next((r for r in rows if (r.label or '').startswith(title)), rows[0] if rows else None)
+        # by the row's English, which `title` is, so it is found in a translated game too
+        row = next((r for r in rows if (r._label or '').startswith(title)), rows[0] if rows else None)
         self.screen.post_screen_changed(row)
 
     # --- categories ------------------------------------------------------------------------------
     def open_category(self, key: str) -> None:
         self.category = key
+        self.page = None
         self.capturing = None
         self.capturing_replaces = False
         self.table_view.children.clear()                  # a new list: no row keeps its place
@@ -568,7 +658,14 @@ class ControlSchemePanel:
         params.set_sapi(voice=None, rate=None, boost=False, pitch=0, volume=None)
         params.set_speak_hints(params.DEFAULT_SPEAK_HINTS)
         params.set_hint_pause(params.DEFAULT_HINT_PAUSE)
-        params.forget_speech_word_times()                 # the pace measured is forgotten
+        # PORT ADDITION (user request, 2026-10-03): the second speech: not used, and its own settings back
+        params.set_second_speech(params.DEFAULT_SECOND_SPEECH)
+        params.set_second_speech_output(params.DEFAULT_SPEECH_OUTPUT)
+        params.set_second_sapi(voice=None, rate=None, boost=False, pitch=0, volume=None)
+        if system.ANDROID:
+            params.set_second_speech_engine(None)
+        params.forget_speech_word_times()                 # the pace measured is forgotten, both speeches'
+        params.set_second_follows(params.DEFAULT_SECOND_FOLLOWS)
         App.apply_menu_music_volume()
         self.reload_data()
         if calibration_wanted():                          # PORT ADDITION (user request, 2026-10-02): the pace
@@ -661,10 +758,31 @@ class ControlSchemePanel:
 
     def choose_speech_output(self) -> None:
         """PORT ADDITION: the outputs as a list (user request).  Twelve of them, and each one said as you
-        passed it while stepping - the list says them once and takes the one you land on."""
+        passed it while stepping - the list says them once and takes the one you land on.  The second speech's
+        page lists them for the second (user request, 2026-10-03)."""
         from ..platform.speech import OUTPUTS
-        self.open_choices('Speech output', list(OUTPUTS), GameParameters.shared().speech_output(),
-                          self.take_speech_output)
+        params = GameParameters.shared()
+        if self.second_page():
+            self.open_choices('Speech output', list(OUTPUTS), params.second_speech_output(),
+                              self.take_second_output)
+            return
+        self.open_choices('Speech output', list(OUTPUTS), params.speech_output(), self.take_speech_output)
+
+    def take_second_output(self, choice: str) -> None:
+        """PORT ADDITION (user request, 2026-10-03): the second speech's output, said through it so its voice is
+        heard - or, when it cannot speak, by the first speech, saying the second will be silent."""
+        from ..platform.speech import OUTPUTS, PRISM_NAMES, Speech
+        GameParameters.shared().set_second_speech_output(choice)
+        name = dict(OUTPUTS)[choice]
+        speech = Speech.shared()
+        if speech.can_speak(choice):
+            speech.speak_second('Speech output: %s' % name)
+        elif choice in PRISM_NAMES and speech.readers.ctx is None:
+            self.announce('Speech output: %s. It needs Prism, which is not installed, so the second speech will be '
+                          'silent.' % name)
+        else:
+            self.announce('Speech output: %s. %s is not running, so the second speech will be silent until it is.'
+                          % (name, name))
 
     def take_speech_output(self, choice: str) -> None:
         """The chosen Speech output.  Said through the new one - or, when that one cannot speak, through
@@ -697,55 +815,80 @@ class ControlSchemePanel:
     SPEECH_CHECK_EVERY = 1.0                              # seconds between looks at what speaks
 
     @staticmethod
-    def sapi_speaking() -> bool:
-        """Whether SAPI 5 is what speaks: chosen, or Automatic with no screen reader running."""
+    def sapi_speaking(second: bool = False) -> bool:
+        """Whether SAPI 5 is what the first speech speaks with - or the second's, for `second`: chosen, or
+        Automatic with no screen reader running."""
         from ..platform.speech import Speech
-        choice = GameParameters.shared().speech_output()
+        params = GameParameters.shared()
+        choice = params.second_speech_output() if second else params.speech_output()
         return choice == 'sapi' or (choice == 'auto' and Speech.shared().automatic_output() == 'sapi')
 
     def follow_speech(self) -> None:
-        """On the Speech category, SAPI 5's rows come and go as it starts or stops being what speaks - a
-        screen reader started or closed while the list is open - looked at once a second."""
-        if (self.category != 'speech' or self.capturing is not None or self.choosing is not None
-                or self.calibration.timing is not None):
+        """On a speech's page, SAPI 5's rows come and go as it starts or stops being what speaks - a screen
+        reader started or closed while the list is open - looked at once a second."""
+        if (self.category != 'speech' or self.page is None or self.capturing is not None
+                or self.choosing is not None or self.calibration.timing is not None):
             return
         now = time.monotonic()
         if now < self._speech_due:
             return
         self._speech_due = now + self.SPEECH_CHECK_EVERY
-        if self.sapi_speaking() != self.sapi_shown or self.engine_settled():
+        if self.sapi_speaking(self.second_page()) != self.sapi_shown or self.engine_settled():
             self.reload_data()
 
     def engine_settled(self) -> bool:
         """PORT ADDITION (Android): an engine chosen in the engine row has started since the rows were made, so
         the row says Phone default again if the one chosen gave way to it."""
-        if not system.ANDROID or not self.sapi_shown:
+        if not system.ANDROID or not self.sapi_shown or self.page is None:
             return False
+        return self.voice().settled != self._engine_settled
+
+    # PORT ADDITION (user request, 2026-10-03): the rows below act on the speech whose page is open
+    def second_page(self) -> bool:
+        return self.page == 'second'
+
+    def voice(self):
+        """The voice of the speech whose page is open: SAPI 5's, the Mac's system voice or the phone's."""
         from ..platform.speech import Speech
-        return Speech.shared().sapi.settled != self._engine_settled
+        return Speech.shared().second_sapi if self.second_page() else Speech.shared().sapi
+
+    def voice_config(self) -> dict:
+        params = GameParameters.shared()
+        return params.second_sapi_config() if self.second_page() else params.sapi_config()
+
+    def set_voice(self, **changes) -> None:
+        params = GameParameters.shared()
+        if self.second_page():
+            params.set_second_sapi(**changes)
+        else:
+            params.set_sapi(**changes)
 
     #: what the voice row says with no voice chosen
     CONTROL_PANEL_VOICE = 'System default' if system.MAC else 'Control Panel default'
 
-    def sapi_rows(self, t, params) -> None:
+    def sapi_rows(self, t, params, second: bool = False) -> None:
         """SAPI 5's voice, rate, rate boost (for a voice that has one), pitch and volume - the system voice's,
         on the Mac.  Each change is said in that voice itself, at the new setting, so it can be heard
-        whatever else is speaking.  On the phone the engine takes the voice's place."""
+        whatever else is speaking.  On the phone the engine takes the voice's place.  `second`: the second
+        speech's voice, which has the same rows but Use modern output, one row for both."""
         from ..platform.speech import Speech
-        sapi = Speech.shared().sapi
+        sapi = Speech.shared().second_sapi if second else Speech.shared().sapi
         if sapi.voice is None:                            # no SAPI here (comtypes missing)
             return
-        config = params.sapi_config()
+        config = params.second_sapi_config() if second else params.sapi_config()
         if system.ANDROID:
             # PORT ADDITION (user request): the engine, by its name, and no voice row - each engine speaks with
             # the voice set in its own settings on the phone (2026-10-02)
             self._engine_settled = sapi.settled
-            engine = params.speech_engine()
+            engine = params.second_speech_engine() if second else params.speech_engine()
             t.cell('Android speech engine',
                    dict(sapi.engines()).get(engine, engine) if engine else 'Phone default',
-                   hint="Which text-to-speech engine speaks the game: Phone default, the one set in the phone's "
-                        'settings, or any engine installed on the phone. Each engine speaks with the voice set '
-                        'in its own settings. Press Enter for the list.',
+                   hint=("Which text-to-speech engine the second speech uses: Phone default, the one set in the "
+                         "phone's settings, or any engine installed on the phone. Each engine speaks with the voice "
+                         'set in its own settings. Press Enter for the list.' if second else
+                         "Which text-to-speech engine speaks the game: Phone default, the one set in the phone's "
+                         'settings, or any engine installed on the phone. Each engine speaks with the voice set '
+                         'in its own settings. Press Enter for the list.'),
                    action=self.choose_speech_engine, shift_action=self.choose_speech_engine)
             voice = None
         else:
@@ -768,7 +911,7 @@ class ControlSchemePanel:
                action=self.step_sapi_pitch, shift_action=self.step_sapi_pitch_back)
         t.cell(VOICE_NAME + ' volume', '%d%%' % sapi.volume(), hint='How loud %s speaks. ' % VOICE_NAME + self.SAPI_STEP_HINT,
                action=self.step_sapi_volume, shift_action=self.step_sapi_volume_back)
-        if not system.ANDROID:                            # the phone's voice is always played by the phone
+        if not system.ANDROID and not second:             # the phone's voice is always played by the phone
             t.cell('Use modern output', 'ON' if params.modern_audio() else 'OFF',
                    hint='Press Enter to toggle: when on, the game plays %s itself, and a line stops the moment '
                         'you interrupt it. Turn it off to let Windows play it, which is slower to stop.'
@@ -807,8 +950,9 @@ class ControlSchemePanel:
 
     # --- speech calibration (PORT ADDITION, user request) ---------------------------------------
     def start_calibration(self) -> None:
-        """Read the sample through whatever speaks the game, and time it until Enter (SpeechCalibration)."""
-        self.calibration.start()
+        """Read the sample through the speech whose page is open, and time it until Enter (SpeechCalibration)."""
+        params = GameParameters.shared()
+        self.calibration.start(params.SECOND_SPEECH if self.second_page() else params.FIRST_SPEECH)
 
     def calibration_key(self, event) -> None:
         """Every key while a calibration is timing; the row says the pace once one is saved."""
@@ -838,77 +982,75 @@ class ControlSchemePanel:
         self.announce('Use modern output %s' % ('on' if params.modern_audio() else 'off'))
         self._sapi_say('This is how it sounds.')          # in that voice, through whichever plays it now
 
-    @staticmethod
-    def _sapi_say(text: str) -> None:
+    def _sapi_say(self, text: str) -> None:
         """A change said by the voice being set, at its new setting, whatever else is speaking - and in the
         player's language, as Speech.speak says every other line of the tab.  Handed to the voice directly,
-        these went out in English until 2026-10-02 (user request)."""
-        from ..platform.speech import Speech
-        Speech.shared().sapi.speak(localization.translate(text), True)
+        these went out in English until 2026-10-02 (user request).  On the second speech's page, by the
+        second speech's voice."""
+        self.voice().speak(localization.translate(text), True)
 
     def choose_sapi_voice(self) -> None:
         """PORT ADDITION: the installed voices as a list (user request).  There are as many as the machine
         has - two hundred and fifty on the one this was written for - and stepping said every one of them
         on the way past."""
-        from ..platform.speech import Speech
-        voices = Speech.shared().sapi.voices()
+        voices = self.voice().voices()
         self.open_choices('%s voice' % VOICE_NAME, [(None, self.CONTROL_PANEL_VOICE)] + list(voices),
-                          GameParameters.shared().sapi_config()['voice'], self.take_sapi_voice)
+                          self.voice_config()['voice'], self.take_sapi_voice)
 
     def take_sapi_voice(self, voice_id) -> None:
-        from ..platform.speech import Speech
-        GameParameters.shared().set_sapi(voice=voice_id)
-        names = dict(Speech.shared().sapi.voices())
+        self.set_voice(voice=voice_id)
+        names = dict(self.voice().voices())
         self._sapi_say('%s voice: %s' % (VOICE_NAME, names.get(voice_id, self.CONTROL_PANEL_VOICE)))
 
     def choose_speech_engine(self) -> None:
         """PORT ADDITION (Android, user request): the phone's text-to-speech engines as a list, the one set in
         the phone's settings first."""
-        from ..platform.speech import Speech
-        engines = [(None, 'Phone default')] + list(Speech.shared().sapi.engines())
-        self.open_choices('Android speech engine', engines, GameParameters.shared().speech_engine(),
+        params = GameParameters.shared()
+        engines = [(None, 'Phone default')] + list(self.voice().engines())
+        self.open_choices('Android speech engine', engines,
+                          params.second_speech_engine() if self.second_page() else params.speech_engine(),
                           self.take_speech_engine)
 
     def take_speech_engine(self, package) -> None:
         """The chosen engine.  The speech starts again with it, in the voice set in its own settings, and what
         is said meanwhile waits for it, so this is heard in the new engine.  One that would not start gives way
-        to the phone's default, which the row then says (follow_speech, GameParameters.settle_speech_engine)."""
+        to the phone's default, which the row then says (follow_speech, GameParameters.settle_speech_engine).
+        The second speech's is said by the second speech, which starts it if it had not started yet."""
         from ..platform.speech import Speech
+        names = dict(self.voice().engines())
+        if self.second_page():
+            GameParameters.shared().set_second_speech_engine(package)
+            Speech.shared().speak_second('Android speech engine: %s'
+                                         % (names.get(package, package) if package else 'Phone default'))
+            return
         GameParameters.shared().set_speech_engine(package)
-        names = dict(Speech.shared().sapi.engines())
         self.announce('Android speech engine: %s' % (names.get(package, package) if package else 'Phone default'))
 
     def step_sapi_rate(self, step: int = 1) -> None:
-        from ..platform.speech import Speech
-        params = GameParameters.shared()
-        params.set_sapi(rate=max(-10, min(10, Speech.shared().sapi.rate() + step)))   # the ends hold
+        self.set_voice(rate=max(-10, min(10, self.voice().rate() + step)))   # the ends hold
         self.reload_data()
-        self._sapi_say('%s rate %d' % (VOICE_NAME, Speech.shared().sapi.rate()))
+        self._sapi_say('%s rate %d' % (VOICE_NAME, self.voice().rate()))
 
     def step_sapi_rate_back(self) -> None:
         self.step_sapi_rate(-1)
 
     def toggle_sapi_boost(self) -> None:
-        params = GameParameters.shared()
-        params.set_sapi(boost=not params.sapi_config()['boost'])
+        self.set_voice(boost=not self.voice_config()['boost'])
         self.reload_data()
-        self._sapi_say('%s rate boost %s' % (VOICE_NAME, 'ON' if params.sapi_config()['boost'] else 'OFF'))
+        self._sapi_say('%s rate boost %s' % (VOICE_NAME, 'ON' if self.voice_config()['boost'] else 'OFF'))
 
     def step_sapi_pitch(self, step: int = 1) -> None:
-        params = GameParameters.shared()
-        params.set_sapi(pitch=max(-10, min(10, params.sapi_config()['pitch'] + step)))
+        self.set_voice(pitch=max(-10, min(10, self.voice_config()['pitch'] + step)))
         self.reload_data()
-        self._sapi_say('%s pitch %d' % (VOICE_NAME, params.sapi_config()['pitch']))
+        self._sapi_say('%s pitch %d' % (VOICE_NAME, self.voice_config()['pitch']))
 
     def step_sapi_pitch_back(self) -> None:
         self.step_sapi_pitch(-1)
 
     def step_sapi_volume(self, step: int = 1) -> None:
-        from ..platform.speech import Speech
-        params = GameParameters.shared()
-        params.set_sapi(volume=max(0, min(100, Speech.shared().sapi.volume() + 10 * step)))
+        self.set_voice(volume=max(0, min(100, self.voice().volume() + 10 * step)))
         self.reload_data()
-        self._sapi_say('%s volume %d%%' % (VOICE_NAME, Speech.shared().sapi.volume()))
+        self._sapi_say('%s volume %d%%' % (VOICE_NAME, self.voice().volume()))
 
     def step_sapi_volume_back(self) -> None:
         self.step_sapi_volume(-1)
@@ -1124,7 +1266,7 @@ class SettingsScreen(ViewControllerScreen):
             return
         where = cross_axis_key(event)                     # PORT ADDITION: the other arrows change category
         if where is not None:
-            if self.control_scheme.choosing is None:      # while a row's list is open, it has the arrows
+            if not self.control_scheme.on_a_page():       # while a row's list or a page is open, it has them
                 self.control_scheme.move_category(where)
             return
         super().key_down(event)
@@ -1166,12 +1308,12 @@ class SettingsScreen(ViewControllerScreen):
     # PORT ADDITION: a row's list of choices takes Escape and Back first, closing itself rather than the
     # screen - the armory does the same for an open weapon page (armory.accessibility_perform_escape)
     def accessibility_perform_escape(self) -> bool:
-        if self.control_scheme.close_choices():
+        if self.control_scheme.close_page():              # a row's list, or a speech's page (close_page)
             return True
         return super().accessibility_perform_escape()
 
     def back_button_pressed(self) -> None:                # 0x1000af948
-        if self.control_scheme.close_choices():
+        if self.control_scheme.close_page():
             return
         pl = _headphones_playlist()
         if pl is not None:
@@ -1255,7 +1397,7 @@ class PauseScreen(SettingsScreen):
             self.pause.quit_button_touched()
 
     def back_button_pressed(self) -> None:                # 0x1000559ac
-        if self.control_scheme.close_choices():           # PORT ADDITION: as on the settings screen
+        if self.control_scheme.close_page():              # PORT ADDITION: as on the settings screen
             return
         self.validate_button_pressed()
 
@@ -1286,6 +1428,7 @@ class SpeechCalibration:
     def __init__(self, say):
         self.say = say                                    # how its lines are said
         self.timing = None                                # while the sample is read: (when, its words)
+        self.speech = GameParameters.FIRST_SPEECH         # the speech being calibrated (`start`)
 
     @staticmethod
     def sample() -> str:
@@ -1296,12 +1439,19 @@ class SpeechCalibration:
             'Press Enter as soon as this ends. Somewhere past the fence a gate creaks open, the first footsteps '
             'come out of the dark, slow and uneven, and you check your clip and wait for them to come closer.'))
 
-    def start(self) -> None:
-        """Read the sample, and time it until Enter."""
+    def start(self, speech: str = GameParameters.FIRST_SPEECH) -> None:
+        """Read the sample, and time it until Enter.  The second speech's is read by the second speech, with its
+        own output, voice and settings (user request, 2026-10-03); what is said about it after is the first's,
+        as everything in Settings is."""
         from ..platform.runloop import RunLoop
+        from ..platform.speech import Speech
         from .reading import word_count
+        self.speech = speech
         sample = self.sample()
-        self.say(sample)
+        if speech == GameParameters.SECOND_SPEECH:
+            Speech.shared().speak_second(sample)
+        else:
+            self.say(sample)
         self.timing = (RunLoop.main().now(), word_count(sample))
 
     def key(self, event):
@@ -1328,7 +1478,7 @@ class SpeechCalibration:
             self.say('Too late: the sentence ended long before that. Nothing was changed. Try again, and '
                      'press Enter as soon as the reading stops.')
             return None
-        GameParameters.shared().set_speech_word_time(pace)
+        GameParameters.shared().save_calibration(pace, self.speech)   # and Follow, as it says there
         self.say('Speech calibrated: %i words a minute.' % round(60.0 / pace))
         return pace
 

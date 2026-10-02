@@ -3008,6 +3008,101 @@ they were.
   fake Bridge.  In the Speech tab, NVDA chosen after SAPI 5 asked at once over the tab, saying "Speech output:
   NVDA" first; Escape went back to that row; NVDA chosen again did not ask; Automatic did, and a calibration
   there brought the row back reading "200 words a minute"; with that saved, NVDA did not ask.
+* PORT ADDITION: a second speech (user request, 2026-10-03), for Windows, the Mac and the phone.  The original
+  has one voice, VoiceOver's, for its screens and for what it posts while a game runs; the port's players
+  asked for the text of a game - the Extra mode's story, the tutorial's lines, the announcements - to have a
+  voice of its own.  There is nothing of the original's to depart from: VoiceOver and
+  `UIAccessibilityPostNotification` are the port's `Speech`, and that is what grew a second voice.
+
+  The Speech tab is now Use second speech (off by default), First speech settings, Second speech settings,
+  Hints and Pause before hints.  The two settings rows open a page of their own, in the manner of a row's
+  list of choices (`ControlSchemePanel.open_page`, `close_page`): the panel shows the page instead of the tab,
+  OK is hidden, the arrows that change category are the page's while it is open, and Escape or Back goes back
+  to the row it was opened from; a list opened on a page closes back to the page.  First speech settings
+  holds what the tab held for the one speech: Speech output, SAPI 5's voice, rate, rate boost, pitch and
+  volume and Use modern output while SAPI 5 speaks (the system voice's on the Mac; on the phone the Android
+  speech engine, rate, pitch and volume), and Speech calibration.  Second speech settings has the same rows
+  for the second speech - its own output from the same list, its own voice and settings, its own engine on
+  the phone - and Follow the first speech's calibration; it can be set while Use second speech is off, and
+  each change is said by the second speech.  Use modern output is one row for both SAPI 5 voices.  The
+  calibration question at start-up and after Reset all settings is the first speech's, as it was.
+
+  While Use second speech is on, the second speech reads what is read out during a game: the story screen's
+  text and the epilogue's (`StoryScreen.speak_element`; its Continue button is read by the first, as every
+  button is), the tutorial's lines (`ADSound.speak_tutorial_text`), the game's announcements
+  (`GameplayScreen.announce`: the weapons a wave hands over and the opener's way to skip) and the challenge
+  timer's key.  All of them go through one door, `Speech.speak_in_game`, which with the switch off is
+  `Speech.speak` - the first speech, line for line as before - and anything added later that reads text
+  during a game is to go through it too.  Everything else stays with the first speech: the menus, the hints,
+  the pause menu, Settings, a controller coming and going, the phone's Pause button read as it is touched.
+  The second speech's own rows and calibration speak through `Speech.speak_second`, whether it is used or
+  not.  A line is timed by the measurement of the speech that reads it (`reading.reading_seconds(text,
+  speech)`, `reading.in_game_speech`): the story's wait, and the wait for the weapons read out as a wave
+  begins (`GameplayScreen.still_announcing`), by the second's while it is on; the hints always by the
+  first's.
+
+  Calibration is per speech, not per voice.  `speechWordTime` holds {"first": ..., "second": ...}; Speech
+  calibration on the second speech's page reads the sample through the second speech, with its own output,
+  voice and settings, and saves "second" (`SpeechCalibration.start(speech)`, `GameParameters.save_calibration`);
+  what is said about the result is the first's, as everything in Settings is.  Follow the first speech's
+  calibration (`secondSpeechFollows`, `second_follows`): while it is on the second is timed by the first's
+  measurement, and its own is a copy kept up to date, so a calibration of the first applies to both.
+  Turning it on replaces the second's own with the first's; turning it off leaves the second with that copy
+  until it is calibrated; calibrating the second turns it off, since it then has a measurement of its own
+  (the user left that one open; it was chosen because a measurement the player has just made should be the
+  one used).  The very first calibration - nothing measured for either speech, so at start-up or after Reset
+  all settings - turns it on.  It is also on by default, so a measurement made before the second speech
+  existed is the second's too (a profile from before has no copy saved; turning Follow off makes it).
+  Changing either speech's output or voice keeps its measurement (user request).
+
+  Two voices at once.  A screen reader is one for the whole system, so when both speeches use it, or the
+  second uses it while the first speaks otherwise, its lines simply go to it: NVDA through the same
+  controller client, the others through the same Prism context (`_Readers`; a first speech on Automatic and
+  a second on one Prism reader by name make it look again for the one asked for as they alternate, which
+  costs a millisecond or two and changes nothing heard).  SAPI 5 is two voices: the second is a `_Sapi` of
+  its own (`Speech.second_sapi`), with its own SpVoice, its own speaking thread and, for Use modern output,
+  its own SDL device (`_Sapi.player`, a `SpeechAudio` of its own), so the two are never mixed into one queue
+  and neither's interruption drops the other's line; with Use modern output off Windows mixes them.  The
+  Mac's second is a second NSSpeechSynthesizer.  The phone's is a second TextToSpeech in the Bridge
+  (`Bridge.Voice`, which both speeches now are: `speakSecond`, `configureSecondSpeech`,
+  `setSecondSpeechEngine` and the rest beside the first's calls), with its own engine, rate, pitch and
+  volume, and made only by its first line - a player who never uses it never starts a second engine.  Its
+  engine gives way to the phone's default as the first's does (`settle_second_speech_engine`), and says so.
+  A line interrupts only what its own speech is saying, unless both are the same screen reader, where an
+  interrupting line cuts it as it always did; so a second-speech line never cuts a first-speech line that it
+  did not cut before.  On the story screen the text and Continue can therefore overlap when the player moves
+  to Continue while the second speech is still reading - but a key in the menus cuts both SAPI 5 voices
+  (`interrupt_sapi`), as it cut the one, and a screen reader usually stops its own speech at a key, so that
+  is only heard with a second speech on a screen reader that does not.  Control, and the phone's
+  two-finger tap, stop both speeches (`Speech.stop`), once the second has said anything.  A second output
+  that cannot speak - a chosen screen reader not running - leaves the second speech silent, as the first is
+  in the same case, and choosing it says so through the first.  `interrupt_sapi` now asks a voice for its
+  thread with `getattr`: the Mac's system voice has none, and asking it raised.
+
+  Kept in settings.json, beside the first's: `secondSpeech`, `secondSpeechOutput`, `secondSapiVoice`,
+  `secondSapiRate`, `secondSapiRateBoost`, `secondSapiPitch`, `secondSapiVolume`, `secondSapiEngine` (the
+  phone) and `secondSpeechFollows`.  Reset all settings turns the second speech off, puts its output, voice
+  and engine back, forgets both measurements and puts Follow back on.
+
+  Checked headless on a fake clock with a stand-in NVDA, stand-ins for both SAPI 5 voices and Prism stubbed
+  out, through the real Settings screen and the real game (the Extra arena port_barnyard): the tab's five rows;
+  each page's rows, the first's with Use modern output and the second's without; Escape back to each row and
+  the category arrows doing nothing on a page; the second's output, rate, pitch and voice said by the second
+  voice and saved under its own keys, the first's untouched.  With the switch off the story, Continue, a
+  tutorial line and "New weapons" were all NVDA's; with it on the story, the tutorial line, "New weapons" and
+  the timer were the second voice's, Continue and the menu rows and their hints NVDA's.  Follow: off before
+  anything was measured, the first calibration (240 a minute) turned it on and gave the second the same; a
+  new first one (300) applied to both; the second's own (200), read by the second voice, turned it off; on
+  again replaced it with the first's, off again kept that, and a later first one left the second alone.  A
+  hint followed its row by the first's measurement, "New weapons" was announcing until its seven words at
+  the second's 0.2 s and not after, and the story went on 12.5 s after it opened (55 words at 0.2 s and
+  1.5 s).  Control stopped both.  Reset all settings left secondSpeech off, Automatic and Follow on with no
+  measurement, and the question asked at once and gave both speeches its result.  On the Android build's
+  Python with the fake Bridge given a second TextToSpeech: the same pages with the phone's rows; nothing
+  made at start-up or by opening the page, the second made by its first line with rate 1 and volume 90 of
+  its own; its engine its own, and a broken one gave way to the phone's default with the line said by the
+  second; its sample read in the phone's words by the second; the story and "New weapons" by the second and
+  Continue by the first; Reset all settings put all of it back.  The APK built (`gradle assembleDebug`).
 
 
 ## Original quirks kept on purpose

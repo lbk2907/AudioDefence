@@ -394,9 +394,8 @@ class _SapiThread(threading.Thread):
         if self.streaming:
             return True
         from . import speech_stream
-        from .speech_audio import SpeechAudio
         self._cut_what_is_playing()                       # Windows is speaking: what it has buffered plays
-        self.sink = speech_stream.sink(SpeechAudio.shared().play, self._dropping)   # on after the switch
+        self.sink = speech_stream.sink(self.sapi.player().play, self._dropping)   # on after the switch
         # otherwise - 0.2 s of the old line, measured, over the top of the new one
         if self.sink is None:                             # a new one every time: SAPI lets the old one go
             return False                                  # when it takes its card back, and one let go of
@@ -417,8 +416,7 @@ class _SapiThread(threading.Thread):
     def _stream(self, generation: int, body: str, flags: int) -> bool:
         """Have SAPI write the line into the game as it makes it.  False if that cannot be done, and the
         line is rendered into memory instead (`_render`)."""
-        from .speech_audio import SpeechAudio
-        if not SpeechAudio.shared().available():          # opened here, so the game never waits for a card
+        if not self.sapi.player().available():            # opened here, so the game never waits for a card
             return False
         if not self._to_the_game():
             return False
@@ -439,10 +437,10 @@ class _SapiThread(threading.Thread):
     def _render(self, generation: int, body: str, flags: int) -> bool:
         """Render into memory, a piece at a time, handing each to the card as it is made.  False if that
         cannot be done at all, and the line goes to Windows instead."""
-        from .speech_audio import SAPI_FORMAT, SpeechAudio, without_the_lead_in
+        from .speech_audio import SAPI_FORMAT, without_the_lead_in
         if self.streaming:                                # the stream was given up on: the card comes back
             self._to_windows()
-        audio = SpeechAudio.shared()
+        audio = self.sapi.player()
         if not audio.available():                         # opened here, so the game never waits for a card
             return False
         text, template = body
@@ -510,8 +508,7 @@ class _SapiThread(threading.Thread):
         try:
             if self.streaming:
                 self.voice.Speak('', _Sapi.SVSF_ASYNC | _Sapi.SVSF_PURGE)
-                from .speech_audio import SpeechAudio     # and what the game already holds of that line
-                SpeechAudio.shared().stop()
+                self.sapi.player().stop()                 # and what the game already holds of that line
             self.voice.AudioOutputStream = self.card
             told = self.streaming
             self.rendering = self.streaming = False
@@ -537,7 +534,11 @@ class _Sapi:
     SVSF_IS_NOT_XML = 16
     SAS_STOP, SAS_RUN = 1, 3                              # SpeechAudioState: stopping the output stream
 
-    def __init__(self):
+    def __init__(self, player=None):
+        #: PORT ADDITION: the device the game plays this voice through (speech_audio.py) - the shared one for the
+        #: first speech, and one of its own for the second (Speech.second_sapi), so the two voices' lines are
+        #: never mixed into one queue or cut off by each other's stops
+        self._player = player
         self.voice = None
         self.client = None
         self.panel_rate, self.panel_volume = 0, 100
@@ -554,6 +555,13 @@ class _Sapi:
         except Exception:
             log.info('SAPI not available')
             self.voice = None
+
+    def player(self):
+        """The device this voice is played through when the game plays it (Use modern output)."""
+        if self._player is None:
+            from .speech_audio import SpeechAudio
+            self._player = SpeechAudio.shared()
+        return self._player
 
     def voices(self) -> list:
         """(id, name) for every installed SAPI 5 voice, in SAPI's own order."""
@@ -675,13 +683,12 @@ class _Sapi:
             flags |= self.SVSF_IS_XML
         else:
             body, flags = (text, None), flags | self.SVSF_IS_NOT_XML
-        from .speech_audio import SpeechAudio
         engine = self.modern_audio()                      # the card is opened by the thread, not here
         if interrupt:
             self.generation += 1
             # cut here rather than wait for the thread to wake, and whichever way the row is set
             # now: what is playing may have been started the other way, and it is still playing.
-            SpeechAudio.shared().stop()
+            self.player().stop()
         self.worker().say(body, flags, engine, self.generation)
         return True
 
@@ -701,8 +708,7 @@ class _Sapi:
         if self.voice is None:
             return
         self.generation += 1
-        from .speech_audio import SpeechAudio
-        SpeechAudio.shared().stop()                       # what the game is playing: gone at once
+        self.player().stop()                              # what the game is playing: gone at once
         self.worker().silence(self.generation)
 
     def shutdown(self) -> None:
@@ -714,14 +720,13 @@ class _Sapi:
         is Python work, and the game's own sound is mixed by Python on the audio thread, so every
         millisecond spent here is a millisecond of the arena not being mixed.
         """
-        from .speech_audio import SpeechAudio
         self.generation += 1
         thread, self.thread = self.thread, None
         if thread is not None:
             thread.queue.put(('quit',))                   # a daemon: told, not waited for, except that a
             if thread.streaming:                          # stream of ours in SAPI's hands ends the process
                 thread.join(0.25)                         # if it is still there as the game goes (measured:
-        SpeechAudio.shared().close()                      # the thread is idle, and this costs under a ms)
+        self.player().close()                             # the thread is idle, and this costs under a ms)
 
 
 class _NoReaders:
@@ -740,6 +745,22 @@ class _NoReaders:
 
 
 class Speech:
+    """Everything the game says.  PORT ADDITION (user request, 2026-10-03): two speeches.
+
+    The first says everything - the menus, the hints, the pause menu, Settings - through Speech output (`choice`)
+    and SAPI 5's settings (`sapi`).  The second has an output and SAPI 5 settings of its own (`second_choice`,
+    `second_sapi`), and while the Speech tab's Use second speech is on (`second_on`) it reads what is read during
+    a game: the Extra mode's story and its epilogue, the tutorial's lines and the game's announcements, such as
+    the weapons a wave hands over.  All of that goes through one door, `speak_in_game`, and so should anything
+    added later that reads text out during a game; with Use second speech off it is `speak`, exactly as before.
+
+    Two voices at once: a screen reader is the same one for both, system-wide - NVDA through the same controller
+    client, the others through the same Prism context - so its lines simply go to it, and one that interrupts
+    cuts what it is saying, as it always has.  SAPI 5 is two voices (`_Sapi`), each with its own thread, its own
+    settings and its own device for Use modern output, so neither cuts the other off; on the Mac, two system
+    voices.  A line interrupts only the output it is sent to.  A key in the menus cuts both SAPI 5 voices
+    (`interrupt_sapi`), and Control both speeches (`stop`), as they cut the one speech before.
+    """
     _shared: 'Speech | None' = None
 
     @classmethod
@@ -762,6 +783,13 @@ class Speech:
         #: PORT ADDITION: how many lines have been spoken or stopped, so that a hint waiting to be read can
         #: tell that something else has been said since (ui/reading.py)
         self.lines = 0
+        # PORT ADDITION (user request, 2026-10-03): the second speech, set from the settings like the first
+        self.second_on = False                            # Use second speech: whether it reads in-game text
+        self.second_choice = 'auto'                       # its Speech output
+        self.second_config = dict(SAPI_DEFAULTS)          # its SAPI 5 voice and the rest
+        self._second_sapi = None
+        self._second_silent = False
+        self._second_spoke = False                        # whether it has said anything yet (`_stop_second`)
 
     @property
     def readers(self) -> _Readers:
@@ -786,6 +814,74 @@ class Speech:
         configure = getattr(self._sapi, 'configure', None)
         if configure is not None:
             configure(**self.sapi_config)
+
+    # --- the second speech (PORT ADDITION, user request, 2026-10-03) -----------------------------------------
+    @property
+    def second_sapi(self) -> _Sapi:
+        """The second speech's SAPI 5 voice - the Mac's system voice there - made the first time it is wanted:
+        a voice of its own, with its own settings and, for Use modern output, its own device."""
+        if self._second_sapi is None:
+            if host.MAC:
+                from .macspeech import SystemVoice
+                self._second_sapi = SystemVoice()
+            else:
+                from .speech_audio import SpeechAudio
+                self._second_sapi = _Sapi(player=SpeechAudio())
+            self._second_sapi.configure(**self.second_config)
+        return self._second_sapi
+
+    def made_second(self):
+        """The second speech's voice if it has been made, else None - asking makes nothing."""
+        return self._second_sapi
+
+    def configure_second_sapi(self, **config) -> None:
+        """The second speech's voice, rate, boost, pitch and volume, from the settings."""
+        self.second_config = dict(SAPI_DEFAULTS, **config)
+        if self._second_sapi is not None:
+            self._second_sapi.configure(**self.second_config)
+
+    def speak_in_game(self, text, interrupt: bool = True, braille=None) -> None:
+        """PORT ADDITION (user request, 2026-10-03): the one door for text read out during a game - the Extra
+        mode's story and its epilogue, the tutorial's lines, the game's announcements (the weapons a wave hands
+        over, the opener's way to skip) and the challenge timer.  The second speech reads them while Use second
+        speech is on; otherwise this is `speak`, the first speech, exactly as before.  Anything added later that
+        reads text out during a game comes through here, and is timed by `reading.in_game_speech`'s
+        measurement."""
+        if self.second_on:
+            self.speak_second(text, interrupt, braille)
+        else:
+            self.speak(text, interrupt, braille)
+
+    def speak_second(self, text, interrupt: bool = True, braille=None) -> None:
+        """A line for the second speech, whether Use second speech is on or not: its Settings rows and its
+        calibration speak through it.  `braille` as for `speak`, for a screen reader."""
+        if not text:
+            return
+        self.lines += 1
+        text = localization.translate(str(text))
+        if braille:
+            braille = localization.translate(str(braille))
+        log.debug('speak (second): %s', text)
+        self._second_spoke = True
+        choice = self.second_choice
+        if choice not in PRISM_NAMES and choice not in (SCREEN_READER, 'sapi'):
+            if self.nvda.speak(text, interrupt, braille):
+                return
+            if self.readers.speak(text, interrupt, braille=braille):
+                return
+            self.second_sapi.speak(text, interrupt)
+            return
+        if choice == SCREEN_READER:
+            spoken = self.nvda.speak(text, interrupt, braille)
+        elif choice == 'sapi':
+            spoken = self.second_sapi.speak(text, interrupt)
+        else:
+            spoken = self.readers.speak(text, interrupt, PRISM_NAMES[choice], braille)
+        if spoken == self._second_silent:
+            self._second_silent = not spoken
+            log.info('second speech: %s %s', dict(OUTPUTS)[choice],
+                     'is not running: the second speech is silent until it is' if self._second_silent
+                     else 'speaks again')
 
     def screen_reader_running(self) -> bool:
         """UIAccessibilityIsVoiceOverRunning() equivalent: always, in the port.
@@ -867,6 +963,11 @@ class Speech:
         except Exception:                                 # building Prism to tell it to stop took 80 ms
             log.exception('the speech card was not closed cleanly')
         try:
+            if self._second_sapi is not None:             # the second speech's voice, likewise
+                self._second_sapi.shutdown()
+        except Exception:
+            log.exception("the second speech's card was not closed cleanly")
+        try:
             self.nvda.stop()
             if self._readers is not None:
                 self._readers.stop()
@@ -878,6 +979,9 @@ class Speech:
         been built is told: a game that has never spoken through SAPI has nothing to hand back."""
         if self._sapi is not None:
             self._sapi.modern_audio_changed()
+        changed = getattr(self._second_sapi, 'modern_audio_changed', None)
+        if changed is not None:                           # one row for both SAPI 5 voices
+            changed()
 
     def interrupt_sapi(self) -> None:
         """PORT ADDITION: cut what SAPI 5 is saying, whoever is speaking now (user request).
@@ -890,8 +994,11 @@ class Speech:
         from .speech_audio import SpeechAudio
         SpeechAudio.shared().stop()                       # what the game is playing: gone at once
         sapi = self._sapi
-        if sapi is not None and sapi.thread is not None:  # and what it was about to say
+        if sapi is not None and getattr(sapi, 'thread', None) is not None:   # and what it was about to say
             sapi.stop()
+        second = self._second_sapi                        # PORT ADDITION: the second speech's voice too
+        if second is not None and getattr(second, 'thread', None) is not None:
+            second.stop()
 
     def stop(self) -> None:
         self.lines += 1                                   # PORT ADDITION: a hint waiting is not read now
@@ -911,3 +1018,21 @@ class Speech:
             self._readers.stop()
         elif self._sapi is not None:
             self._sapi.stop()
+        self._stop_second()
+
+    def _stop_second(self) -> None:
+        """PORT ADDITION (user request, 2026-10-03): `stop` stops the second speech too, through its own output -
+        Control stops whatever is being read out.  Only once it has said something: until then there is nothing
+        of its own to stop, and nothing is made just to be stopped."""
+        if not self._second_spoke:
+            return
+        choice = self.second_choice
+        if choice == SCREEN_READER or (choice == 'auto' and self.nvda.running()):
+            if self.nvda.running():
+                self.nvda.stop()
+        elif choice in PRISM_NAMES or (choice == 'auto' and self._readers is not None
+                                       and self._readers.reader is not None):
+            if self._readers is not None:
+                self._readers.stop()
+        elif self._second_sapi is not None:
+            self._second_sapi.stop()
