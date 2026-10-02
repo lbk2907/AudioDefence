@@ -2917,11 +2917,13 @@ they were.
   hears is no use.  So it never asks while SAPI 5 or the Mac's system voice speaks, nor on the phone.
 
   The question is a screen of its own (`SpeechCalibrationScreen`, `Port_SpeechCalibrationViewController`): it
-  says what the calibration is for and how it goes, and lands on Start calibration, with Skip for now after
-  it.  From Enter on it is the row's own calibration, the same object (`SpeechCalibration`) with the same
+  says what the calibration is for and how it goes, and lands on Start calibration, its only row.  From Enter on it is the row's own calibration, the same object (`SpeechCalibration`) with the same
   sample, the same checks and the same lines: too early and too late are turned away and any key but Enter
-  cancels, and each leaves the player on the screen to try again.  Escape, or Skip for now, goes on with
-  nothing saved, which is why the next start asks again.  A pace saved is said, and the game goes on - to the
+  cancels, and each leaves the player on the screen to try again.  It cannot be skipped (user request, the
+  same day): it first had Skip for now and Escape, which went on with nothing saved, and a skipped question
+  left the hints and the story timed at the guessed pace - the very thing it asks to end.  Escape only says
+  how to go on ("The game needs this once. Press Enter to start."), unless no screen reader speaks the game
+  any more, when it goes on.  A pace saved is said, and the game goes on - to the
   main menu, or back to the Speech output row - once that line has been read at the pace just measured, with
   half a second over (`GO_ON_MARGIN`): the next screen's first line interrupts, and would have cut the result
   off.  A key in that time goes on at once.  The screen plays no music, so the end of the sentence is heard

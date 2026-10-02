@@ -1356,10 +1356,12 @@ class SpeechCalibrationScreen(MenuScreen):
     It says what the calibration is for and how it goes, and lands on Start calibration.  Enter starts it,
     and from there it is the Speech tab's own (`SpeechCalibration`): Enter at the end of the sentence, the
     result turned away when it is far too early or far too late, and any other key cancelling - after which
-    it can be tried again.  Escape, or Skip for now, goes on without one, and since nothing was saved the
-    game asks again the next time it starts.  A pace saved is said, and the game goes on once that has been
-    read: the next screen's first line would otherwise cut it off.  `then` is where it goes on to - the main
-    menu, or back to the Speech tab."""
+    it can be tried again.  It cannot be skipped (user request, 2026-10-02): skipped, the game went on timing
+    a screen reader at a guessed pace, which is what the question is there to end.  Escape only says how to
+    go on - unless no screen reader speaks the game any more (it was closed, and Automatic went over to
+    SAPI 5), when nothing is wanted and it goes on.  A pace saved is said, and the game goes on once that has
+    been read: the next screen's first line would otherwise cut it off.  `then` is where it goes on to - the
+    opener, or back to Settings."""
 
     #: seconds after the result has been read, at the pace just measured, before the game goes on
     GO_ON_MARGIN = 0.5
@@ -1369,15 +1371,14 @@ class SpeechCalibrationScreen(MenuScreen):
         explanation = menu_words(localization.translate(
             'Speech calibration. Your screen reader cannot tell the game when it has finished speaking. The game '
             'measures how fast it reads instead, so that hints wait until it has finished. Press Enter to start: '
-            'a sentence is read, and you press Enter again the moment it ends. Press Escape to skip this for now, '
-            'and the game asks again the next time it starts.'))
+            'a sentence is read, and you press Enter again the moment it ends. It is needed once, and can be done '
+            'again in the Speech tab in Settings.'))
         super().__init__(host, title=joined([first, explanation]))   # `first`: what was said as it opened
         self.then = then if then is not None else App.delegate().go_to_main_menu
         self.calibration = SpeechCalibration(self.say)
         self.said = ''
-        self.items = [MenuItem('Start calibration', self.start_pressed),
-                      MenuItem('Skip for now', self.skip_pressed, hint='The game asks again the next time it starts.')]
-        self.back_action = self.go_on
+        self.items = [MenuItem('Start calibration', self.start_pressed)]
+        self.back_action = self.escape_pressed
         self.going_on = None                              # the result is being read: the timer that goes on
         self.gone = False
 
@@ -1389,9 +1390,13 @@ class SpeechCalibrationScreen(MenuScreen):
         self.calibration.start()
         play_button_click()
 
-    def skip_pressed(self) -> None:
-        self.go_on()
-        play_button_click()
+    def escape_pressed(self) -> None:
+        """Not a way out: the calibration is needed while a screen reader speaks the game.  If none does any
+        more, nothing is wanted, and the game goes on."""
+        if calibration_wanted():
+            self.speak('The game needs this once. Press Enter to start.')
+        else:
+            self.go_on()
 
     def key_down(self, event) -> None:
         if self.gone:
@@ -1414,7 +1419,7 @@ class SpeechCalibrationScreen(MenuScreen):
         self.going_on = RunLoop.main().schedule_timer(wait, self.go_on, False)
 
     def go_on(self) -> None:
-        """On to the main menu, or back to the Speech tab: calibrated, or skipped for now."""
+        """On to the opener, or back to Settings: calibrated, or no longer wanted."""
         if self.gone:
             return
         self.gone = True

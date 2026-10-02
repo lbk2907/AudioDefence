@@ -80,10 +80,10 @@ all settings forgets the measurement.
 Until you have measured it, the game asks you to: when it starts, after the
 logo and before the intro; in the Speech tab as soon as you change Speech
 output to a screen reader; and straight after Reset all settings, which
-forgets the measurement. It says what the measurement is for,
-and Enter starts it just as the row does. Escape skips it for now, and the
-game asks again the next time it starts. It never asks while SAPI 5 or the
-Mac's system voice speaks, nor on the phone.
+forgets the measurement. It says what the measurement is for, and Enter starts
+it just as the row does. It cannot be skipped: it is needed once, and the
+Speech calibration row can do it again later. It never asks while SAPI 5 or
+the Mac's system voice speaks, nor on the phone.
 
 On the Mac the same page lists **Automatic**, **VoiceOver** and **System
 voice**: VoiceOver when it is on, the system voice when it is not, and the
