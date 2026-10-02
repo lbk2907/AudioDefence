@@ -139,11 +139,36 @@ class S3DEngine:
         state = ctypes.c_int(0)
         for src in list(self._extra_voices):
             self.al.alGetSourcei(src, oal.AL_SOURCE_STATE, ctypes.byref(state))
-            if state.value != oal.AL_PLAYING:
+            if state.value not in (oal.AL_PLAYING, oal.AL_PAUSED):   # a held one is not finished (see hold)
                 self.al.alSourceStop(src)
                 self.al.alSourcei(src, oal.AL_BUFFER, 0)
                 self.al.delete('alDeleteSources', src)
                 self._extra_voices.remove(src)
+
+    # --- holding everything (PORT ADDITION) -------------------------------------------------------
+    def hold(self, keep=()) -> 'SoundHold':
+        """Pause every sound playing now, the one-shot copies included, except those in `keep`, and say
+        which: the pause menu's catch-all (`GameplayController.pause_game`).
+
+        Only what is playing at this moment is held, so a sound started afterwards - a click on the pause
+        menu, the revive screen - plays as it always did.  A held sound reports nothing to the dispatcher
+        while it is held (`S3DSound.poll_events`), so one that has an end callback does not fire it: it is
+        still in the middle of itself.  `SoundHold.release` lets go of exactly these, once."""
+        keep = set(keep or ())
+        sounds = []
+        for sound in list(self.dispatcher.agents):
+            if sound in keep or sound._paused or not sound.playing:
+                continue                                 # already held by its owner, or finished
+            sound.pause()
+            sounds.append(sound)
+        voices = []
+        state = ctypes.c_int(0)
+        for src in list(self._extra_voices):
+            self.al.alGetSourcei(src, oal.AL_SOURCE_STATE, ctypes.byref(state))
+            if state.value == oal.AL_PLAYING:
+                self.al.alSourcePause(src)
+                voices.append(src)
+        return SoundHold(self, sounds, voices)
 
     def _drain(self) -> None:
         guard = 0
@@ -298,6 +323,49 @@ class S3DEngine:
         self.device.close()
         self.device = None
         S3DEngine._instance = None
+
+
+class SoundHold:
+    """PORT ADDITION: the sounds `S3DEngine.hold` paused, to be let go of again - those and no others, once.
+
+    A held sound that something else stopped or started again meanwhile is no longer this hold's to touch:
+    `S3DSound.resume` only plays a source that is really paused, and `drop` only stops one."""
+
+    def __init__(self, engine: S3DEngine, sounds: list, voices: list):
+        self.engine = engine
+        self.sounds = sounds
+        self.voices = voices
+
+    def _held_voices(self) -> list:
+        state = ctypes.c_int(0)
+        out = []
+        for src in self.voices:
+            if src in self.engine._extra_voices:          # not reaped meanwhile
+                self.engine.al.alGetSourcei(src, oal.AL_SOURCE_STATE, ctypes.byref(state))
+                if state.value == oal.AL_PAUSED:
+                    out.append(src)
+        return out
+
+    def release(self) -> None:
+        """Play on, each from where it was held."""
+        sounds, voices = self.sounds, self._held_voices()
+        self.sounds, self.voices = [], []
+        for sound in sounds:
+            if sound._paused:
+                sound.resume()
+        for src in voices:
+            self.engine.al.alSourcePlay(src)
+
+    def drop(self) -> None:
+        """Stop them instead: the game they belonged to is over (`GameplayController.kill_gameplay`), and a
+        sound held for it must not come back over whatever comes next."""
+        sounds, voices = self.sounds, self._held_voices()
+        self.sounds, self.voices = [], []
+        for sound in sounds:
+            if sound._paused and sound._source and sound._source_state() == oal.AL_PAUSED:
+                sound.stop()
+        for src in voices:
+            self.engine.al.alSourceStop(src)              # and the next pump reaps it
 
 
 # =========================================================================================== dispatcher

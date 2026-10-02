@@ -230,3 +230,15 @@ class AmbientManager:
     def resume(self) -> None:                             # 0x1000999e8
         if self.enemy_ambiant_sound is not None:
             self.enemy_ambiant_sound.resume()
+
+    def room_sounds(self) -> set:
+        """PORT ADDITION: what the pause leaves sounding, because it is the room and not the game - the
+        arena's bed and base sound, the storm and its thunder, the scares: everything this plays but the
+        enemy ambience (see `pause`).  `GameplayController.pause_game` holds every other sound."""
+        out = set()
+        for pl in (self.playlist, self.storm_playlist):
+            for sound in (pl.agent_cache.values() if pl is not None else ()):
+                if sound is not None:
+                    out.add(sound)
+                    out.update(sound.copies)
+        return out

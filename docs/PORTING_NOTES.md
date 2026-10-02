@@ -1117,12 +1117,35 @@ they were.
   the armory anyway in the tail call at 0x0761b8 - so one press closed the weapon page *and* threw you out
   of the armory, skipping the list.  Back now matches Escape (`accessibility_perform_escape`): it closes the
   detail and leaves the cursor on the row it was opened from, and a second press leaves the armory.
-* A power-up in hand is held while the game is paused (user request).  `pauseGame` 0x10005b5fc stops the
-  timers and pauses the bricks and the ambience, and says nothing about a power-up, as it says nothing about
-  the weapon (`Weapon.pause`, the same divergence).  The Minigun's fire loops, so it went on firing through
-  the pause menu and only stopped when the game came back and its time ran out.  `PowerUp.pause` holds
+* A power-up in hand is held while the game is paused, and so is every other sound still playing (user
+  request).  `pauseGame` 0x10005b5fc stops the timers and pauses the bricks and the ambience, and
+  `resumeGame` 0x10005b718 lets the same go; it says nothing about a power-up, as it says nothing about the
+  weapon (`Weapon.pause`, the same divergence).  The Minigun's fire loops, so it went on firing through the
+  pause menu and only stopped when the game came back and its time ran out.  `PowerUp.pause` holds
   whatever the power-up is playing and `resume` lets go of exactly those, so a second pause cannot forget
   what the first is holding.
+
+  As first written that never reached the power-up in a real game.  `WeaponManager.pause` asked its own
+  power-up, and a game's weapon manager is a fresh `initWithWeaponsFromArmory` 0x1000a76c4 or
+  `initWithChallengeWeaponArray:` 0x1000a80f4, whose own is always nil: the power-up lives on the shared
+  manager, since `initPowerUp:` 0x1000a9874 and `usePowerUp` 0x1000a9cd8 go through +sharedWeaponManager -
+  as `update:` 0x1000a8c38 knows.  Its test had called the shared manager directly, so it passed while the
+  Minigun fired on through every pause.  It asks the shared manager now.
+
+  Under the pauses by name there is a net (user request: when the game pauses, everything in it pauses).
+  `pause_game` holds every sound still playing in the engine as it runs - a Fireworks launch and its
+  explosions, the Tornado's wind, the Tesla's zap, a shot's tail, a projectile, any one-shot - and
+  `resume_game` lets go of exactly those, each from where it was (`hold_every_sound`, `S3DEngine.hold`).
+  Only what is playing at that moment is held, so the pause menu's own sounds, the revive screen, the story
+  screen and anything else started afterwards play as they always did.  A held sound tells the dispatcher
+  nothing, so one that ends while held does not fire its end callback early: a power-up paused during its
+  announcement starts when the announcement has finished, after the game is back.  A second pause keeps
+  what the first is holding, and a resume lets go once.  Speech is not the engine's - the screen readers
+  speak for themselves, and SAPI 5, when the game plays it, through a sound card of its own
+  (`platform/speech_audio.py`) - so a pause is never silent for want of it.  The room keeps sounding, as
+  the entry on the pause menu above has it (`AmbientManager.room_sounds`).  A game ended from a pause -
+  End Game, Restart, an epilogue - stops what was held instead of letting it go over the next screen
+  (`kill_gameplay`).
 * Being killed by a Berserk counts (user request).  `-[ADEnemy update:]`'s case 3 posts `PLAYER_DIED` at
   0x10005f16c and then attacks; case 8, the berserk charge, goes straight to `attack` at 0x10005f468 with no
   notification.  `ADInGameStats` learns of a death only from that notification, so the Berserk - the one

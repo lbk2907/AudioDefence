@@ -529,6 +529,7 @@ class GameplayController:
         self.announcer_value_on_entering_pause = False
         self.accessible_game_view = None
         self.paused = False
+        self.held_sounds = None                           # PORT ADDITION: see hold_every_sound
         self.weapon_manager = None
         self.player = None
         self.death_overlay_visible = False
@@ -770,8 +771,29 @@ class GameplayController:
             self.weapon_manager.pause()
         if self.player is not None:                       # PORT ADDITION: see Player.pause
             self.player.pause()
+        self.hold_every_sound()                           # PORT ADDITION: and everything else
         self.paused = True
         self.announcer_value_on_entering_pause = GameParameters.shared().last_announcer_value()
+
+    def hold_every_sound(self) -> None:
+        """PORT ADDITION (user request): whatever is still sounding when the game pauses is held with it.
+
+        `pauseGame` 0x10005b5fc stops the timers and pauses the bricks and the ambience, and `resumeGame`
+        0x10005b718 lets the same go; anything else that happens to be playing plays on.  The port pauses
+        the weapons, the player's ringing ears and the power-up by name (`Weapon.pause`, `Player.pause`,
+        `PowerUp.pause`); this is the net under them - a power-up's launch and explosions, a projectile, a
+        shot's tail, any one-shot nobody thought of - so that a paused game is a paused game, and only the
+        sounds held here are let go again (`S3DEngine.hold`).  The room keeps sounding, as it already did
+        (`AmbientManager.room_sounds`).  A second pause keeps what the first is holding."""
+        if self.held_sounds is None:
+            self.held_sounds = S3DEngine.engine().hold(keep=AmbientManager.shared().room_sounds())
+
+    def let_go_of_every_sound(self, stop: bool = False) -> None:
+        """PORT ADDITION: the other half of `hold_every_sound` - play on, or, when the game is over rather
+        than resumed (`kill_gameplay`), stop."""
+        held, self.held_sounds = self.held_sounds, None
+        if held is not None:
+            held.drop() if stop else held.release()
 
     def resume_game(self) -> None:                        # 0x10005b718
         self.start_update_timers()
@@ -781,6 +803,7 @@ class GameplayController:
             self.weapon_manager.resume()
         if self.player is not None:                       # PORT ADDITION: see Player.pause
             self.player.resume()
+        self.let_go_of_every_sound()                      # PORT ADDITION: see hold_every_sound
         self.pause_view = None
         self.paused = False
         announcer = GameParameters.shared().last_announcer_value()
@@ -832,6 +855,7 @@ class GameplayController:
     def kill_gameplay(self) -> None:                      # 0x10005c170
         from .persistent_stats import PersistentStats
         self.stop_timers()
+        self.let_go_of_every_sound(stop=True)             # PORT ADDITION: ended from a pause, held for nothing
         AmbientManager.shared().stop_ambient()
 
         def later():                                      # killGameplay_block_invoke 0x10005c770 (0.1 s)

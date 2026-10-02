@@ -1165,8 +1165,9 @@ nothing, or says something no keyboard player can act on.
   already did. The loadout was the one way into a weapon page the original left silent.
 - **Closing a weapon page and equipping a weapon click too.** Those three buttons are plain ones in the
   original, and only its font buttons make a sound.
-- **A power-up stops while the game is paused.** The Minigun kept firing through the pause menu, because
-  the original's pause says nothing about a power-up in hand.
+- **Every sound of the game waits while it is paused**, and carries on from where it was. The Minigun kept
+  firing through the pause menu, because the original's pause holds only the zombies and the arena, and
+  says nothing about a power-up in hand. The arena's own ambience keeps sounding.
 - **Being killed by a Berserk counts.** The enemy kills you from a state the original never reports a death
   from, so its own "killed you" tally stayed at zero however often it got you, and the Deaths total on the
   statistics screen missed those deaths as well.

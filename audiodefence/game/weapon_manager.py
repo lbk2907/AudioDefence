@@ -217,19 +217,25 @@ class WeaponManager:
     # --- pausing (PORT ADDITION) ------------------------------------------------------------------
     def pause(self) -> None:
         """Freeze the weapons and the power-up in hand with the rest of the game: see Weapon.pause and
-        PowerUp.pause."""
+        PowerUp.pause.
+
+        The power-up is the shared manager's, as `update:` reads it: a gameplay manager's own is always nil,
+        `initPowerUp:` and `usePowerUp` going through +sharedWeaponManager.  This asked its own at first,
+        so in a real game - whose manager is never the shared one - it never reached the power-up at all."""
         for weapon in (self.current_weapon, self.melee_weapon):
             if weapon is not None:
                 weapon.pause()
-        if self._power_up is not None:
-            self._power_up.pause()
+        pu = WeaponManager.shared().power_up
+        if pu is not None:
+            pu.pause()
 
     def resume(self) -> None:
         for weapon in (self.current_weapon, self.melee_weapon):
             if weapon is not None:
                 weapon.resume()
-        if self._power_up is not None:
-            self._power_up.resume()
+        pu = WeaponManager.shared().power_up
+        if pu is not None:
+            pu.resume()
 
     # --- power-ups (always through the shared instance) ------------------------------------------
     @property
