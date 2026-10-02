@@ -170,6 +170,11 @@ class S3DEngine:
                 voices.append(src)
         return SoundHold(self, sounds, voices)
 
+    def playing_now(self) -> list:
+        """PORT ADDITION: every sound playing at this moment - not one held, not one finished - in the order
+        they were started.  The Extra mode's story waits on some of them (`tell_story_if_due`)."""
+        return [sound for sound in list(self.dispatcher.agents) if sound.playing]
+
     def _drain(self) -> None:
         guard = 0
         while self._queue and guard < 10000:

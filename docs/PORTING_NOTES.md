@@ -2410,6 +2410,27 @@ they were.
   two-finger tap and two-finger swipe, which stop and reread, count as keys here.  Leaving the game's window,
   or the app going into the background, makes it wait too (`App.pause_game`), so the game never plays on
   with nobody there.  With no screen at all - the referee - the story is passed over as before.
+
+  It waits for what is already being said as its wave begins (user request, 2026-10-02).  A pause holds
+  every sound playing, so the challenge's start clip - `start_level_button`, which Play on the overview
+  (`playButtonSound` 0x1000d8d50), Try again (0x1000720c4) and the pause menu's Restart play as they start
+  the game, three seconds of which two are heard - was held under the first wave's story and finished after
+  it.  The game is still paused at once, so the wave does not begin before its story, but the start clip,
+  the announcer, a gun being drawn and naming itself (`Weapon.deploy`, when a wave hands weapons over), the
+  revive's answer and the weapons read out are left out of the hold and play to their end, and the story is
+  shown once they are over (`opening_lines`, `GameplayScreen.still_announcing`, looked at on a run-loop
+  timer, `pause_game(keep=)`).  Nothing in the original waits for the clip: `goToChallengeWithDict:`
+  0x100082278 loads the game at once and its timers run from `viewDidLoad`.  Its challenges are written
+  round it instead - none of the thirty first waves has a zombie on a clock, each waiting on a line or on
+  another zombie, and twenty-nine open with a second or two of nothing before Dr. Bastard's or the
+  announcer's line - while most of the Extra mode's first waves send a zombie at once; so here the wave
+  waits.  A wave's own recordings cannot be playing then: its story is told before its first tick, and the
+  last wave's are stopped as it loads.  Checked headless with the overview's own Play on The Barnyard: the
+  game paused at once with the clip playing and not held, the wave not moved on, and the story shown 0.05 s
+  after the clip ended at 3.00 s with nothing held under it; without the clip, at once as before; leaving
+  the window during the wait made the story wait for Continue; on Reprise's third wave the story waited for
+  the Hunting Rifle's deploy and voice and for "New weapons: Hunting Rifle, Micro SMG, Golf" to be read
+  (2.35 s against 2.33); the referee still passed it over.
 * PORT ADDITION: Extra holds campaigns, and a campaign holds chapters (user request, 2026-10-01).  Play,
   Extra opens on a list of campaigns (`additions.CAMPAIGNS`, `ExtraMenuScreen`), each row its name and the
   stars won of the stars it holds - "The Long Way Home, 30 of 147 stars" - and each opening its chapters

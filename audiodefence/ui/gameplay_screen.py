@@ -60,7 +60,26 @@ class GameplayScreen(Screen):
         return self.host.screen_reader_running()
 
     def announce(self, text) -> None:
+        from ..platform.speech import Speech
         self.speak(text)
+        # PORT ADDITION: remembered, so that the Extra mode's story waits for it (still_announcing)
+        self._announced = (str(text), Speech.shared().lines, RunLoop.main().now())
+
+    def still_announcing(self) -> bool:
+        """PORT ADDITION: whether the speech is still reading what the game last announced - the weapons a
+        wave hands over - so that a story told as the wave begins does not cut it off
+        (`ChallengeGameplayController.tell_story_if_due`).  Anything said since has cut it already.  The
+        game's own voice says when it has finished; a screen reader is timed, as a hint is (ui/reading.py)."""
+        from ..platform.speech import Speech
+        from .reading import reading_seconds
+        said = getattr(self, '_announced', None)
+        speech = Speech.shared()
+        if said is None or speech.lines != said[1]:
+            return False
+        speaking = speech.still_speaking()
+        if speaking is None:
+            return RunLoop.main().now() < said[2] + reading_seconds(said[0])
+        return bool(speaking)
 
     @staticmethod
     def skip_intro_announcement() -> str:
