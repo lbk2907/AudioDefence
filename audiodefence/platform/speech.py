@@ -257,25 +257,10 @@ class _SapiThread(threading.Thread):
         self.line = 0                                     # the generation of the line being written now
         self.audio = None                                 # its output as ISpeechAudio, for stopping it
         self.ready = threading.Event()
-        # PORT ADDITION: whether the voice has finished (`_Sapi.busy`).  `asked` counts the lines the game
-        # has handed over, and only the game's side changes it; `said` is the last of them given to the
-        # voice and `finished` the last it has finished with, and only this thread changes those.
-        self.asked = 0
-        self.said = 0
-        self.finished = 0
-        self.watching = False                             # a line may still be being said: keep asking
-        self.went = None                                  # which way the last line went: see _still_saying
-        self.number = 0                                   # SAPI's stream number for the last line streamed
-
-    #: PORT ADDITION: how often, while a line may still be being said, the voice is asked whether it is
-    #: (SpeechRunState: SRSEIsSpeaking)
-    WATCH_EVERY = 0.05
-    SRSE_IS_SPEAKING = 2
 
     # --- what the game asks for -----------------------------------------------------------------------
     def say(self, body: str, flags: int, engine: bool, generation: int) -> None:
-        self.asked += 1
-        self.queue.put(('speak', generation, body, flags, engine, self.asked))
+        self.queue.put(('speak', generation, body, flags, engine))
 
     def silence(self, generation: int) -> None:
         self.queue.put(('stop', generation))
@@ -301,11 +286,7 @@ class _SapiThread(threading.Thread):
             return
         self.ready.set()
         while True:
-            try:
-                command = self.queue.get(timeout=self.WATCH_EVERY) if self.watching else self.queue.get()
-            except queue.Empty:
-                self._watch()
-                continue
+            command = self.queue.get()
             try:
                 if command[0] == 'quit':
                     self._to_windows()                    # the card back before the stream is let go of
@@ -319,36 +300,9 @@ class _SapiThread(threading.Thread):
                 elif command[0] == 'stop':
                     self._stop(command[1])
                 elif command[0] == 'speak':
-                    self.said = command[5]                # first: a line that fails is finished with too
-                    self._speak(*command[1:5])
+                    self._speak(*command[1:])
             except Exception:
                 log.exception('SAPI thread: %s failed', command[0])
-            self.watching = True
-
-    def _watch(self) -> None:
-        """PORT ADDITION: once the voice is no longer saying anything, the lines given to it so far are
-        finished with (`_Sapi.busy`)."""
-        if not self._still_saying():
-            self.finished = self.said
-            self.watching = False
-
-    def _still_saying(self) -> bool:
-        """PORT ADDITION: whether the voice has more of the last line to give.
-
-        Spoken to Windows, the voice says so itself: its RunningState is SRSEIsSpeaking until the card has
-        played the line (measured: 8.65 s for a line 8.52 s long).  Written into the game it cannot - the
-        stream keeps the events SAPI gives it, so the voice says it is speaking for ever after - but the
-        stream sees the end of the line go by (`SpeechSink.ISpEventSink_AddEvents`), which is when SAPI
-        has written all of it.  Rendered, the line was finished with before the thread moved on.  Either
-        way into the game, what is left of the line is SpeechAudio's to play, and `_Sapi.busy` asks it."""
-        if self.went == 'stream':
-            return self.sink is not None and self.sink.ended < self.number
-        if self.went == 'windows':
-            try:
-                return int(self.voice.Status.RunningState) == self.SRSE_IS_SPEAKING
-            except Exception:                             # cannot be asked: what has been given is done
-                return False
-        return False
 
     def _configure(self, voice_id, rate: int, volume: int) -> None:
         if voice_id:
@@ -382,7 +336,6 @@ class _SapiThread(threading.Thread):
         if generation < self.sapi.generation:
             return
         self._cut_what_is_playing()
-        self.went = None                                  # PORT ADDITION: cut is finished with (_still_saying)
 
     #: how long a piece of a line may be before it is split again: the first short, so speech starts at
     #: once, and the rest longer, since they are made while the first is being heard.  Rendering a piece
@@ -416,13 +369,10 @@ class _SapiThread(threading.Thread):
         if generation < self.sapi.generation:             # interrupted before this one was reached
             return
         if engine and self._stream(generation, body, flags):
-            self.went = 'stream'
             return
         if engine and self._render(generation, body, flags):
-            self.went = 'render'
             return
         self._to_windows()                                # the row was turned off: give the card back
-        self.went = 'windows'
         text, template = body
         whole = template % text if template else text
         if flags & _Sapi.SVSF_PURGE:                      # Windows plays it: cut what it is playing first
@@ -479,7 +429,7 @@ class _SapiThread(threading.Thread):
                 self.voice.Speak('', _Sapi.SVSF_ASYNC | _Sapi.SVSF_PURGE)    # only then call this one ours
             self.line = generation                        # (a switch cuts what was playing on its own way)
             self.sink.starting()
-            self.number = int(self.voice.Speak(whole, (flags & ~_Sapi.SVSF_PURGE) | _Sapi.SVSF_ASYNC) or 0)
+            self.voice.Speak(whole, (flags & ~_Sapi.SVSF_PURGE) | _Sapi.SVSF_ASYNC)
         except Exception as exc:
             log.info('SAPI would not speak into the game, so its lines are rendered first: %s', exc)
             self._to_windows()
@@ -565,7 +515,6 @@ class _SapiThread(threading.Thread):
             self.voice.AudioOutputStream = self.card
             told = self.streaming
             self.rendering = self.streaming = False
-            self.went = None                              # PORT ADDITION: nothing more of it is coming
             self.audio = None                             # ISpeechAudio for the card, not for the stream
             if told:
                 log.info('SAPI speaks to Windows again')  # the other side of `_to_the_game`'s line
@@ -736,19 +685,6 @@ class _Sapi:
         self.worker().say(body, flags, engine, self.generation)
         return True
 
-    def busy(self):
-        """PORT ADDITION: whether the voice is still saying what it was given - True or False - or None when
-        it cannot be told, its thread having found no voice to speak with.  A line still waiting for the
-        thread counts, and so does what the game still has to play of one (SpeechAudio), whichever way the
-        voice is going: into the game, or to Windows."""
-        thread = self.thread
-        if thread is None:
-            return False                                  # it has never been given anything
-        if not thread.is_alive():
-            return None
-        from .speech_audio import SpeechAudio
-        return thread.finished < thread.asked or SpeechAudio.shared().speaking()
-
     def modern_audio_changed(self) -> None:
         """PORT ADDITION: Settings -> Speech -> Use modern output was pressed.
 
@@ -823,7 +759,6 @@ class Speech:
         self.choice = 'auto'                              # Speech output (OUTPUTS), set from the settings
         self.sapi_config = dict(SAPI_DEFAULTS)            # SAPI 5's voice and the rest, likewise
         self._silent = False                              # the chosen one could not speak the last line
-        self.spoken_by = None                             # PORT ADDITION: see still_speaking
         #: PORT ADDITION: how many lines have been spoken or stopped, so that a hint waiting to be read can
         #: tell that something else has been said since (ui/reading.py)
         self.lines = 0
@@ -885,7 +820,6 @@ class Speech:
             spoken = self.sapi.speak(text, interrupt)
         else:
             spoken = self.readers.speak(text, interrupt, PRISM_NAMES[choice], braille)
-        self.spoken_by = (('voice' if choice == 'sapi' else 'reader') if spoken else None)
         if spoken == self._silent:                        # said once, as it starts or stops
             self._silent = not spoken
             log.info('speech: %s %s', dict(OUTPUTS)[choice],
@@ -899,21 +833,11 @@ class Speech:
         self._speak_automatic(text, interrupt)
 
     def _speak_automatic(self, text, interrupt: bool, braille=None) -> None:
-        self.spoken_by = 'reader'
         if self.nvda.speak(text, interrupt, braille):
             return
         if self.readers.speak(text, interrupt, braille=braille):
             return
-        self.spoken_by = 'voice' if self.sapi.speak(text, interrupt) else None
-
-    def still_speaking(self):
-        """PORT ADDITION: whether the last line spoken is still being said: True or False when the game's own
-        voice said it (SAPI 5, or the Mac's system voice), and None when it cannot be known - a screen reader
-        said it, and NVDA's controller client, Prism and VoiceOver's Apple Event can only hand a line over,
-        not say when it is done - or nothing could say it."""
-        if self.spoken_by != 'voice' or self._sapi is None:
-            return None
-        return self._sapi.busy()
+        self.sapi.speak(text, interrupt)
 
     def automatic_output(self) -> str:
         """What Automatic speaks through right now, without speaking: 'nvda' ('voiceover' on the Mac),

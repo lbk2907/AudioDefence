@@ -213,20 +213,12 @@ class FakeBridge:
     # calls finish_start(); one in `broken` falls back to the phone's default, as one that is not installed does.
     ENGINES = {'com.example.fake': 'Fake speech', 'com.example.other': 'Other speech'}
 
-    #: how long each line "takes to say", for speechBusy: a test sets it, and None is a voice that is never busy
-    speaking_seconds = None
-
     def speak(self, text, interrupt):
         self.spoken.append(text)
-        if self.speaking_seconds is not None:
-            self.speaking_until = time.perf_counter() + self.speaking_seconds
         return True
 
     def stopSpeech(self):
-        self.speaking_until = 0.0
-
-    def speechBusy(self):
-        return time.perf_counter() < getattr(self, 'speaking_until', 0.0)
+        pass
 
     def configureSpeech(self, rate, pitch, volume):
         self.speech_config = (rate, pitch, volume)

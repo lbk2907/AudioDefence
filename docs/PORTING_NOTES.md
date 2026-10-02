@@ -2428,8 +2428,9 @@ they were.
   `RunningState` spoken to Windows and by the end of the line's stream going past the game's stream object
   written into the game; the Mac's system voice through `isSpeaking`; the phone's through a `speechBusy` on
   the Bridge, an `UtteranceProgressListener` with `isSpeaking` behind it.  The user asked for one rule for
-  every voice - what the game follows is the player's calibration and settings, not what a voice reports.
-  Checked headless with a stand-in SAPI 5 that fell quiet after a second, the speech measured at 0.1 s a word: The Barnyard's 55 words went on after
+  every voice - what the game follows is the player's calibration and settings, not what a voice reports -
+  and with nothing left asking, all of that was taken out again.  Checked headless with a stand-in SAPI 5
+  that fell quiet after a second, the speech measured at 0.1 s a word: The Barnyard's 55 words went on after
   6.95 s against the 7.0 predicted (5.5 s and the margin).
   The game's update timers are stopped under the story, so the screen waits on a run-loop timer of its own.
   Any key but Enter and Back hands the screen to the player, and it then waits for Continue: moving through
