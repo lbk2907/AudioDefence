@@ -639,14 +639,15 @@ class ControlSchemePanel:
         GameParameters.shared().set_speech_output(choice)
         name = dict(OUTPUTS)[choice]
         speech = Speech.shared()
+        # speak_automatic takes a line as it is, so these are put in the player's language here (2026-10-02)
         if speech.can_speak(choice):
             self.announce('Speech output: %s' % name)
         elif choice in PRISM_NAMES and speech.readers.ctx is None:
-            speech.speak_automatic('Speech output: %s. It needs Prism, which is not installed, so the game '
-                                   'will be silent.' % name)
+            speech.speak_automatic(localization.translate('Speech output: %s. It needs Prism, which is not '
+                                                          'installed, so the game will be silent.' % name))
         else:
-            speech.speak_automatic('Speech output: %s. %s is not running, so the game will be silent until '
-                                   'it is.' % (name, name))
+            speech.speak_automatic(localization.translate('Speech output: %s. %s is not running, so the game '
+                                                          'will be silent until it is.' % (name, name)))
 
     # --- SAPI 5 (PORT ADDITION) ------------------------------------------------------------------
     SAPI_STEP_HINT = 'Press Enter for the next setting and Shift plus Enter for the previous.'
@@ -740,8 +741,11 @@ class ControlSchemePanel:
 
     @staticmethod
     def _sapi_say(text: str) -> None:
+        """A change said by the voice being set, at its new setting, whatever else is speaking - and in the
+        player's language, as Speech.speak says every other line of the tab.  Handed to the voice directly,
+        these went out in English until 2026-10-02 (user request)."""
         from ..platform.speech import Speech
-        Speech.shared().sapi.speak(text, True)
+        Speech.shared().sapi.speak(localization.translate(text), True)
 
     def choose_sapi_voice(self) -> None:
         """PORT ADDITION: the installed voices as a list (user request).  There are as many as the machine
