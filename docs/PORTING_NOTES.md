@@ -2854,7 +2854,7 @@ they were.
   and the others are reached through Prism, which only hands a line over, and VoiceOver on the Mac through an
   Apple Event that does the same.  The hints and the Extra mode's story therefore time a screen reader from
   the words of a line, and a pace guessed for everyone is right for nobody.  Enter on the row reads a sample
-  through whatever speaks the game (`ControlSchemePanel.calibration_sample`): one translatable phrase of 38
+  through whatever speaks the game (`SpeechCalibration.sample`, ui/settings.py): one translatable phrase of 38
   words, an instruction and then a sentence of the game's world, every word of it counted as it is read, in
   the player's language.  The player presses Enter the moment it ends, and the time taken over the number of
   words is the time a word (`speechWordTime` in settings.json, `GameParameters.speech_word_time`), which
@@ -2872,6 +2872,41 @@ they were.
   1 s pause, and the story's 15 words waited 5.25 s; a press after a second and one after 46 s were turned
   away; Escape and an arrow cancelled, Shift alone did not, and Settings stayed open; the row went with SAPI
   5 speaking and on the Android build's Python with the fake Bridge; Reset all settings forgot it.
+
+  Until a pace is saved the game asks for one (user request, 2026-10-02), rather than leave the row saying
+  "not done yet" to a player who may never open the Speech tab.  It asks when the screens a player meets
+  first are done and before the main menu: the logo, then the opener, whose two ways out - its end,
+  `goToScoreScreen` 0x100025e48, and the skip, `skipButtonPressed` 0x100025ef8 - go to the main menu in the
+  original and to `App.finish_starting` here.  The first-run control scheme screen comes before the opener
+  in the original, but the port never shows it (it starts on Gyro, `last_control_scheme`), and the update
+  check and the offer to put back missing files belong to the main menu, so they come after.  It asks again
+  in the Speech tab the moment Speech output is changed to a screen reader with nothing saved
+  (`ControlSchemePanel.take_speech_output`), over the tab, with the choice said first so the question does not
+  cut it off; choosing the output already in use is not a change and does not ask.  Whether to ask is
+  `calibration_wanted`: a screen reader speaks the game (`screen_reader_speaks`, which is also what shows the
+  row, so the two cannot disagree; Automatic counts as what it speaks through now), nothing is saved, and the
+  output can speak - a chosen screen reader that is not running leaves the game silent, and a question nobody
+  hears is no use.  So it never asks while SAPI 5 or the Mac's system voice speaks, nor on the phone.
+
+  The question is a screen of its own (`SpeechCalibrationScreen`, `Port_SpeechCalibrationViewController`): it
+  says what the calibration is for and how it goes, and lands on Start calibration, with Skip for now after
+  it.  From Enter on it is the row's own calibration, the same object (`SpeechCalibration`) with the same
+  sample, the same checks and the same lines: too early and too late are turned away and any key but Enter
+  cancels, and each leaves the player on the screen to try again.  Escape, or Skip for now, goes on with
+  nothing saved, which is why the next start asks again.  A pace saved is said, and the game goes on - to the
+  main menu, or back to the Speech output row - once that line has been read at the pace just measured, with
+  half a second over (`GO_ON_MARGIN`): the next screen's first line interrupts, and would have cut the result
+  off.  A key in that time goes on at once.  The screen plays no music, so the end of the sentence is heard
+  clearly; the main menu starts the theme as it always does.  Checked headless on a fake clock with a
+  stand-in NVDA on Automatic and Prism stubbed out, through the real launch: a fresh profile went logo,
+  opener, then the question, not the main menu; Escape went on to the main menu with nothing saved, and the
+  next start asked again; there too early, too late, Escape and an arrow while the sentence was read each kept
+  it asking, and Enter after 38 words at 240 a minute saved 0.2497 s, said "240 words a minute" and opened
+  the main menu 2.0 s later.  With a pace saved, with SAPI 5 speaking on Automatic or chosen, and with NVDA
+  chosen but not running it went straight to the main menu, as it did on the Android build's Python with the
+  fake Bridge.  In the Speech tab, NVDA chosen after SAPI 5 asked at once over the tab, saying "Speech output:
+  NVDA" first; Escape went back to that row; NVDA chosen again did not ask; Automatic did, and a calibration
+  there brought the row back reading "200 words a minute"; with that saved, NVDA did not ask.
 
 
 ## Original quirks kept on purpose

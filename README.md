@@ -76,6 +76,13 @@ same measure. The row is not there while SAPI 5 or the Mac's system voice
 speaks, nor on the phone: the game can tell when those have finished. Reset
 all settings forgets the measurement.
 
+Until you have measured it, the game asks you to: when it starts, once the
+intro is over and before the main menu, and in the Speech tab as soon as you
+change Speech output to a screen reader. It says what the measurement is for,
+and Enter starts it just as the row does. Escape skips it for now, and the
+game asks again the next time it starts. It never asks while SAPI 5 or the
+Mac's system voice speaks, nor on the phone.
+
 On the Mac the same page lists **Automatic**, **VoiceOver** and **System
 voice**: VoiceOver when it is on, the system voice when it is not, and the
 system voice's own five rows — voice, rate, pitch and volume, with no rate
@@ -1300,7 +1307,8 @@ replacing them.
   setting, Shift+Enter to the previous.
 - **Settings → Speech**: Speech output — Automatic, or one screen reader or voice only — SAPI 5's
   voice, rate, rate boost, pitch and volume, whether hints are read and how long after their item, and a
-  calibration that measures how fast your screen reader reads. See [Accessibility](#accessibility).
+  calibration that measures how fast your screen reader reads, which the game asks for when it starts until
+  it has been done. See [Accessibility](#accessibility).
 - **Settings → Miscellaneous → Remember cursor position** (off by default) returns the cursor to the row
   you left a screen on.
 - **A menu music volume**: Page Up and Page Down, on any menu, in steps of 10% from 100% — the original's

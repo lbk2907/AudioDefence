@@ -36,6 +36,7 @@ from .accessibility import (CELL, Button, View, cross_axis_key, cross_axis_text,
                             play_button_click, JUMP_MODS)
 from .challenges import _TableLoader, _play_buttons_sound
 from .host import register
+from .screens import MenuItem, MenuScreen, joined
 from .viewcontroller import ViewControllerScreen
 
 log = logging.getLogger('ui.settings')
@@ -119,7 +120,7 @@ class ControlSchemePanel:
         self.sapi_shown = False                           # Speech: whether SAPI 5's rows are listed
         self._engine_settled = 0                          # Android: the engine start the rows were made after
         self.choosing = None                              # a row's choices, shown as a list of their own
-        self.calibrating = None                           # Speech calibration timing: (when, words)
+        self.calibration = SpeechCalibration(self.announce)   # Speech: the Speech calibration row
         self._trigger_sample = None                       # the Trigger feel being tried on the pad
         self._speech_due = 0.0
         frame = (center[0] - 220.0, center[1] - 122.0, 440.0, 244.0)
@@ -255,7 +256,7 @@ class ControlSchemePanel:
                    hint="How long the game waits after reading a row before it reads the row's hint, from 0 to "
                         '3 seconds. ' + self.SAPI_STEP_HINT,
                    action=self.step_hint_pause, shift_action=self.step_hint_pause_back)
-            if not system.ANDROID and not self.sapi_shown:
+            if screen_reader_speaks():
                 # PORT ADDITION (user request, 2026-10-02): a screen reader cannot say when it has finished, so
                 # how fast it reads is measured (ui/reading.py).  Not while the game's own voice speaks, which
                 # says so itself - and so never on the phone, whose voice always does.
@@ -662,11 +663,18 @@ class ControlSchemePanel:
         the automatic choice, since it could not be heard otherwise and the player would be left in
         silence without knowing why."""
         from ..platform.speech import OUTPUTS, PRISM_NAMES, Speech
-        GameParameters.shared().set_speech_output(choice)
+        params = GameParameters.shared()
+        changed = choice != params.speech_output()
+        params.set_speech_output(choice)
         name = dict(OUTPUTS)[choice]
         speech = Speech.shared()
         # speak_automatic takes a line as it is, so these are put in the player's language here (2026-10-02)
-        if speech.can_speak(choice):
+        if changed and calibration_wanted():
+            # PORT ADDITION (user request, 2026-10-02): a screen reader speaks now, and how fast it reads has
+            # never been measured: the game asks for a Speech calibration at once, as it does at start-up,
+            # and the choice is said as the question opens rather than cut off by it
+            self.ask_for_calibration(localization.translate('Speech output: %s' % name))
+        elif speech.can_speak(choice):
             self.announce('Speech output: %s' % name)
         elif choice in PRISM_NAMES and speech.readers.ctx is None:
             speech.speak_automatic(localization.translate('Speech output: %s. It needs Prism, which is not '
@@ -690,7 +698,7 @@ class ControlSchemePanel:
         """On the Speech category, SAPI 5's rows come and go as it starts or stops being what speaks - a
         screen reader started or closed while the list is open - looked at once a second."""
         if (self.category != 'speech' or self.capturing is not None or self.choosing is not None
-                or self.calibrating is not None):
+                or self.calibration.timing is not None):
             return
         now = time.monotonic()
         if now < self._speech_due:
@@ -789,56 +797,26 @@ class ControlSchemePanel:
         self.step_hint_pause(-1)
 
     # --- speech calibration (PORT ADDITION, user request) ---------------------------------------
-    @staticmethod
-    def calibration_sample() -> str:
-        """What is read to be timed: the one thing to do, then a sentence of the game's world - in the
-        player's language, and in a controller's words when those are chosen.  Every word of it is counted."""
-        from ..platform.pad import menu_words
-        return menu_words(localization.translate(
-            'Press Enter as soon as this ends. Somewhere past the fence a gate creaks open, the first footsteps '
-            'come out of the dark, slow and uneven, and you check your clip and wait for them to come closer.'))
-
     def start_calibration(self) -> None:
-        """Read the sample through whatever speaks the game, and time it until Enter."""
-        from ..platform.runloop import RunLoop
-        from .reading import word_count
-        sample = self.calibration_sample()
-        self.announce(sample)
-        self.calibrating = (RunLoop.main().now(), word_count(sample))
-
-    #: keys only ever held with another, which do not end a calibration by themselves - NVDA's own among them
-    CALIBRATION_IGNORES = (pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_LALT, pygame.K_RALT, pygame.K_LGUI,
-                           pygame.K_RGUI, pygame.K_CAPSLOCK, pygame.K_NUMLOCK, pygame.K_INSERT)
+        """Read the sample through whatever speaks the game, and time it until Enter (SpeechCalibration)."""
+        self.calibration.start()
 
     def calibration_key(self, event) -> None:
-        """Every key while a calibration is timing.  Enter is the end of the reading; Escape, or any other
-        key, cancels, since a key in the middle of the sentence may well have cut the reading short."""
-        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-            self.finish_calibration()
-        elif event.key not in self.CALIBRATION_IGNORES:
-            self.cancel_calibration()
+        """Every key while a calibration is timing; the row says the pace once one is saved."""
+        if self.calibration.key(event) is not None:
+            self.reload_data()
 
-    def finish_calibration(self) -> None:
-        from ..platform.runloop import RunLoop
-        from .reading import measured_pace
-        started, words = self.calibrating
-        self.calibrating = None
-        pace = measured_pace(RunLoop.main().now() - started, words)
-        if pace == 'early':
-            self.announce('Too early: the sentence cannot have been read yet. Nothing was changed. Try again, and '
-                          'press Enter as soon as the reading stops.')
-            return
-        if pace == 'late':
-            self.announce('Too late: the sentence ended long before that. Nothing was changed. Try again, and '
-                          'press Enter as soon as the reading stops.')
-            return
-        GameParameters.shared().set_speech_word_time(pace)
-        self.reload_data()
-        self.announce('Speech calibrated: %i words a minute.' % round(60.0 / pace))
+    def ask_for_calibration(self, first: str) -> None:
+        """Ask for a Speech calibration over this screen, after `first`, as the game asks at start-up
+        (SpeechCalibrationScreen); calibrated or skipped, back here to the Speech output row."""
+        host = self.screen.host
 
-    def cancel_calibration(self) -> None:
-        self.calibrating = None
-        self.announce('Calibration cancelled. Nothing was changed.')
+        def back() -> None:
+            host.dismiss_presented(asking)
+            self.reload_data()
+            self._focus_row('Speech output')
+        asking = SpeechCalibrationScreen(host, then=back, first=first)
+        host.push_overlay(asking)
 
     def toggle_modern_audio(self) -> None:
         """PORT ADDITION: whether the game plays SAPI 5 itself (speech_audio.py) or Windows does."""
@@ -1103,7 +1081,7 @@ class SettingsScreen(ViewControllerScreen):
 
     # --- keys ------------------------------------------------------------------------------------
     def key_down(self, event) -> None:
-        if self.control_scheme.calibrating is not None:   # PORT ADDITION: Speech calibration is timing
+        if self.control_scheme.calibration.timing is not None:   # PORT ADDITION: Speech calibration is timing
             self.control_scheme.calibration_key(event)
             return
         if self.control_scheme.capturing is not None:     # setting a binding: every key goes to the panel
@@ -1270,3 +1248,176 @@ class PauseScreen(SettingsScreen):
         if self.control_scheme.close_choices():           # PORT ADDITION: as on the settings screen
             return
         self.validate_button_pressed()
+
+
+# ================================================================================= speech calibration
+# PORT ADDITION (user request, 2026-10-02): a screen reader cannot say when it has finished a line, so the
+# hints and the Extra mode's story time it from the line's words (ui/reading.py), at a pace the player
+# measures.  The Speech tab's Speech calibration row measures it, and the game asks for it - at start-up, and
+# when Speech output is changed to a screen reader - until it has been measured.
+def screen_reader_speaks() -> bool:
+    """Whether what speaks the game is a screen reader, whose end the game cannot know: NVDA, another
+    screen reader through Prism, or VoiceOver on the Mac - chosen, or what Automatic speaks through now.  Not
+    while SAPI 5 or the Mac's system voice speaks, and never on the phone, whose voice is always the game's
+    own: those say when they have finished.  The Speech calibration row is shown by this and the game asks
+    for a calibration by it (`calibration_wanted`), so the two always agree."""
+    return not system.ANDROID and not ControlSchemePanel.sapi_speaking()
+
+
+def calibration_wanted() -> bool:
+    """Whether the game asks for a Speech calibration: a screen reader speaks the game and how fast it reads
+    has never been measured (`speechWordTime`).  Not while the chosen screen reader is not running, since
+    then nothing could be heard: the game is silent until it is."""
+    from ..platform.speech import Speech
+    params = GameParameters.shared()
+    return (screen_reader_speaks() and params.speech_word_time() is None
+            and Speech.shared().can_speak(params.speech_output()))
+
+
+class SpeechCalibration:
+    """One Speech calibration: a sample read through whatever speaks the game, timed until Enter, and the
+    time a word saved or turned away (ui/reading.py).  The Speech tab's row runs it, and so does the screen
+    that asks for one (SpeechCalibrationScreen)."""
+
+    #: keys only ever held with another, which do not end a calibration by themselves - NVDA's own among them
+    IGNORES = (pygame.K_LSHIFT, pygame.K_RSHIFT, pygame.K_LALT, pygame.K_RALT, pygame.K_LGUI, pygame.K_RGUI,
+               pygame.K_CAPSLOCK, pygame.K_NUMLOCK, pygame.K_INSERT)
+
+    def __init__(self, say):
+        self.say = say                                    # how its lines are said
+        self.timing = None                                # while the sample is read: (when, its words)
+
+    @staticmethod
+    def sample() -> str:
+        """What is read to be timed: the one thing to do, then a sentence of the game's world - in the
+        player's language, and in a controller's words when those are chosen.  Every word of it is counted."""
+        from ..platform.pad import menu_words
+        return menu_words(localization.translate(
+            'Press Enter as soon as this ends. Somewhere past the fence a gate creaks open, the first footsteps '
+            'come out of the dark, slow and uneven, and you check your clip and wait for them to come closer.'))
+
+    def start(self) -> None:
+        """Read the sample, and time it until Enter."""
+        from ..platform.runloop import RunLoop
+        from .reading import word_count
+        sample = self.sample()
+        self.say(sample)
+        self.timing = (RunLoop.main().now(), word_count(sample))
+
+    def key(self, event):
+        """Every key while the sample is timed.  Enter is the end of the reading; Escape, or any other key,
+        cancels, since a key in the middle of the sentence may well have cut the reading short.  Returns the
+        seconds a word once a pace has been saved, and None otherwise."""
+        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+            return self.finish()
+        if event.key not in self.IGNORES:
+            self.cancel()
+        return None
+
+    def finish(self):
+        from ..platform.runloop import RunLoop
+        from .reading import measured_pace
+        started, words = self.timing
+        self.timing = None
+        pace = measured_pace(RunLoop.main().now() - started, words)
+        if pace == 'early':
+            self.say('Too early: the sentence cannot have been read yet. Nothing was changed. Try again, and '
+                     'press Enter as soon as the reading stops.')
+            return None
+        if pace == 'late':
+            self.say('Too late: the sentence ended long before that. Nothing was changed. Try again, and '
+                     'press Enter as soon as the reading stops.')
+            return None
+        GameParameters.shared().set_speech_word_time(pace)
+        self.say('Speech calibrated: %i words a minute.' % round(60.0 / pace))
+        return pace
+
+    def cancel(self) -> None:
+        self.timing = None
+        self.say('Calibration cancelled. Nothing was changed.')
+
+
+@register('Port_SpeechCalibrationViewController')
+class SpeechCalibrationScreen(MenuScreen):
+    """The game asks for a Speech calibration (`calibration_wanted`), rather than leave the Speech tab's row
+    saying "not done yet" to a player who may never open it.  It asks once the screens a player meets first
+    are done - the logo, a first run's control scheme and the opener - before the main menu
+    (`App.finish_starting`), and in the Speech tab as soon as Speech output is changed to a screen reader
+    (`ControlSchemePanel.take_speech_output`).
+
+    It says what the calibration is for and how it goes, and lands on Start calibration.  Enter starts it,
+    and from there it is the Speech tab's own (`SpeechCalibration`): Enter at the end of the sentence, the
+    result turned away when it is far too early or far too late, and any other key cancelling - after which
+    it can be tried again.  Escape, or Skip for now, goes on without one, and since nothing was saved the
+    game asks again the next time it starts.  A pace saved is said, and the game goes on once that has been
+    read: the next screen's first line would otherwise cut it off.  `then` is where it goes on to - the main
+    menu, or back to the Speech tab."""
+
+    #: seconds after the result has been read, at the pace just measured, before the game goes on
+    GO_ON_MARGIN = 0.5
+
+    def __init__(self, host, then=None, first: str = ''):
+        from ..platform.pad import menu_words
+        explanation = menu_words(localization.translate(
+            'Speech calibration. Your screen reader cannot tell the game when it has finished speaking. The game '
+            'measures how fast it reads instead, so that hints wait until it has finished. Press Enter to start: '
+            'a sentence is read, and you press Enter again the moment it ends. Press Escape to skip this for now, '
+            'and the game asks again the next time it starts.'))
+        super().__init__(host, title=joined([first, explanation]))   # `first`: what was said as it opened
+        self.then = then if then is not None else App.delegate().go_to_main_menu
+        self.calibration = SpeechCalibration(self.say)
+        self.said = ''
+        self.items = [MenuItem('Start calibration', self.start_pressed),
+                      MenuItem('Skip for now', self.skip_pressed, hint='The game asks again the next time it starts.')]
+        self.back_action = self.go_on
+        self.going_on = None                              # the result is being read: the timer that goes on
+        self.gone = False
+
+    def say(self, text: str) -> None:
+        self.said = text
+        self.speak(text)
+
+    def start_pressed(self) -> None:
+        self.calibration.start()
+        play_button_click()
+
+    def skip_pressed(self) -> None:
+        self.go_on()
+        play_button_click()
+
+    def key_down(self, event) -> None:
+        if self.gone:
+            return
+        if self.going_on is not None:                     # the result is being read: a key goes on at once
+            if event.key not in SpeechCalibration.IGNORES:
+                self.go_on()
+            return
+        if self.calibration.timing is not None:
+            if self.calibration.key(event) is not None:
+                self.calibrated()
+            return
+        super().key_down(event)
+
+    def calibrated(self) -> None:
+        """The pace is saved and said: go on once that has been read, timed by the pace just measured."""
+        from ..platform.runloop import RunLoop
+        from .reading import reading_seconds
+        wait = reading_seconds(localization.translate(self.said)) + self.GO_ON_MARGIN
+        self.going_on = RunLoop.main().schedule_timer(wait, self.go_on, False)
+
+    def go_on(self) -> None:
+        """On to the main menu, or back to the Speech tab: calibrated, or skipped for now."""
+        if self.gone:
+            return
+        self.gone = True
+        self.stop_waiting()
+        self.then()
+
+    def stop_waiting(self) -> None:
+        if self.going_on is not None:
+            self.going_on.invalidate()
+            self.going_on = None
+
+    def on_dismiss(self) -> None:
+        self.stop_waiting()
+        super().on_dismiss()
