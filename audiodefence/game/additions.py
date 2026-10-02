@@ -3103,8 +3103,10 @@ PLISTS['port_closingtime'] = {
 #: of two, one for each chapter, and each act fought with that chapter's weapons (user request).  A wave may
 #: carry `Weapons` of its own - the challenge's form, handed over as the wave loads - so the first wave of
 #: every act takes the last act's weapons away and hands over the next set, reads it out ("New weapons:
-#: ..."), and draws its first gun.  The challenge's own `weapons` names every one of them, because that is
-#: the list the overview checks; the first wave's set replaces it before anything is heard.
+#: ..."), and draws its first gun once that has been said, the wave waiting until it is in hand
+#: (`ChallengeGameplayController.hand_over_weapons`).  The challenge's own `weapons` names every one of
+#: them, because that is the list the overview checks; the first wave's set replaces it before anything is
+#: heard.
 #:
 #: It is long - ten to twelve minutes - and one enemy reaching the player ends it, so every act is a little
 #: gentler than the chapter it remembers, and a death offers the revive, as in every arena of the mode.

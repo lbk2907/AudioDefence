@@ -59,15 +59,19 @@ class GameplayScreen(Screen):
     def screen_reader_running(self) -> bool:
         return self.host.screen_reader_running()
 
-    def announce(self, text) -> None:
+    def announce(self, text) -> float:
+        """Say a line of the game's; PORT ADDITION: returns the seconds the speech that reads it is taken to
+        need (ui/reading.py), which a wave handing over weapons waits for before it draws the first
+        (`ChallengeGameplayController.hand_over_weapons`)."""
         from ..platform.speech import Speech
-        from .reading import in_game_speech
+        from .reading import in_game_speech, reading_seconds
         # PORT ADDITION (user request, 2026-10-03): said by the second speech while Settings -> Speech -> Use
         # second speech is on (Speech.speak_in_game), and by the first, as it always was, otherwise
         Speech.shared().speak_in_game(text)
         # PORT ADDITION: remembered, so that the Extra mode's story waits for it (still_announcing), with the
         # speech that read it
         self._announced = (str(text), Speech.shared().lines, RunLoop.main().now(), in_game_speech())
+        return reading_seconds(text, self._announced[3])
 
     def still_announcing(self) -> bool:
         """PORT ADDITION: whether the speech is still reading what the game last announced - the weapons a

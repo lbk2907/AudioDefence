@@ -657,6 +657,8 @@ class GameplayController:
             return
         if BrickManager.shared().has_skippable_sounds_playing():
             return
+        if self.holds_the_wave():                         # PORT ADDITION: not begun, so not counted
+            return
         notify_stats('TIME_ELAPSED', 0.25)
         notify_stats('BRICK_TIME_ELAPSED', 0.25)
         cw = self.weapon_manager.current_weapon if self.weapon_manager is not None else None
@@ -681,12 +683,25 @@ class GameplayController:
             mm.last_tilt_angle = mm.get_tilt_angle()
         for v in list(self.infinite_scroll_views):
             v.update()
-        BrickManager.shared().update(0.05)
+        if not self.holds_the_wave():                     # PORT ADDITION: see holds_the_wave
+            BrickManager.shared().update(0.05)
         if self.player is not None:
             self.player.update(0.05)
         if self.accessible_game_view is not None:
             self.accessible_game_view.update(0.05)
         self.update_score_view_with_animation(True)
+
+    def holds_the_wave(self) -> bool:
+        """PORT ADDITION (user request, 2026-10-03): whether the wave is kept from beginning while the game
+        goes on round it - the turning, the ambience, the guns.  A wave runs on the brick manager's `update:`
+        0x1000c37b0: its enemies' spawn times, their walk, its recordings, its passers-by and its power-up
+        drop all count from it, so not sending it holds the whole wave, as its own `playerIsDead` test does.
+        (An enemy with no spawn time at all is spawned as the wave is made, `Brick.__init__`, and its spawn
+        sound is heard then, though it goes nowhere until this runs; every wave that hands over weapons gives
+        each of its enemies a time.)  Only an Extra wave handing over a new set of weapons asks for it
+        (`ChallengeGameplayController.arm`), and the challenge's clock does not run meanwhile either
+        (`update_stats`).  Endless never holds a wave."""
+        return False
 
     # --- input -----------------------------------------------------------------------------------
     def motion_ended(self, shake: bool) -> None:          # 0x10005a108
@@ -1042,6 +1057,8 @@ class ChallengeGameplayController(GameplayController):
         self.story_view = None
         self.story_wait = None                            # PORT ADDITION: see tell_story_if_due
         self.epilogue_told = False                        # PORT ADDITION: see go_to_score_screen
+        self.arming = False                               # PORT ADDITION: see hand_over_weapons
+        self.draw_left = 0.0
 
     def view_did_load(self) -> None:                      # 0x1000da420
         self.init_challenge_modifiers()                   # PORT ADDITION: see below
@@ -1087,7 +1104,9 @@ class ChallengeGameplayController(GameplayController):
         BrickManager.shared().skip_skippable_sounds()
 
     def update(self) -> None:                             # 0x1000da794
-        if self.tell_story_if_due():                      # PORT ADDITION
+        if self.arming:                                   # PORT ADDITION: see hand_over_weapons
+            self.arming = self.arm()
+        if not self.arming and self.tell_story_if_due():  # PORT ADDITION
             return
         self.check_skip_button_counter = self.check_skip_button_counter + 1
         if self.check_skip_button_counter == 20:
@@ -1105,6 +1124,8 @@ class ChallengeGameplayController(GameplayController):
     def update_stats(self) -> None:                       # 0x1000daa68
         super().update_stats()
         if self.paused or BrickManager.shared().has_skippable_sounds_playing():
+            return
+        if self.holds_the_wave():                         # PORT ADDITION: see GameplayController.update_stats
             return
         notify_stats('UPDATE_CHALLENGE_TIME_ELAPSED', 0.25)
 
@@ -1129,6 +1150,10 @@ class ChallengeGameplayController(GameplayController):
         has been read, or sooner if the player goes on.  Each part is told once a game: a wave fought again
         after a revive does not tell it twice.  With no screen to read it on (a run with none, as the referee
         plays) it is passed over.
+
+        A wave that hands over a new set of weapons tells it once they have been read out and the new gun
+        drawn and ready (`hand_over_weapons`, `arm`; user request, 2026-10-03), so the order there is the
+        line, the pause, the draw and the gun's name, the story and the wave.
 
         It is shown once what was already being said as the wave began has been heard out (user request,
         2026-10-02): the challenge's start clip, the announcer, a gun naming itself, the revive's answer and
@@ -1237,18 +1262,32 @@ class ChallengeGameplayController(GameplayController):
         The new guns are made before the old ones are let go: a gun of the same name shares its playlist
         (`Weapon.__init__` activates it, `dealloc` deactivates it), and activating one again is not
         immediate, so the old gun releases only the playlists nothing new is using.  A reload in progress
-        and a held trigger are stopped first, as a switch of weapon stops them.  The first new gun is drawn
-        as a switch draws it - its deploy sound, and its name if the announcer is on - and the new set is
-        read out.
+        and a held trigger are stopped first, as a switch of weapon stops them.  Every new gun arrives as
+        `Weapon.__init__` makes it: a full clip of its capacity (after the modifiers that change it), the
+        rounds the entry gives (`ammo`, or the original's unlimited 0x7fffffff), and at rest.
+
+        The new set is read out first, and the first new gun drawn after it (user request, 2026-10-03):
+        "New weapons: ..." is said, the game waits for the time the speech that reads it is taken to need
+        (`GameplayScreen.announce`, ui/reading.py) and DRAW_PAUSE on top, and only then is the gun drawn
+        as a switch draws it - its deploy sound, and its name if the announcer is on (`Weapon.deploy`).
+        Drawn together, as they were, the draw and the name were heard over the list.  Until the draw the
+        guns are holstered (`WeaponManager.holstered`): fire, tapped or held, melee, the switch and the
+        reload do nothing, by key, gesture, Button mode, controller or shake.  And the wave waits until
+        the drawn gun is ready, its switch's second over (`arm`, `holds_the_wave`): no enemy is spawned or
+        moves, no spawn time runs and the challenge's clock stands still.  Only then is a story the
+        wave carries told (`tell_story_if_due`), and the wave begins after it.  The wait is counted in the
+        game's own ticks, so a pause holds it and it goes on after.  With no screen to read the line on
+        (the referee) the gun is drawn at once, as before.
 
         A hand-over of the set already in hand says nothing and leaves the gun that was in hand there, fresh
         (user request, 2026-10-02): that is a revive or its skip giving the wave its weapons back
         (`BrickManager.hand_back_weapons`), which used to read out "New weapons" for the same wave while
         the announcer named the first gun.  The original's revive (`revive` 0x10005bec0, and the brick
         manager's 0x1000c7558) sends nothing to the weapons, and `deploy` 0x1000166e4 is sent by
-        `selectNextWeapon` 0x1000a9e04 alone, so nothing is drawn or named as play resumes.  A set that
-        differs from the one in hand - a wave that changes the weapons, a skip to it included - is drawn
-        and read out as before."""
+        `selectNextWeapon` 0x1000a9e04 alone, so nothing is drawn or named as play resumes, and nothing
+        waits.  A set that differs from the one in hand - a wave that changes the weapons, a skip to it
+        included - is read out and drawn as above.  The first wave's set, which says nothing, is in hand at
+        once, as before."""
         from .weapon_manager import WeaponManager
         old = self.weapon_manager
         new = WeaponManager.with_challenge_weapon_array(entries)
@@ -1265,7 +1304,9 @@ class ChallengeGameplayController(GameplayController):
             for w in list(old.weapons_array or []) + [old.melee_weapon]:
                 if w is None:
                     continue
-                if w.state == 6 or w.state == 8:
+                # a reload still sounding counts too: a death puts the gun back at rest (`stop_firing_now`)
+                # and leaves its reload playing, which a revive into the same set then played on
+                if w.state == 6 or w.state == 8 or w.reload_sound is not None:
                     w.interrupt_reload()
                 w.stop_firing_now()
                 if w.playlist is not None and id(w.playlist) in kept:
@@ -1277,11 +1318,41 @@ class ChallengeGameplayController(GameplayController):
             self.accessible_game_view.weapon_manager = new
         if not announce or same:
             return
-        new.current_weapon.deploy()
-        if self.host is not None:
-            names = [WeaponManager.shared().display_name_for_item_with_name(w.name)
-                     for w in list(new.weapons_array) + [new.melee_weapon] if w is not None]
-            self.host.announce('New weapons: %s' % ', '.join(names))
+        if self.host is None:                             # nowhere to read it out: drawn at once
+            new.current_weapon.deploy()
+            return
+        names = [WeaponManager.shared().display_name_for_item_with_name(w.name)
+                 for w in list(new.weapons_array) + [new.melee_weapon] if w is not None]
+        new.holstered = True
+        reading = self.host.announce('New weapons: %s' % ', '.join(names))
+        self.draw_left = (reading or 0.0) + self.DRAW_PAUSE
+        self.arming = True
+
+    #: PORT ADDITION (user request, 2026-10-03): the brief pause, in seconds, between the predicted end of
+    #: "New weapons: ..." and the new gun being drawn (`hand_over_weapons`) - long enough to hear the list
+    #: finish before the draw, short enough not to feel like waiting
+    DRAW_PAUSE = 0.5
+
+    def arm(self) -> bool:
+        """PORT ADDITION: one tick of a hand-over in progress (`hand_over_weapons`), and whether it is still in
+        progress - which holds the wave (`holds_the_wave`).  It counts down to the draw by the update timer's
+        own 0.05 s, the time the wave is moved on by, so it stops while the game is paused; then the gun in
+        hand is drawn, and the hand-over is over once it is ready - out of `Switching`, its draw's second,
+        or whatever the player has done with it since."""
+        weapons = self.weapon_manager
+        if weapons is None or weapons.current_weapon is None:
+            return False
+        if weapons.holstered:
+            self.draw_left -= 0.05
+            if self.draw_left > 0.0:
+                return True
+            weapons.holstered = False
+            weapons.current_weapon.deploy()
+        return weapons.current_weapon.state == 1
+
+    def holds_the_wave(self) -> bool:
+        """PORT ADDITION: while a new set of weapons is being handed over (`arm`)."""
+        return self.arming
 
     def init_brick_manager(self) -> None:                 # 0x1000daf74
         bm = BrickManager.shared()

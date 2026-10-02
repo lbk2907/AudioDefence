@@ -44,6 +44,13 @@ class WeaponManager:
         self.current_weapon_index = 0
         self.current_weapon = None
         self._power_up = None
+        #: PORT ADDITION (user request, 2026-10-03): handed over and not drawn yet.  A wave of the Extra mode
+        #: that hands over a new set has it read out first and draws the first gun after it
+        #: (`ChallengeGameplayController.hand_over_weapons`); until then nothing fires, swings, switches or
+        #: reloads.  Every input reaches the guns through this manager - the keys, the gestures, Button
+        #: mode's quarters, a controller, a shake - so this is where it is turned away: the readiness test
+        #: that fire and melee already ask (`is_weapon_ready_to_shoot`), and the switch and the reload.
+        self.holstered = False
 
     # --- plist lookups ---------------------------------------------------------------------------
     def get_all_weapons_array(self) -> list:              # 0x1000a6f78
@@ -282,6 +289,8 @@ class WeaponManager:
             self.current_weapon.single_shot()
 
     def select_next_weapon(self) -> None:                 # 0x1000a9e04
+        if self.holstered:                                # PORT ADDITION: see `holstered`
+            return
         cw = self.current_weapon
         if cw is not None and (cw.state == 6 or cw.state == 8):
             # the reload goes first: `stop_firing_now` ends by putting the weapon back to state 0, so
@@ -330,6 +339,8 @@ class WeaponManager:
         pass
 
     def is_weapon_ready_to_shoot(self) -> bool:           # 0x1000aa350
+        if self.holstered:                                # PORT ADDITION: see `holstered` - fire, held or
+            return False                                  # tapped, and melee all ask this first
         melee_state = self.melee_weapon.state if self.melee_weapon is not None else 0
         if melee_state == 2:
             return False
@@ -383,11 +394,11 @@ class WeaponManager:
         return self.melee_weapon.name if self.melee_weapon is not None else None
 
     def reload_gesture_down(self) -> None:                # 0x1000aac7c
-        if self.current_weapon is not None:
+        if self.current_weapon is not None and not self.holstered:   # PORT ADDITION: see `holstered`
             self.current_weapon.reload()
 
     def reload_gesture_up(self) -> None:                  # 0x1000aacd8
-        if self.current_weapon is not None:
+        if self.current_weapon is not None and not self.holstered:
             self.current_weapon.reload()
 
     def shut_down(self) -> None:                          # 0x1000aad34

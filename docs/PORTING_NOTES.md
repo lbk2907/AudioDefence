@@ -2410,16 +2410,46 @@ they were.
   one long arena can go from the guns of one chapter to the guns of the next.  A brick's `Weapons` - a list
   in the form of the challenge's `weapons` - is handed over when the brick is loaded
   (`BrickManager.load_brick_with_name` to `ChallengeGameplayController.hand_over_weapons`): the guns in hand
-  are taken away and the new ones given, the first of them drawn as a switch draws it (its deploy sound,
-  and its name if the announcer is on), and the set read out - "New weapons: Police Shotgun, Revolver,
-  Golf".  The first wave's is handed over before anything is heard, and says nothing, and so does one that
-  gives back the set already in hand, as a revive does (below).  The challenge's
+  are taken away and the new ones given, the set read out - "New weapons: Police Shotgun, Revolver, Golf" -
+  and the first of them drawn after it as a switch draws it (its deploy sound, and its name if the announcer
+  is on; below).  The first wave's is handed over before anything is heard, and says nothing, and so does
+  one that gives back the set already in hand, as a revive does (below).  The challenge's
   own `weapons` lists every gun any wave hands over, because that is what the overview checks
   (`hasWeaponForChallengeWithName:` 0x10001f868) and names when one is not bought.  The new guns are made
   before the old are let go, since a gun of the same name shares its playlist and activating one again is
   not immediate: the old gun releases only the playlists nothing new is using.  Checked headless with a
   two-wave arena: the second wave's guns in hand and fired, the revolver carried across still heard, the
   wok's playlist released.
+
+  The set is read out first and the gun drawn after it, with a pause between (user request, 2026-10-03).
+  Drawn as the list began, the gun's deploy and its name were heard over "New weapons", and the wave began
+  under both.  Now the line is said, the game waits for the time the speech that reads it is taken to need
+  (`ui/reading.py`, by that speech's own measurement) and `DRAW_PAUSE`, half a second, on top, and only then
+  draws the first gun, its deploy and its name together.  Until the draw the guns are holstered
+  (`WeaponManager.holstered`): fire, tapped or held, melee, the switch and the reload do nothing.  Every key,
+  gesture, Button mode quarter, controller button and shake reaches the guns through the manager, so that is
+  where they are turned away - fire and melee in `isWeaponReadyToShoot` 0x1000aa350, which both already ask,
+  the switch in `selectNextWeapon` 0x1000a9e04 and the reload in `reloadGestureDown` 0x1000aac7c and
+  `reloadGestureUp` 0x1000aacd8.  The wave waits until the drawn gun is ready, its switch's second over
+  (`ChallengeGameplayController.arm`): the brick manager's `update:` 0x1000c37b0, which every spawn time,
+  step, recording and drop of a wave counts from, is not sent (`holds_the_wave`), as its own `playerIsDead`
+  test holds it, and the challenge's clock does not run.  Turning, the ambience and the guns go on.  The wait is counted in the update timer's ticks,
+  so a pause holds it and it goes on after.  A story on the wave is told once the hand-over is over and the
+  deploy and the name have been heard, so the order is the line, the pause, the draw, the story and the
+  wave.  The first wave's set and a revive's are in hand at once with nothing said or drawn, as before, and
+  with no screen to read the line on (the referee) the gun is drawn at once, as before.  An old gun's reload
+  still sounding is stopped with it: a death puts the gun back at rest (`stop_firing_now`) and left its
+  reload playing, which a revive into the same set played on.  Every gun of every set arrives as
+  `Weapon.__init__` makes it, a full clip of its capacity after the modifiers and the rounds its entry gives;
+  none of the six sets Reprise hands over gives fewer rounds than a clip at any level.  Checked headless in
+  Reprise through the real keys, the speech measured at 0.6 s a word: "New weapons: Hunting Rifle, Micro SMG,
+  Golf" said, the rifle drawn 4.74 s after it against 4.70 due and its name with it, the hand-over over
+  1.05 s later and the story at 1.50, once the deploy had ended, with nothing spawned or moved until it had
+  been read; fire, melee, switch and reload by key, Button mode, controller, shake and the plain layout's
+  buttons all did nothing in the wait and worked after it; paused for 2.10 s in the wait, the gun was drawn
+  4.38 s after the line against 4.35; a revive was silent and immediate, a skip into the third act read out
+  and waited; with the second speech on, the line was its and the wait its measurement's, 3.69 s against
+  3.65; every gun of every set full, with lessBullets too; Endless and the referee as before.
 * PORT ADDITION: an arena of the Extra mode offers a revive (user request, 2026-10-01).  A death there
   offers what Endless offers - the revive for diamonds, twice the price each time (`show_revive_view`
   0x10005ba78), or the failed screen, which is starting over - where `-[ADEnemy afterAttackSound]`
