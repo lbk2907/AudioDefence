@@ -35,6 +35,13 @@ log = logging.getLogger('ui.reading')
 #: than they need, which is the side to err on.  The Extra mode's story and the hints both time a screen
 #: reader by it until the player has measured their own (Speech calibration, ui/settings.py).
 DEFAULT_WORDS_PER_MINUTE = 180.0
+#: PORT ADDITION (user request, 2026-10-02): seconds a screen reader's hint waits after its item even with
+#: Pause before hints at 0, until Speech calibration has been done.  Timed at the default pace above, the
+#: end of the item is a guess, and a guess a little early hands the hint over before the item is done; a
+#: fifth of a second keeps the two apart.  Once the pace has been measured, 0 means 0.  The game's own
+#: voices say when they have finished, so for them 0 is already "right after the voice ends" and this
+#: does not apply.
+UNCALIBRATED_LEAST_PAUSE = 0.2
 #: A measured pace outside these cannot be a press at the end of the reading, and is turned away: faster
 #: than even the fastest listeners set a screen reader with its rate boost, or slower than one at its
 #: slowest rate.
@@ -140,9 +147,12 @@ class Hints:
         w = self.waiting
         if w is None:
             return None
-        pause = GameParameters.shared().hint_pause()
+        params = GameParameters.shared()
+        pause = params.hint_pause()
         speaking = Speech.shared().still_speaking()
         if speaking is None:                              # a screen reader: the time the line takes to read
+            if params.speech_word_time() is None:         # at a guessed pace: never quite at once
+                pause = max(pause, UNCALIBRATED_LEAST_PAUSE)
             return max(0.0, w.at + reading_seconds(w.said) + pause - now)
         if speaking:
             w.quiet_since = None

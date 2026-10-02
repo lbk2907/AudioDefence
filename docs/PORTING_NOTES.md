@@ -2824,7 +2824,15 @@ they were.
   pause starts when it falls quiet.  A screen reader cannot be asked, so the item's words are timed at
   `DEFAULT_WORDS_PER_MINUTE`, the 180 the story already used, which moved from `ui/gameplay_screen.py` to
   `ui/reading.py` so that the two share it.  The hint is queued, not interrupting, so a screen reader slower
-  than that finishes the item first.  A braille display is given the item and its hint together as the
+  than that finishes the item first.  Until the player has measured their screen reader's pace (Speech
+  calibration, below), Pause before hints at 0 still waits a fifth of a second after a screen reader's item
+  (`UNCALIBRATED_LEAST_PAUSE`, beside the 180 in `ui/reading.py`; user request, 2026-10-02): the end of the
+  item is then a guess, and a guess a little early would hand the hint over before the item is done.  Once
+  the pace is measured 0 means 0, and the game's own voices are untouched either way, since for them 0
+  already means the moment the voice falls quiet.  Checked on a fake clock with a stand-in NVDA: with
+  nothing measured and the pause at 0, a three-word item's hint came 1.2 s after it (1.0 s and the 0.2);
+  with the pause at 0.5 it came after the 0.5 alone; measured at 0.25 s a word, 0.75 s after it; with SAPI 5
+  speaking and nothing measured, the moment its 0.5 s line ended.  A braille display is given the item and its hint together as the
   item is read (`nvdaController_brailleMessage`; Prism's `braille` beside its `speak`), and the spoken hint
   is not brailled again: a display is read at the reader's own pace, and a second message would take the
   item off it a second after it came, as NVDA itself shows an object's description beside its name.
