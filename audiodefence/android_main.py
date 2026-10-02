@@ -468,6 +468,7 @@ def run(home: str, fake: bool = False) -> int:
     params = GameParameters.shared()
     GameParameters.screen_reader_running = Speech.shared().screen_reader_running()
     Speech.shared().choice = params.speech_output()
+    params.forget_saved_voice()                          # PORT ADDITION (user request): each engine's own voice
     Speech.shared().configure_sapi(**params.sapi_config())
     Speech.shared().set_engine(params.speech_engine())   # PORT ADDITION (user request): Settings > Speech
 
@@ -499,7 +500,7 @@ def run(home: str, fake: bool = False) -> int:
             loop.run_once()
             engine.pump()
             host.frame()
-            if 'engine' in params.settle_speech_engine():  # PORT ADDITION: the speech engine has started
+            if params.settle_speech_engine():             # PORT ADDITION: the speech engine has started
                 Speech.shared().speak("The speech engine chosen in Settings could not be started, so the phone's "
                                       'default engine speaks instead.', False)
             top = host.top()

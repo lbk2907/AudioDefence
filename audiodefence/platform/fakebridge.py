@@ -209,13 +209,9 @@ class FakeBridge:
         return 0.0
 
     # --- speech ---------------------------------------------------------------------------------------
-    # Two engines, each with voices of its own.  An engine starts as soon as it is asked for, unless a test
-    # sets `starts_at_once` False and calls finish_start(); one in `broken` falls back to the phone's default,
-    # as one that is not installed does.
+    # Two engines.  An engine starts as soon as it is asked for, unless a test sets `starts_at_once` False and
+    # calls finish_start(); one in `broken` falls back to the phone's default, as one that is not installed does.
     ENGINES = {'com.example.fake': 'Fake speech', 'com.example.other': 'Other speech'}
-    VOICES = {'com.example.fake': 'v1\tEnglish (United States), v1\n',
-              'com.example.other': 'o1\tEnglish (United Kingdom), o1\no2\tRussian (Russia), o2\n'}
-    DEFAULT_ENGINE = 'com.example.fake'
 
     #: how long each line "takes to say", for speechBusy: a test sets it, and None is a voice that is never busy
     speaking_seconds = None
@@ -232,16 +228,8 @@ class FakeBridge:
     def speechBusy(self):
         return time.perf_counter() < getattr(self, 'speaking_until', 0.0)
 
-    def voiceList(self):
-        if not self.speech_ready:
-            return ''
-        return self.VOICES[self.engine_in_use or self.DEFAULT_ENGINE]
-
-    def hasVoice(self, name):
-        return self.speech_ready and ('%s\t' % name) in self.voiceList()
-
-    def configureSpeech(self, voice, rate, pitch, volume):
-        self.speech_config = (voice, rate, pitch, volume)
+    def configureSpeech(self, rate, pitch, volume):
+        self.speech_config = (rate, pitch, volume)
 
     def speechReady(self):
         return self.speech_ready

@@ -3,12 +3,14 @@ Bridge.  On the phone this module is `platform.speech` (see platform/__init__.py
 
 Where the desktop port speaks through NVDA, Prism or SAPI 5, the phone has one voice - the text-to-speech
 engine of the device - and it takes the place of SAPI 5 (and of the Mac's system voice): the Speech tab's
-voice, rate, pitch and volume rows drive it, in the same units (rate and pitch -10 to 10, volume 0 to 100).
+rate, pitch and volume rows drive it, in the same units (rate and pitch -10 to 10, volume 0 to 100).
 TalkBack is not used: the game speaks for itself, so TalkBack has to be off while it is played.
 
 PORT ADDITION (user request): the engine is the one set in the phone's settings unless the Speech tab's
-engine row names another installed one.  Changing it starts the speech again with that engine, and its
-voices are the ones listed; an engine that is gone or will not start gives way to the phone's default.
+engine row names another installed one.  Changing it starts the speech again with that engine; an engine
+that is gone or will not start gives way to the phone's default.  There is no voice row on the phone (user
+request, 2026-10-02): each engine speaks with the voice set in its own settings on the phone, and a voice
+saved by an earlier build is cleared (GameParameters.forget_saved_voice).
 """
 from __future__ import annotations
 
@@ -69,7 +71,7 @@ def _pairs(text) -> list:
 
 
 class AndroidVoice:
-    """TextToSpeech with the player's engine, voice, rate, pitch and volume: the phone's SAPI 5."""
+    """TextToSpeech with the player's engine, rate, pitch and volume: the phone's SAPI 5."""
 
     def __init__(self):
         self.voice = True                                 # settings asks: is there a voice at all?
@@ -78,7 +80,6 @@ class AndroidVoice:
         self.engine = None                                # the engine asked for, by package; None the phone's
         self.settling = True                              # an engine is starting, to be checked once it has
         self.settled = 0                                  # how many times one has (Settings reads its rows again)
-        self._voices = None
 
     def engines(self) -> list:
         """(package, name) for each text-to-speech engine on the phone, by name."""
@@ -95,7 +96,6 @@ class AndroidVoice:
         if package == self.engine:
             return
         self.engine = package
-        self._voices = None
         self.settling = True
         try:
             bridge().setSpeechEngine(package or '')
@@ -122,34 +122,15 @@ class AndroidVoice:
             return False
         self.settling = False
         self.settled += 1
-        self._voices = None                               # the voices are the new engine's
         return True
 
-    def has_voice(self, voice_id) -> bool:
-        """Whether the engine speaking has this voice."""
-        try:
-            return bool(bridge().hasVoice(str(voice_id)))
-        except Exception:
-            return False
-
-    def voices(self) -> list:
-        """(id, name) for the engine's voices; none while it is starting, and asked again once it has."""
-        if self._voices is None:
-            try:
-                voices = _pairs(bridge().voiceList())
-            except Exception:
-                log.exception('could not list the voices')
-                voices = []
-            if not voices and not self.ready():
-                return []
-            self._voices = voices
-        return self._voices
-
     def configure(self, voice=None, rate=None, boost=False, pitch=0, volume=None) -> None:
-        self.config = {'voice': voice, 'rate': rate, 'boost': bool(boost), 'pitch': int(pitch or 0),
+        """The Speech tab's rate, pitch and volume.  `voice` is taken with the rest of the settings and not
+        used: each engine speaks with the voice set in its own settings on the phone."""
+        self.config = {'voice': None, 'rate': rate, 'boost': bool(boost), 'pitch': int(pitch or 0),
                        'volume': volume}
         try:
-            bridge().configureSpeech(voice or '', self.rate(), int(pitch or 0), self.volume())
+            bridge().configureSpeech(self.rate(), int(pitch or 0), self.volume())
         except Exception:
             log.exception('speech settings not applied')
 

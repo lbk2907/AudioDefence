@@ -496,8 +496,10 @@ a minute or two, and later starts are quick.
 
 The game speaks with the text-to-speech engine set in the phone's settings. To
 use another engine installed on the phone, choose it in the Android speech
-engine row of the Speech tab in Settings; the voice, rate, pitch and volume
-rows below it then work with that engine.
+engine row of the Speech tab in Settings. Each engine speaks with the voice set
+in its own settings on the phone, so a voice is chosen there, not in the game;
+the rate, pitch and volume rows below the engine row work with whichever engine
+speaks.
 
 ### Controls on the phone
 

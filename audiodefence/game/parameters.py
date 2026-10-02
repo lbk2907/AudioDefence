@@ -392,7 +392,10 @@ class GameParameters:
                  'volume': 'sapiVolume'}
 
     def sapi_config(self) -> dict:
-        voice = self.defaults.object('sapiVoice')
+        from ..platform import host
+        # PORT ADDITION (Android, user request): the phone has no voice row - each engine speaks with the voice
+        # set in its own settings - so a voice saved there is never handed on (see forget_saved_voice)
+        voice = None if host.ANDROID else self.defaults.object('sapiVoice')
         rate = self.defaults.object('sapiRate')
         pitch = self.defaults.object('sapiPitch')
         volume = self.defaults.object('sapiVolume')
@@ -412,6 +415,14 @@ class GameParameters:
         self.defaults.synchronize()
         Speech.shared().configure_sapi(**self.sapi_config())
 
+    def forget_saved_voice(self) -> None:
+        """PORT ADDITION (Android, user request, 2026-10-02): the Speech tab chooses the engine and not the
+        voice, and each engine speaks with the voice set in its own settings on the phone.  A voice an earlier
+        build saved is cleared at start-up, so it cannot come back with an engine that has it."""
+        if self.defaults.object('sapiVoice') is not None:
+            self.defaults.remove('sapiVoice')
+            self.defaults.synchronize()
+
     #: PORT ADDITION (Android, user request): Settings -> Speech -> Android speech engine: the package of the
     #: text-to-speech engine the phone speaks with (platform/speech_android.py).  Nothing stored is the one
     #: set in the phone's settings.  Kept apart from SAPI_KEYS, which the desktop's voices are given.
@@ -427,25 +438,19 @@ class GameParameters:
         self.defaults.synchronize()
         Speech.shared().set_engine(self.speech_engine())
 
-    def settle_speech_engine(self) -> list:
+    def settle_speech_engine(self) -> bool:
         """PORT ADDITION (Android): once the engine asked for has started, what is saved is made to agree with
         what speaks.  An engine that is gone or would not start has given way to the phone's default, and the
-        setting goes back to that, as a language whose file has gone goes back to English; a voice the engine
-        has not got - one of the engine before - goes back to the engine's own.  What was put back, 'engine'
-        and 'voice', or nothing: also while the engine is still starting, which this waits for."""
+        setting goes back to that, as a language whose file has gone goes back to English.  True when it was
+        put back; False when it was not, and while the engine is still starting, which this waits for."""
         from ..platform.speech import Speech
         sapi = Speech.shared().sapi
         if not sapi.settle():
-            return []
-        put_back = []
+            return False
         if self.speech_engine() is not None and sapi.engine_in_use() != self.speech_engine():
             self.set_speech_engine(None)
-            put_back.append('engine')
-        voice = self.sapi_config()['voice']
-        if voice is not None and not sapi.has_voice(voice):
-            self.set_sapi(voice=None)
-            put_back.append('voice')
-        return put_back
+            return True
+        return False
 
     def names_controller(self):
         """The connected controller whose buttons the lines name, by the name it gives itself - the one
