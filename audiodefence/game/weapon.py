@@ -48,6 +48,17 @@ def _c_div(a: int, b: int) -> int:
 _LEAD_IN: dict = {}
 
 
+def _debugging() -> bool:
+    """PORT ADDITION: whether the weapon's sounds are written to the log (--log-level debug), so a player
+    can send what a gun did and heard, to the hundredth of a second."""
+    return log.isEnabledFor(logging.DEBUG)
+
+
+def _sound_name(sound) -> str:
+    import os
+    return os.path.basename(getattr(sound, 'path', '') or '') or 'no sound'
+
+
 def _at_the_sound(sound):
     """Have this sound start where the recording does, not where the file does; returns it, to wrap the
     place it is taken from the playlist."""
@@ -160,6 +171,9 @@ class Weapon:
     def set_state(self, state: int) -> None:              # 0x100015210
         if self._state == state:
             return
+        if _debugging():
+            log.debug('%s: %s -> %s after %.3f s', self.name, self.state_to_string(),
+                      STATE_NAMES[state] if 0 <= state <= 8 else state, self.time_in_state)
         self._state = state
         self.time_in_state = 0.0
 
@@ -285,9 +299,18 @@ class Weapon:
             self.continuous_sound.set_spatialized(False)
             self.continuous_sound.set_gain(0.6)
             self.continuous_sound.play(True)
+        if _debugging():
+            s = self.continuous_sound
+            log.debug('%s: trigger held, continuous fire: %s, %.3f s long, played from %.3f s, looped',
+                      self.name, _sound_name(s), s.duration if s else 0.0, getattr(s, 'skip_to', 0.0) or 0.0)
         self.update_low_ammo_warning()                    # due from this shot, if the clip is low enough
 
     def continuous_stop(self) -> None:                    # 0x1000157f8
+        if _debugging():
+            s = self.continuous_sound
+            log.debug('%s: trigger released in %s after %.3f s; %s stopped %.3f s into its %.3f s',
+                      self.name, self.state_to_string(), self.time_in_state, _sound_name(s),
+                      s.elapsed_time() if s is not None and s.playing else 0.0, s.duration if s else 0.0)
         self.stop_empty_loop()                            # PORT ADDITION: let go, and the warning stops
         if self.continuous_sound is not None:
             self.continuous_sound.stop()
@@ -319,6 +342,10 @@ class Weapon:
     def play_continuous_tail(self) -> None:               # 0x1000158b0
         tail = _at_the_sound(
             self.playlist.any_sound_with_prefix(f'weapon_gun_{self.name}_tail')) if self.playlist else None
+        if _debugging():
+            log.debug('%s: tail %s, %.3f s long, played from %.3f s%s', self.name, _sound_name(tail),
+                      tail.duration if tail else 0.0, (getattr(tail, 'skip_to', 0.0) or 0.0) if tail else 0.0,
+                      ', the last one still sounding' if tail is not None and tail.playing else '')
         if tail is None:
             return
         # DIVERGENCE: a weapon has one sound per file, so playing the tail again while the last one is still
