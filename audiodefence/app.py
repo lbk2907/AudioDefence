@@ -404,6 +404,15 @@ class App:
         # Windows - every alt-tab - so the port pauses real gameplay only, never the opener.
         if isinstance(vc, OpenerGameplayController):
             return
+        # DIVERGENCE (user request, 2026-10-03): nor once the player is dead.  A challenge's death overlay
+        # (0x1000db788) never sets `paused`, unlike Endless's (0x10005b97c), so the original - and the port
+        # until now - put the pause menu over the death and the revive screen whenever the window lost
+        # focus.  Only a game being played is paused; dead, there is nothing running to stop.
+        if getattr(vc, 'death_overlay_visible', False) or getattr(vc, 'revive_view_controller', None) is not None:
+            return
+        from .game.brick_manager import BrickManager
+        if isinstance(vc, GameplayController) and BrickManager.shared().player_is_dead:
+            return
         story = getattr(vc, 'story_view', None)
         if story is not None:
             # PORT ADDITION: the Extra mode's story goes on by itself once it is read (StoryScreen), and

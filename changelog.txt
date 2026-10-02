@@ -31,6 +31,7 @@ Hints are read on their own, a moment after the item they belong to. The Speech 
 The Speech tab in Settings has a Speech calibration row, which measures how fast your screen reader speaks so that hints come once it has finished.
 Your gun stops firing when you die, even with the trigger still held.
 A short burst from a continuous-fire gun is no longer cut off when you let go of the trigger.
+Switching to another window after you die no longer opens the pause menu over the death or revive screen.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.

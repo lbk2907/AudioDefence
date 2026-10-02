@@ -402,6 +402,14 @@ they were.
   `ADOpenerGameplayViewController` is one, so the original pauses the opener as well when the app resigns
   active.  On a phone that is a phone call or the home button; on Windows it is every alt-tab, so the port
   pauses real gameplay only (`App.pause_game`).  The logo and the menus never paused in either.
+* Nor does the window losing focus pause a game the player has died in (user request, 2026-10-03).  A
+  challenge's `showDeathOverlay` (0x1000db788) never sets `paused`, unlike Endless's (0x10005b97c), so
+  `pauseGame` put the pause menu over the death and over the revive screen at every alt-tab - in the
+  original and in the port until then.  `App.pause_game` now leaves alone a game whose death overlay is
+  up, whose revive screen is up, or whose player is dead (`BrickManager.player_is_dead`): there is nothing
+  running to stop.  Checked through the real controller in Endless, in the challenge maya_2 and in the
+  Extra arena port_wall: alt-tab while playing still pauses, and once dead it brings no pause menu; the
+  old code put one over maya_2's death.
 * The settings rows play `click_button` when pressed.  The original's accessible table is silent, but its
   sighted twin's rows are `ADButtonWithFont`s, which click (`-[ADButtonWithFont playSound]` 0x100073578) -
   and the port's categories are pressed like buttons, so they click like them.
