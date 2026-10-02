@@ -2907,7 +2907,10 @@ they were.
   main menu, so they come after.  It asks again
   in the Speech tab the moment Speech output is changed to a screen reader with nothing saved
   (`ControlSchemePanel.take_speech_output`), over the tab, with the choice said first so the question does not
-  cut it off; choosing the output already in use is not a change and does not ask.  Whether to ask is
+  cut it off; choosing the output already in use is not a change and does not ask.  Reset all settings,
+  which forgets the pace with the rest, asks at once in the same way, with its line said first, and comes
+  back to its own row (user request, 2026-10-02: left until the next start, the reset put the guessed pace
+  back for the rest of the session).  Whether to ask is
   `calibration_wanted`: a screen reader speaks the game (`screen_reader_speaks`, which is also what shows the
   row, so the two cannot disagree; Automatic counts as what it speaks through now), nothing is saved, and the
   output can speak - a chosen screen reader that is not running leaves the game silent, and a question nobody

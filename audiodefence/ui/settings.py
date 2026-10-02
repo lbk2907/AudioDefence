@@ -535,6 +535,8 @@ class ControlSchemePanel:
         self.announce('Check for updates when the game starts %s'
                       % ('ON' if params.check_updates() else 'OFF'))
 
+    RESET_DONE = 'All settings reset to default. Your key and controller bindings are unchanged.'
+
     def reset_all_settings(self) -> None:
         """Every setting on these pages back to where a new profile starts, except the key bindings and the
         controller's - they have their own Restore default keys and Restore default buttons.
@@ -569,7 +571,13 @@ class ControlSchemePanel:
         params.set_speech_word_time(None)                 # the pace measured is forgotten
         App.apply_menu_music_volume()
         self.reload_data()
-        self.announce('All settings reset to default. Your key and controller bindings are unchanged.')
+        if calibration_wanted():                          # PORT ADDITION (user request, 2026-10-02): the pace
+            # was forgotten with the rest, and a screen reader speaks: asked for again at once, as at
+            # start-up, rather than left guessed until the next start (the line is the one below, which is
+            # where the translators' list finds it)
+            self.ask_for_calibration(localization.translate(self.RESET_DONE), row='Reset all settings')
+        else:
+            self.announce('All settings reset to default. Your key and controller bindings are unchanged.')
 
     # --- joystick (PORT ADDITION) ----------------------------------------------------------------
     @staticmethod
@@ -806,15 +814,16 @@ class ControlSchemePanel:
         if self.calibration.key(event) is not None:
             self.reload_data()
 
-    def ask_for_calibration(self, first: str) -> None:
+    def ask_for_calibration(self, first: str, row: str = 'Speech output') -> None:
         """Ask for a Speech calibration over this screen, after `first`, as the game asks at start-up
-        (SpeechCalibrationScreen); calibrated or skipped, back here to the Speech output row."""
+        (SpeechCalibrationScreen); calibrated or skipped, back here to `row` - the Speech output row, or
+        Reset all settings."""
         host = self.screen.host
 
         def back() -> None:
             host.dismiss_presented(asking)
             self.reload_data()
-            self._focus_row('Speech output')
+            self._focus_row(row)
         asking = SpeechCalibrationScreen(host, then=back, first=first)
         host.push_overlay(asking)
 
