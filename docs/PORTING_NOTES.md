@@ -304,7 +304,9 @@ they were.
     game is now what it was in the original, the first finger's tap.
 * **What the phone changes** (user requests to Erick, all behind `host.ANDROID`):
   * A Shake sensitivity slider in the Controls tab, 1 to 10 or Off; on the Settings screen the game says
-    Shake when it feels one.  It changes how hard a shake has to be, not what a shake does.
+    Shake when it feels one.  It changes how hard a shake has to be, not what a shake does.  It is a setting,
+    `shakeSensitivity` in settings.json, and Reset all settings puts it back to 6; the first builds kept it in
+    save.json, and a value there is carried over (user request, 2026-10-02 - see the split below).
   * Skip dialogue, first on the pause screen while a line can be skipped: the original's Skip button lies
     under the game view, where a touch cannot reach it.
   * A first finger in a game waits 0.06 s (`MULTI_FINGER_GRACE`) before it is a touch, and while more
@@ -1497,7 +1499,11 @@ they were.
   first, being neither named in `SETTINGS_KEYS` nor new; they are settings, so they were named on 2026-09-24
   at the user's request.  A value already written to a player's `save.json` is left there and ignored, and
   both start at their defaults once - the announcer on, the gain 1.0 - which is what the user asked for
-  rather than a migration.  The game reaches all three through one `UserDefaults.standard()`, which routes each key by name.
+  rather than a migration.  `shakeSensitivity`, the phone's, went to `save.json` the same way and was named
+  on 2026-10-02, at the user's request too; this time the player's value is kept: `SplitDefaults` moves each
+  key in `MOVED_TO_SETTINGS` from `save.json` to `settings.json` the first time the profile is opened,
+  writing `settings.json` first, and a value `settings.json` already has stays.  The game reaches all three
+  through one `UserDefaults.standard()`, which routes each key by name.
   the figure at 0x0d129c from everything before the first dot of the number's `stringValue`, so a weapon
   that has never been fired (`shotsHit` / `shotsFired` = 0 / 0, which is nan) is read out as
   "accuracy, nan percent", and a real figure is cut at the decimal point - 66.6 per cent announced as 66.

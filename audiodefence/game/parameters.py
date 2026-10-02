@@ -182,7 +182,8 @@ class GameParameters:
     DEFAULT_REMEMBER_FOCUS = False
 
     #: PORT ADDITION (Android, user request): how easily a shake of the phone swings the melee weapon.
-    #: 0 is off; 1 needs a hard shake, 10 a light one.  6 is a little easier than the first builds were.
+    #: 0 is off; 1 needs a hard shake, 10 a light one.  6 is a little easier than the first builds were.  A
+    #: setting, in settings.json, since 2026-10-02; the first builds kept it in save.json (defaults.py).
     SHAKE_LEVELS = tuple(range(0, 11))
     DEFAULT_SHAKE_SENSITIVITY = 6
 

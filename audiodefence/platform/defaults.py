@@ -24,15 +24,21 @@ from .. import paths
 #: `announcer` and `masterGain` are the original's own keys and went with the progress at first, being
 #: neither named here nor new.  They are settings - the Announcer row is in Settings -> Sound - so they are
 #: named now (user request), which means the value in an existing save.json is left where it is and ignored,
-#: and both start at their defaults once: the announcer on, the gain 1.0.
+#: and both start at their defaults once: the announcer on, the gain 1.0.  `shakeSensitivity` (Android) went
+#: to save.json the same way and is named now too (user request, 2026-10-02); this time the player's value is
+#: carried over (MOVED_TO_SETTINGS).
 SETTINGS_KEYS = frozenset({'buttonMode', 'controlScheme', 'sensivity', 'menuAxis', 'debugMapVisible',
                           'tutorialText', 'rememberFocus', 'checkUpdates', 'skippedUpdate',
                           'menuMusicVolume', 'vibration', 'triggerEffects', 'keyNames',
                           'keyNamesController', 'speechOutput', 'fineHaptics', 'sapiVoice', 'sapiRate',
                           'sapiRateBoost',
                           'sapiPitch', 'sapiVolume', 'sapiModernAudio', 'sapiEngine', 'announcer', 'masterGain',
-                          'language'})
+                          'language', 'shakeSensitivity'})
 INPUT_KEYS = frozenset({'keymap', 'padmap', 'padmaps'})
+#: PORT ADDITION: settings that were saved with the progress before they were named in SETTINGS_KEYS, and
+#: whose value is moved to settings.json the first time the profile is opened, so the player keeps it (user
+#: request, 2026-10-02).  A value settings.json already has is the newer one and stays.
+MOVED_TO_SETTINGS = ('shakeSensitivity',)
 
 
 class SplitDefaults:
@@ -43,6 +49,27 @@ class SplitDefaults:
         self.save = UserDefaults(os.path.join(folder, 'save.json'))
         self.settings = UserDefaults(os.path.join(folder, 'settings.json'))
         self.keys = UserDefaults(os.path.join(folder, 'keys.json'))
+        self._carry_over()
+
+    def _carry_over(self) -> None:
+        """MOVED_TO_SETTINGS: each value still in save.json goes to settings.json, once.  settings.json is
+        written first, so a game stopped in between finds the value in both, never in neither."""
+        moved = [key for key in MOVED_TO_SETTINGS if key in self.save.data]
+        if not moved:
+            return
+        for key in moved:
+            if key not in self.settings.data:
+                self.settings.set_object(self.save.data[key], key)
+        try:
+            self.settings.synchronize()
+        except OSError:
+            return                                        # not written: save.json keeps it, to be moved next time
+        for key in moved:
+            self.save.remove(key)
+        try:
+            self.save.synchronize()
+        except OSError:
+            pass                                          # in both files next time, and moved again
 
     def store_for(self, key: str) -> 'UserDefaults':
         if key in INPUT_KEYS:
