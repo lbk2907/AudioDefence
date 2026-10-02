@@ -1,7 +1,7 @@
 # Working on this port
 
 Audio Defence: Zombie Arena (Somethin' Else / Bitbee, 2015) recovered from the iOS binary and rebuilt in
-Python for Windows and the Mac.  There was never any source: everything here was read out of an arm64 app
+Python for Windows, the Mac and Android.  There was never any source: everything here was read out of an arm64 app
 and written again.  These are the conventions that keeps it honest.  The README says what the game is and
 how to build it; `docs/PORTING_NOTES.md` says what was changed and why.
 
@@ -76,8 +76,20 @@ file, **at the end of that block** - it reads in the order things were done.
   uncommitted blocks the others.
 * Never commit what the build leaves behind (`build/`, `dist/`, `*.spec` are ignored); the game's own data
   in `game/` *is* committed, so a clone has everything.
+* **When the maintainer asks for pushing to wait** until a set of work is finished, each piece is still
+  committed on its own as it is done, and the lot is pushed once at the end.
+* **No GitHub workflows** (user request, 2026-10-01).  The repository is on a free account, and every
+  build - Windows, Mac and the Android APK - is made by hand with `compiler.py` and the tools.  A build
+  step belongs in the README, not in `.github/`.
+* **Files are LF.**  On Windows, Python's text mode writes CRLF: a script that edits a file opens it with
+  `newline=''` or writes with `newline='\n'`.  On 2026-10-02 a script rewrote ten files as CRLF, and the
+  diff showed every line of them changed.  Check `git diff --stat` before committing: it should show only
+  the lines you meant.
+* **No signing key in the repository, ever.**  The Android app's key lives outside it (`C:\Android\Keys`),
+  `.gitignore` turns away `.p12`, `.jks` and `.keystore` wherever they are, and nobody but the maintainer
+  makes or moves a key: a published key lets anyone sign an update every phone accepts as the game's.
 
-## Two things that break quietly
+## Things that break quietly
 
 * `audiodefence/platform/updater.py` holds `REPOSITORY`, the repository the game updates itself from.  It
   belongs to the repository the build is made in.  The Android app's `platform/updater_android.py` repeats
@@ -85,12 +97,28 @@ file, **at the end of that block** - it reads in the order things were done.
 * The release zips' names decide which one an older build downloads: `AudioDefence-Win-<version>.zip` must
   sort before `AudioDefenceMac-<version>.zip`, because builds from before the Mac port take the first zip
   they find.  Let the compiler name them.
+* **A game's weapons and its power-up live in two places.**  The guns in hand are on the game's own weapon
+  manager - `GameplayController.weapon_manager`, made by `with_weapons_from_armory` or
+  `with_challenge_weapon_array` - and the power-up in hand is on `WeaponManager.shared()`.  Asking the
+  wrong one finds nothing, and nothing says so.  Twice on 2026-10-02: the pause held the power-up on the
+  game's manager, so the Minigun fired on through the pause menu, and the death stopped the guns on the
+  shared one, so a held trigger kept firing after the player died.
+* **Shared code reaches the phone too.**  The Android app runs the same `audiodefence` package and the
+  same `game` data, so a change to an arena, a weapon or a screen is on the phone with the next APK.  Only
+  the `*_android.py` modules, `android_main.py` and the Java under `android/` are the phone's alone.
 
 ## Testing
 
 Tests are written for the change at hand and are not kept in the repository.  Use a scratch profile - point
 `APPDATA` at a temporary folder - so a test never touches a player's save, and silence the listener
-(`engine.al.alListenerf(oal.AL_GAIN, 0.0)`) so a test run is not heard.
+(`engine.al.alListenerf(oal.AL_GAIN, 0.0)`) so a test run is not heard.  Never change the computer's
+default sound device for a test, and stand in for the speech - a recording NVDA, SAPI 5 and Prism stubbed
+out - so a test never talks to the screen reader the maintainer is using at that moment.
+
+**Test through the way the game gets there.**  The power-up pause of 2026-09-24 was tested by calling the
+shared weapon manager directly, passed, and never once worked in a game, because the game reaches its own
+manager.  A test that drives the real `GameplayController`, the real screen or the real key gets the bug
+the player would.
 
 **Test a thing once.**  A check that has passed for code nobody has touched since will pass again, and
 running it again costs the time it takes and says nothing.  So:
@@ -135,6 +163,10 @@ put in the wrong places on those numbers.  The simulation is not a better measur
 on how well its bot plays), which is why it was not kept; it is a way of finding out what the measure is
 missing.
 
+**A line a player reads starts with a word, not a digit.**  The translators' list leaves out any phrase
+that starts with a number (it looks like a value, not a sentence), so "0 is the speed..." was never
+offered for translating; "At 0 it speaks..." is.
+
 **A line with a gap in it goes to a translator whole.**  Write it as one `%` template - "Tarot card number
 %i : %s" - and the tools offer it as it is, for the translator to write their sentence round, in their own
 order (`%2$s`) and with their own word forms (`{apple|apples}`).  Until 2026-09-28 the tools dropped every
@@ -161,3 +193,22 @@ recordings, had no gap to sit in once all 915 were measured; and `has_escape`, w
 implements an escape, was used as though it meant the screen has somewhere to go, which is false for the
 main menu.  The first had to be reverted, the second was found by a player.  Checking the set costs one
 command and settles it.
+
+## Working with agents
+
+Big pieces of work go to an agent; small ones are done directly.  The maintainer's usage is limited, so:
+
+* **One agent at a time** (user request, 2026-10-01: "1 by 1").  Agents share one working tree, and two
+  at once would commit each other's half-finished files.  Wait for one to report before starting the
+  next, and queue the rest.
+* **An agent is cut off by a usage limit with its work uncommitted.**  Before anything else is started,
+  look at `git status`: resume that agent with its context rather than start another over its files.
+* **The brief carries what an agent cannot know.**  This file first; the scratch profile; silent tests;
+  LF endings; one commit per piece; no keys and no lasting environment variables; and what the
+  maintainer decided, in their words.  An agent reads the code; it does not read the conversation.
+* **A refused permission is not a puzzle.**  When the permission check turns an action away - a push, a
+  download - the agent stops and says so, and the maintainer decides.  Nobody finds another way round it.
+* **What an agent reports goes to the maintainer in lists**, not drawn trees or wide tables: the
+  maintainer reads with a screen reader.  The same goes for the README and everything written for them,
+  and a link they are to follow is a link they can click.
+* **Deleting a folder sends it to the Recycle Bin**, never past it.
