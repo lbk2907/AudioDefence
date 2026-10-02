@@ -1357,8 +1357,8 @@ class SpeechCalibrationScreen(MenuScreen):
     and from there it is the Speech tab's own (`SpeechCalibration`): Enter at the end of the sentence, the
     result turned away when it is far too early or far too late, and any other key cancelling - after which
     it can be tried again.  It cannot be skipped (user request, 2026-10-02): skipped, the game went on timing
-    a screen reader at a guessed pace, which is what the question is there to end.  Escape only says how to
-    go on - unless no screen reader speaks the game any more (it was closed, and Automatic went over to
+    a screen reader at a guessed pace, which is what the question is there to end.  Escape starts it as Enter
+    does - unless no screen reader speaks the game any more (it was closed, and Automatic went over to
     SAPI 5), when nothing is wanted and it goes on.  A pace saved is said, and the game goes on once that has
     been read: the next screen's first line would otherwise cut it off.  `then` is where it goes on to - the
     opener, or back to Settings."""
@@ -1391,10 +1391,11 @@ class SpeechCalibrationScreen(MenuScreen):
         play_button_click()
 
     def escape_pressed(self) -> None:
-        """Not a way out: the calibration is needed while a screen reader speaks the game.  If none does any
-        more, nothing is wanted, and the game goes on."""
+        """Not a way out: the calibration is needed while a screen reader speaks the game, so Escape starts
+        it as Enter does (user request, 2026-10-02).  If no screen reader speaks the game any more, nothing
+        is wanted, and the game goes on."""
         if calibration_wanted():
-            self.speak('The game needs this once. Press Enter to start.')
+            self.start_pressed()
         else:
             self.go_on()
 
