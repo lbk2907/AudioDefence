@@ -229,11 +229,16 @@ class ControlSchemePanel:
         elif self.category == 'speech':                   # PORT ADDITION: who speaks, and SAPI 5's voice
             from ..platform.speech import OUTPUTS
             t.cell('Speech output', dict(OUTPUTS)[params.speech_output()],
-                   hint='Which screen reader or voice speaks the game. Automatic uses %s. Choose one and only '
-                        'that one speaks: the game is silent while it is not running. Press Enter for the '
-                        'list.'
-                        % ('VoiceOver, or the system voice when VoiceOver is off' if system.MAC else
-                           'NVDA, or another screen reader that is running, or SAPI 5 when none is'),
+                   # PORT ADDITION (Android): the phone has no screen reader to choose, and both its choices
+                   # are its own text-to-speech
+                   hint=("Which voice speaks the game. On the phone, Automatic and Android speech are the same: "
+                         "the phone's own text-to-speech, set in the rows below. Press Enter for the list."
+                         if system.ANDROID else
+                         'Which screen reader or voice speaks the game. Automatic uses %s. Choose one and only '
+                         'that one speaks: the game is silent while it is not running. Press Enter for the '
+                         'list.'
+                         % ('VoiceOver, or the system voice when VoiceOver is off' if system.MAC else
+                            'NVDA, or another screen reader that is running, or SAPI 5 when none is')),
                    action=self.choose_speech_output, shift_action=self.choose_speech_output)
             self.sapi_shown = self.sapi_speaking()
             if self.sapi_shown:                           # only while SAPI 5 is what speaks
@@ -716,11 +721,12 @@ class ControlSchemePanel:
                action=self.step_sapi_pitch, shift_action=self.step_sapi_pitch_back)
         t.cell(VOICE_NAME + ' volume', '%d%%' % sapi.volume(), hint='How loud %s speaks. ' % VOICE_NAME + self.SAPI_STEP_HINT,
                action=self.step_sapi_volume, shift_action=self.step_sapi_volume_back)
-        t.cell('Use modern output', 'ON' if params.modern_audio() else 'OFF',
-               hint='Press Enter to toggle: when on, the game plays %s itself, and a line stops the moment '
-                    'you interrupt it. Turn it off to let Windows play it, which is slower to stop.'
-                    % VOICE_NAME,
-               action=self.toggle_modern_audio, shift_action=self.toggle_modern_audio)
+        if not system.ANDROID:                            # the phone's voice is always played by the phone
+            t.cell('Use modern output', 'ON' if params.modern_audio() else 'OFF',
+                   hint='Press Enter to toggle: when on, the game plays %s itself, and a line stops the moment '
+                        'you interrupt it. Turn it off to let Windows play it, which is slower to stop.'
+                        % VOICE_NAME,
+                   action=self.toggle_modern_audio, shift_action=self.toggle_modern_audio)
 
     def toggle_modern_audio(self) -> None:
         """PORT ADDITION: whether the game plays SAPI 5 itself (speech_audio.py) or Windows does."""

@@ -234,6 +234,11 @@ they were.
     (`GameParameters.forget_saved_voice`) and never handed to the Bridge, so it cannot come back.  The rate,
     pitch and volume rows stay and work with whichever engine speaks.  Windows and the Mac keep their voice
     rows.
+  * **The Speech tab's words** (user request, 2026-10-02).  The Speech output row's hint was the desktop's,
+    naming NVDA and SAPI 5; on the phone it says that Automatic and Android speech are the same, the phone's
+    own text-to-speech.  Use modern output - whether the game plays SAPI 5 itself or leaves it to Windows -
+    means nothing on the phone and is not offered there.  Nothing else in the tab names Windows, NVDA, SAPI
+    or Control Panel on the phone; the desktop's words are as they were.
 * **Updating** (user request, 2026-10-01).  The desktop's updater and its screens, as far as Android allows.
   `updater_android` checks the same repository's latest release at the same moments - quietly when the main
   menu opens, with Check for updates on the main menu, which the phone now has too - and compares it with
