@@ -56,34 +56,35 @@ all settings puts all five back to Control Panel's.
 
 Many items and rows carry a hint, such as "Press Enter for the list". As
 VoiceOver does, the game reads the item first and the hint on its own after
-it, once the item has been read and a pause has passed. Two rows at the end
-of the Speech tab set this, on the phone too: **Hints** (on by default) turns
+it, once the item has been read and a pause has passed. Two rows at the end of
+the Speech tab set this, on the phone too: **Hints** (on by default) turns
 hints off, and **Pause before hints** sets the pause, from 0 to 3 seconds in
-quarters of a second, 1 second by default. A key, a touch, or a move to
-another item before the hint comes takes it away. With SAPI 5, the Mac's
-system voice or the phone's own speech the game knows when the item has been
-read; a screen reader cannot tell it, so the game allows the time the item's
-words take at an ordinary pace, 180 words a minute, until you measure your own.
-Until then, a screen reader's hint waits a fifth of a second even with the
-pause at 0, and so does the phone's, always. A braille display shows the item and its hint together, at once.
+quarters of a second, 1 second by default; at 0 the hint follows straight on.
+A key, a touch, or a move to another item before the hint comes takes it away.
+A braille display shows the item and its hint together, at once.
 
-To measure it, use **Speech calibration**, the last row of the Speech tab
-while a screen reader speaks the game. Press Enter and a sentence is read;
-press Enter again the moment it ends, and the game works out how long your
-screen reader takes for a word and says the pace in words a minute. Escape,
-or any other key, cancels, and a press far too early or far too late is
-turned away without changing anything. The Extra mode's story waits by the
-same measure. The row is not there while SAPI 5 or the Mac's system voice
-speaks, nor on the phone: the game can tell when those have finished. Reset
-all settings forgets the measurement.
+The game works out when the item has been read from how fast your speech
+reads, whatever speaks it: a screen reader, SAPI 5, the Mac's system voice or
+the phone's own. It counts the item's words, allows each the time you measured
+with **Speech calibration**, and starts the pause from there. The Extra mode's
+story waits the same way before it goes on. Until the speech has been
+measured, the game allows an ordinary pace, 180 words a minute.
 
-Until you have measured it, the game asks you to: when it starts, after the
-logo and before the intro; in the Speech tab as soon as you change Speech
-output to a screen reader; and straight after Reset all settings, which
-forgets the measurement. It says what the measurement is for, and Enter starts
-it just as the row does, and so does Escape. It cannot be skipped: it is
-needed once, and the Speech calibration row can do it again later. It never
-asks while SAPI 5 or the Mac's system voice speaks, nor on the phone.
+**Speech calibration** is the last row of the Speech tab, on Windows, the Mac
+and the phone, and it says the pace measured, such as "240 words a minute".
+Press Enter and a sentence is read; press Enter again the moment it ends, and
+the game works out how long a word takes. Escape, or any other key, cancels,
+and a press far too early or far too late is turned away without changing
+anything. The measurement belongs to the speech, not to one voice: changing
+Speech output or the voice keeps it, so calibrate again when you change the
+voice or its speed. Reset all settings forgets it.
+
+Until the speech has been measured, the game asks you to: when it starts,
+after the logo and before the intro, and straight after Reset all settings. It
+asks whatever speaks the game, the phone included, where a double tap does
+what Enter does. It says what the measurement is for, and Enter starts it just
+as the row does, and so does Escape. It cannot be skipped: it is needed once,
+and the Speech calibration row can do it again later.
 
 On the Mac the same page lists **Automatic**, **VoiceOver** and **System
 voice**: VoiceOver when it is on, the system voice when it is not, and the
@@ -397,7 +398,7 @@ Settings, saves and the log live in `%APPDATA%\AudioDefence` (on the Mac,
 | file | what is in it |
 |---|---|
 | `save.json` | progress: coins, diamonds, weapons, power-ups, missions, challenges, statistics |
-| `settings.json` | control scheme, button mode, turn sensitivity, menu arrows, cursor memory, tutorial text, the announcer, the game volume, menu music volume, the update check and a version you skipped, how strong the vibration and the trigger feel are, and whether hints name keys or controller buttons, and which controller's, the speech output and SAPI 5's voice, rate, rate boost, pitch and volume, whether hints are read and the pause before them, and your screen reader's measured pace; on the phone, the speech engine and the shake sensitivity too |
+| `settings.json` | control scheme, button mode, turn sensitivity, menu arrows, cursor memory, tutorial text, the announcer, the game volume, menu music volume, the update check and a version you skipped, how strong the vibration and the trigger feel are, and whether hints name keys or controller buttons, and which controller's, the speech output and SAPI 5's voice, rate, rate boost, pitch and volume, whether hints are read and the pause before them, and how fast the speech was measured to read; on the phone, the speech engine and the shake sensitivity too |
 | `keys.json` | the key bindings, and each kind of controller's, by its name |
 
 Deleting the folder starts a fresh profile — the first run then begins on Gyro
@@ -1309,8 +1310,8 @@ replacing them.
   setting, Shift+Enter to the previous.
 - **Settings → Speech**: Speech output — Automatic, or one screen reader or voice only — SAPI 5's
   voice, rate, rate boost, pitch and volume, whether hints are read and how long after their item, and a
-  calibration that measures how fast your screen reader reads, which the game asks for when it starts until
-  it has been done. See [Accessibility](#accessibility).
+  calibration that measures how fast the speech reads, which the game asks for when it starts until it has
+  been done. See [Accessibility](#accessibility).
 - **Settings → Miscellaneous → Remember cursor position** (off by default) returns the cursor to the row
   you left a screen on.
 - **A menu music volume**: Page Up and Page Down, on any menu, in steps of 10% from 100% — the original's

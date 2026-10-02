@@ -243,17 +243,45 @@ class GameParameters:
         self.defaults.synchronize()
 
     #: PORT ADDITION (user request, 2026-10-02): Settings -> Speech -> Speech calibration: the seconds a word
-    #: took the player's screen reader, measured (ui/settings.py, ui/reading.py).  None until it has been, and
-    #: the hints and the Extra mode's story then time a screen reader at reading.DEFAULT_WORDS_PER_MINUTE.
-    def speech_word_time(self):
-        value = self.defaults.object('speechWordTime')
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
-            return None
-        return float(value)
+    #: the speech took to read, measured (ui/settings.py), by which every voice's hints and the Extra mode's
+    #: story are timed (ui/reading.py).  None until it has been, and they are timed at
+    #: reading.DEFAULT_WORDS_PER_MINUTE until then.
+    #:
+    #: A measurement belongs to a speech, not to a voice: changing Speech output, or the voice, keeps it, so a
+    #: voice of much the same speed needs no new one, and the player calibrates again when they choose (user
+    #: request).  There is one speech now, FIRST_SPEECH, the one the game speaks with.  They are kept as one
+    #: map, `speechWordTime` in settings.json - {"first": seconds a word} - so that a second speech can be
+    #: added beside it with a measurement of its own (and a key of its own for a switch that has it follow
+    #: the first's).  The key held the first speech's number alone before it was a map, and a number found
+    #: there is read as the first speech's: the measurement is carried over, and the next one saved writes the
+    #: map.
+    FIRST_SPEECH = 'first'
 
-    def set_speech_word_time(self, value) -> None:
-        """The measured seconds a word, or None to forget it."""
-        self.defaults.set_object(None if value is None else float(value), 'speechWordTime')
+    def speech_word_times(self) -> dict:
+        """Every speech's measured seconds a word, by speech; a speech not yet measured is not in it."""
+        value = self.defaults.object('speechWordTime')
+        if not isinstance(value, dict):
+            value = {self.FIRST_SPEECH: value}            # the single number of before: the first speech's
+        return {str(speech): float(seconds) for speech, seconds in value.items()
+                if not isinstance(seconds, bool) and isinstance(seconds, (int, float)) and seconds > 0}
+
+    def speech_word_time(self, speech: str = FIRST_SPEECH):
+        """The measured seconds a word for this speech, or None until it has been measured."""
+        return self.speech_word_times().get(speech)
+
+    def set_speech_word_time(self, value, speech: str = FIRST_SPEECH) -> None:
+        """The measured seconds a word for this speech, or None to forget it."""
+        times = self.speech_word_times()
+        if value is None:
+            times.pop(speech, None)
+        else:
+            times[speech] = float(value)
+        self.defaults.set_object(times or None, 'speechWordTime')
+        self.defaults.synchronize()
+
+    def forget_speech_word_times(self) -> None:
+        """Every speech's measurement forgotten (Reset all settings)."""
+        self.defaults.set_object(None, 'speechWordTime')
         self.defaults.synchronize()
 
     #: PORT ADDITION: whether the main menu looks for a new build when it opens.  The App Store did this

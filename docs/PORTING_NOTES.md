@@ -2417,22 +2417,20 @@ they were.
 
   It carries on by itself once it has been read (user request, 2026-10-02), and an epilogue goes on to the
   completed screen the same way; Continue, Enter wherever the cursor is, and Back still go on at once.  The
-  game's own voice says when it has finished, and the story goes on once it has been quiet for
-  `STORY_QUIET`, a second.  SAPI 5 says it through its thread (`_Sapi.busy`): spoken to Windows, by the
-  voice's `RunningState` (measured: done 8.66 s into a line 8.52 s long); written into the game, by the end
-  of the line's stream going past the game's stream object (`ISpEventSink_AddEvents`), since that object
-  keeps the events SAPI hands it and the voice therefore reports itself speaking for ever after its first
-  line - and then by what the game still has to play of it (measured: done 8.79 s after the line was
-  handed over, 8.42 s of it written).  The Mac's system voice says it through `isSpeaking`, and the phone's
-  through the Bridge's `speechBusy`: the last utterance not yet done, said or stopped (an
-  `UtteranceProgressListener`), with `isSpeaking` behind it.
-  A screen reader cannot be asked: NVDA's controller client exports speakText, cancelSpeech, testIfRunning
-  and brailleMessage and nothing else, and Prism and VoiceOver's Apple Event only hand a line over.  For
-  those the reading is timed, the words at `DEFAULT_WORDS_PER_MINUTE` (180, an ordinary speaking pace, which
-  a player listening faster than that waits a little longer than they need) and `STORY_MARGIN` (1.5 s) on
-  top - so 15 words go on after 6.5 seconds and 55 after 19.8.  `STORY_QUIET` and `STORY_MARGIN` are in
-  `ui/gameplay_screen.py`; the pace moved to `ui/reading.py` when the hints came to be timed by it too, and
-  once the player has measured their screen reader's own (Speech calibration) the story waits by that.
+  reading is timed, the same way whatever speaks it (user request, 2026-10-02): the words at the pace
+  measured in Speech calibration (`ui/reading.py`), or at `DEFAULT_WORDS_PER_MINUTE` (180, an ordinary
+  speaking pace) until it has been, and `STORY_MARGIN` (1.5 s, `ui/gameplay_screen.py`) on top - so at 180,
+  15 words go on after 6.5 seconds and 55 after 19.8.  This replaces the first design, of the same day, in
+  which only a screen reader was timed, since it cannot be asked when it has finished (NVDA's controller
+  client exports speakText, cancelSpeech, testIfRunning and brailleMessage and nothing else, and Prism and
+  VoiceOver's Apple Event only hand a line over), and the game's own voices were followed to their real end,
+  the story going on a second after they fell quiet: SAPI 5 through its thread, by the voice's
+  `RunningState` spoken to Windows and by the end of the line's stream going past the game's stream object
+  written into the game; the Mac's system voice through `isSpeaking`; the phone's through a `speechBusy` on
+  the Bridge, an `UtteranceProgressListener` with `isSpeaking` behind it.  The user asked for one rule for
+  every voice - what the game follows is the player's calibration and settings, not what a voice reports.
+  Checked headless with a stand-in SAPI 5 that fell quiet after a second, the speech measured at 0.1 s a word: The Barnyard's 55 words went on after
+  6.95 s against the 7.0 predicted (5.5 s and the margin).
   The game's update timers are stopped under the story, so the screen waits on a run-loop timer of its own.
   Any key but Enter and Back hands the screen to the player, and it then waits for Continue: moving through
   the text is reading it item by item, which the go-on would cut off, and every key on this screen cuts the
@@ -2449,7 +2447,8 @@ they were.
   the announcer, a gun being drawn and naming itself (`Weapon.deploy`, when a wave hands weapons over), the
   revive's answer and the weapons read out are left out of the hold and play to their end, and the story is
   shown once they are over (`opening_lines`, `GameplayScreen.still_announcing`, looked at on a run-loop
-  timer, `pause_game(keep=)`).  Nothing in the original waits for the clip: `goToChallengeWithDict:`
+  timer, `pause_game(keep=)`); the weapons' line is timed from its words, as a hint is, whatever speaks it.
+  Nothing in the original waits for the clip: `goToChallengeWithDict:`
   0x100082278 loads the game at once and its timers run from `viewDidLoad`.  Its challenges are written
   round it instead - none of the thirty first waves has a zombie on a clock, each waiting on a line or on
   another zombie, and twenty-nine open with a second or two of nothing before Dr. Bastard's or the
@@ -2835,26 +2834,26 @@ they were.
   the cursor or anything else said takes a waiting hint away (`Speech.lines` counts every line said and
   every stop), so a hint never talks over what the player did next; an item read again has its hint again.
 
-  When the item has been read is known for the game's own voice - SAPI 5, the Mac's system voice and the
-  phone's text-to-speech say so through `Speech.still_speaking`, built for the Extra mode's story - and the
-  pause starts when it falls quiet.  A screen reader cannot be asked, so the item's words are timed at
-  `DEFAULT_WORDS_PER_MINUTE`, the 180 the story already used, which moved from `ui/gameplay_screen.py` to
-  `ui/reading.py` so that the two share it.  The hint is queued, not interrupting, so a screen reader slower
-  than that finishes the item first.  Until the player has measured their screen reader's pace (Speech
-  calibration, below), Pause before hints at 0 still waits a fifth of a second after a screen reader's item
-  (`UNCALIBRATED_LEAST_PAUSE`, beside the 180 in `ui/reading.py`; user request, 2026-10-02): the end of the
-  item is then a guess, and a guess a little early would hand the hint over before the item is done.  Once
-  the pace is measured 0 means 0, and SAPI 5 and the Mac's voice are untouched either way, since for them 0
-  already means the moment the voice falls quiet.  The phone keeps the fifth of a second after its voice
-  falls quiet as well (user request, the same day): it has no calibration that would make 0 mean 0, and
-  its engine's word that it has finished is all there is to go by.  Checked on a fake clock with a stand-in NVDA: with
-  nothing measured and the pause at 0, a three-word item's hint came 1.2 s after it (1.0 s and the 0.2);
-  with the pause at 0.5 it came after the 0.5 alone; measured at 0.25 s a word, 0.75 s after it; with SAPI 5
-  speaking and nothing measured, the moment its 0.5 s line ended.  A braille display is given the item and its hint together as the
-  item is read (`nvdaController_brailleMessage`; Prism's `braille` beside its `speak`), and the spoken hint
-  is not brailled again: a display is read at the reader's own pace, and a second message would take the
-  item off it a second after it came, as NVDA itself shows an object's description beside its name.
-  VoiceOver on the Mac speaks and brailles a line as one, so there the display follows the speech.  The
+  When the item has been read is predicted, the same way for every voice (user request, 2026-10-02): its
+  words times the seconds a word measured in Speech calibration (below), or at `DEFAULT_WORDS_PER_MINUTE`
+  until it has been, and the pause counts from that moment (`reading_seconds`, `ui/reading.py`).  The 180 is
+  the story's, which moved from `ui/gameplay_screen.py` so that the two share it.  This replaces the first
+  design, of the same day, in which the game's own voices - SAPI 5, the Mac's system voice and the phone's
+  text-to-speech - were followed to their real end (`Speech.still_speaking`, built for the Extra mode's
+  story) and only a screen reader, which cannot be asked, was timed.  The user asked for one rule for every
+  voice: what the game follows is the player's calibration and settings, not what a voice reports.  The hint
+  is queued, not interrupting, so speech slower than it is timed at finishes the item first.  Pause before
+  hints is added as it is, 0 included.  A least pause of a fifth of a second (`UNCALIBRATED_LEAST_PAUSE`)
+  stood for a while that day in front of a screen reader's hint until it was measured, and in front of the
+  phone's always; it was taken out at the user's request - the game follows the player's setting, not an
+  assumption of its own.  Checked on a fake clock: with nothing measured and the pause at 0, a three-word
+  item's hint was due 1.0 s after it, the three words at 180 a minute and nothing more; measured at 240 a
+  minute (0.2497 s a word), 0.749 s after it with SAPI 5, with a stand-in NVDA and on the Android build's
+  Python with the fake Bridge, and 1.749 s with the pause at 1.  A braille display is given the item and its
+  hint together as the item is read (`nvdaController_brailleMessage`; Prism's `braille` beside its `speak`),
+  and the spoken hint is not brailled again: a display is read at the reader's own pace, and a second message
+  would take the item off it a second after it came, as NVDA itself shows an object's description beside its
+  name.  VoiceOver on the Mac speaks and brailles a line as one, so there the display follows the speech.  The
   phone's two-finger swipe, which reads a whole screen as one line, keeps each hint inline, and leaves them
   out with Hints off.  Every place that reads an element goes through `speak_element`: a screen opening on
   its first element, the arrows and the ends, a menu screen's items, a dimmed item pressed, and the
@@ -2866,16 +2865,17 @@ they were.
   Endless button's "Finish the tutorial to unlock", the Shuffle button's price, and the version on Check for
   updates.  They are left as they were; VoiceOver with hints off loses the same.
 
-  Checked headless with stand-ins for the voice and for NVDA, on a fake clock: with a voice taking 0.5 s
-  the hint came 1.5 s after the item, and 3.0 s with the pause at 2.5; for NVDA "Bravo two words" was
+  Checked headless with stand-ins for the voice and for NVDA, on a fake clock, in the first design: with a
+  voice taking 0.5 s the hint came 1.5 s after the item, and 3.0 s with the pause at 2.5; for NVDA "Bravo two
+  words" was
   followed 2.0 s later (3 words at 180 a minute and the 1 s pause), queued and not brailled again, while
   the display had had the item and hint together; a key, Control, a move of the cursor and another line
   said before it was due each took it away, and Hints off read none.  On the real settings screen the rows
   stepped and held at 0 and 3, were saved in settings.json and were put back by Reset all settings; on the
   Android build's Python with the fake Bridge the hint, in the phone's words, came 0.87 s after a 0.3 s line
-  with a 0.5 s pause, and a touch before then took it away.
-* Settings -> Speech -> Speech calibration measures how fast the player's screen reader reads (user request,
-  2026-10-02; the idea is the game Top Speed's).  The game cannot know when a screen reader has finished: NVDA's
+  with a 0.5 s pause, the voice then followed to its end, and a touch before then took it away.
+* Settings -> Speech -> Speech calibration measures how fast the speech reads (user request, 2026-10-02; the
+  idea is the game Top Speed's).  It began with screen readers, which cannot say when they are done: NVDA's
   controller client exports speakText, cancelSpeech, testIfRunning and brailleMessage and nothing else, JAWS
   and the others are reached through Prism, which only hands a line over, and VoiceOver on the Mac through an
   Apple Event that does the same.  The hints and the Extra mode's story therefore time a screen reader from
@@ -2883,23 +2883,39 @@ they were.
   through whatever speaks the game (`SpeechCalibration.sample`, ui/settings.py): one translatable phrase of 38
   words, an instruction and then a sentence of the game's world, every word of it counted as it is read, in
   the player's language.  The player presses Enter the moment it ends, and the time taken over the number of
-  words is the time a word (`speechWordTime` in settings.json, `GameParameters.speech_word_time`), which
-  `reading.seconds_per_word` hands to the hints and the story in place of `DEFAULT_WORDS_PER_MINUTE`.  The
+  words is the time a word (`GameParameters.speech_word_time`), which `reading.seconds_per_word` hands to the
+  hints and the story in place of `DEFAULT_WORDS_PER_MINUTE`.  The
   reader's own start and the player's reaction are in the time, spread over the 38 words, which is right for
   the lines it times since those have them too.  A result faster than 1,200 words a minute or slower than 60
   (`FASTEST_WORDS_PER_MINUTE`, `SLOWEST_WORDS_PER_MINUTE`) cannot be a press at the end of the reading, and is
   turned away with a plain word that nothing was changed.  Escape, or any key but Enter and a modifier held
   alone, cancels: a key in the middle of the sentence may well have cut the reading short.  The row shows the
-  pace in words a minute, and is there only while a screen reader speaks - not while SAPI 5 or the Mac's
-  system voice does, and never on the phone, whose voice is always the game's own and says when it is done.
-  Reset all settings forgets the measurement.  There is nothing in the original to depart from: VoiceOver knew
-  when it had finished.  Checked headless on a fake clock with a stand-in NVDA: Enter after 38 words at 240 a
-  minute saved 0.2497 s and said "240 words a minute"; a hint then followed a five-word row by 2.25 s with the
-  1 s pause, and the story's 15 words waited 5.25 s; a press after a second and one after 46 s were turned
-  away; Escape and an arrow cancelled, Shift alone did not, and Settings stayed open; the row went with SAPI
-  5 speaking and on the Android build's Python with the fake Bridge; Reset all settings forgot it.
+  pace in words a minute.  Reset all settings forgets the measurement.  There is nothing in the original to
+  depart from: VoiceOver knew when it had finished.  Checked headless on a fake clock with a stand-in NVDA:
+  Enter after 38 words at 240 a minute saved 0.2497 s and said "240 words a minute"; a hint then followed a
+  five-word row by 2.25 s with the 1 s pause, and the story's 15 words waited 5.25 s; a press after a second
+  and one after 46 s were turned away; Escape and an arrow cancelled, Shift alone did not, and Settings
+  stayed open; Reset all settings forgot it.
 
-  Until a pace is saved the game asks for one (user request, 2026-10-02), rather than leave the row saying
+  Every voice follows it now (user request, 2026-10-02): the hints, the story and the weapons a wave reads out
+  are timed from the measurement whatever speaks - a screen reader, SAPI 5, the Mac's system voice or the
+  phone's - rather than the game's own voices being followed to their real end (the hints entry above says
+  why).  So the row is in the Speech tab on every platform and for every output, where at first it was there
+  only while a screen reader spoke, and its hint says to calibrate again after changing the voice or its
+  speed.  A measurement belongs to the speech, not to a voice (user request): changing Speech output or the
+  voice keeps it, so voices of much the same speed need no new one, and the player calibrates again when they
+  choose.  One measurement per output was built first and dropped before it was committed.  There is one
+  speech now, `GameParameters.FIRST_SPEECH`; the measurements are one map in settings.json,
+  `speechWordTime` - {"first": seconds a word} - so that a second speech can be added beside the first with a
+  measurement of its own (and a key of its own for a switch that has it follow the first's).  The key held
+  the first speech's number alone before it was a map, and a number found there is read as the first
+  speech's, so a measurement made before carries over; the next one saved writes the map.  Checked headless
+  with a stand-in NVDA and SAPI 5 and Prism stubbed out: the row was there with SAPI 5 and on the Android
+  build's Python with the fake Bridge, where the sample was read in the phone's words; a calibration with SAPI
+  5 speaking saved {"first": 0.2497}, and changing to NVDA, to Automatic and back to SAPI 5 kept it and asked
+  nothing; a settings.json with the old 0.25 started with no question and read 0.25 as the first speech's.
+
+  Until the speech is measured the game asks (user request, 2026-10-02), rather than leave the row saying
   "not done yet" to a player who may never open the Speech tab.  It asks at start-up after the logo and
   before the opener (`goToOpener` 0x100081584, which `App.go_to_opener` now asks in front of): asked after
   the opener at first, the Enter that skipped it could start the calibration too, and the user asked for it
@@ -2907,16 +2923,21 @@ they were.
   control scheme screen comes before the opener in the original, but the port never shows it (it starts on
   Gyro, `last_control_scheme`), and the update check and the offer to put back missing files belong to the
   main menu, so they come after.  It asks again
-  in the Speech tab the moment Speech output is changed to a screen reader with nothing saved
+  in the Speech tab the moment Speech output is changed with nothing saved
   (`ControlSchemePanel.take_speech_output`), over the tab, with the choice said first so the question does not
-  cut it off; choosing the output already in use is not a change and does not ask.  Reset all settings,
+  cut it off - which now happens only when nothing could be heard at start-up, since a measurement is kept
+  across outputs; choosing the output already in use is not a change and does not ask.  Reset all settings,
   which forgets the pace with the rest, asks at once in the same way, with its line said first, and comes
   back to its own row (user request, 2026-10-02: left until the next start, the reset put the guessed pace
   back for the rest of the session).  Whether to ask is
-  `calibration_wanted`: a screen reader speaks the game (`screen_reader_speaks`, which is also what shows the
-  row, so the two cannot disagree; Automatic counts as what it speaks through now), nothing is saved, and the
-  output can speak - a chosen screen reader that is not running leaves the game silent, and a question nobody
-  hears is no use.  So it never asks while SAPI 5 or the Mac's system voice speaks, nor on the phone.
+  `calibration_wanted`: nothing is saved for the speech, and the output can speak - a chosen screen reader
+  that is not running leaves the game silent, and a question nobody hears is no use.  At first it asked only
+  while a screen reader spoke; with every voice timed by the measurement it asks whatever speaks, SAPI 5, the
+  Mac's system voice and the phone included (user request, 2026-10-02), the phone in its own words (a double
+  tap for Enter, `phone_words`).  Checked headless through the real launch, nothing measured: the logo went
+  to the question with a stand-in NVDA, with SAPI 5 and on the Android build's Python with the fake Bridge
+  ("Double tap to start"); after Reset all settings it asked at once with SAPI 5 speaking and on the phone,
+  where Escape started it as on the desktop.
 
   The question is a screen of its own (`SpeechCalibrationScreen`, `Port_SpeechCalibrationViewController`): it
   says what the calibration is for and how it goes, and lands on Start calibration, its only row.  From Enter on it is the row's own calibration, the same object (`SpeechCalibration`) with the same

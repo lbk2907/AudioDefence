@@ -112,11 +112,11 @@ class App:
         self.load_view_controller_named('ADInitialControlSchemeViewController')
 
     def go_to_opener(self) -> None:                       # 0x100081584
-        """PORT ADDITION (user request, 2026-10-02): while a screen reader speaks the game and how fast it
-        reads has never been measured, the game asks for a Speech calibration first
-        (ui/settings.SpeechCalibrationScreen), and plays the opener from there, calibrated or skipped.  It
-        asks before the opener rather than after it, so the Enter that skips the opener cannot start the
-        calibration as well."""
+        """PORT ADDITION (user request, 2026-10-02): while how fast the speech reads has never been measured,
+        the game asks for a Speech calibration first (ui/settings.SpeechCalibrationScreen), whatever speaks
+        it and on every platform, and plays the opener from there once it is done.  It asks before the
+        opener rather than after it, so the Enter that skips the opener cannot start the calibration as
+        well."""
         from .ui.settings import calibration_wanted
         if self.host is not None and calibration_wanted():
             self.load_view_controller_named('Port_SpeechCalibrationViewController', then=self.play_opener)

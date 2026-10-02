@@ -69,17 +69,13 @@ class GameplayScreen(Screen):
         """PORT ADDITION: whether the speech is still reading what the game last announced - the weapons a
         wave hands over - so that a story told as the wave begins does not cut it off
         (`ChallengeGameplayController.tell_story_if_due`).  Anything said since has cut it already.  The
-        game's own voice says when it has finished; a screen reader is timed, as a hint is (ui/reading.py)."""
+        reading is timed, as a hint is, whatever speaks (ui/reading.py)."""
         from ..platform.speech import Speech
         from .reading import reading_seconds
         said = getattr(self, '_announced', None)
-        speech = Speech.shared()
-        if said is None or speech.lines != said[1]:
+        if said is None or Speech.shared().lines != said[1]:
             return False
-        speaking = speech.still_speaking()
-        if speaking is None:
-            return RunLoop.main().now() < said[2] + reading_seconds(said[0])
-        return bool(speaking)
+        return RunLoop.main().now() < said[2] + reading_seconds(said[0])
 
     @staticmethod
     def skip_intro_announcement() -> str:
@@ -367,21 +363,18 @@ class ReviveScreen(AccessibleScreen):
 
 #: PORT ADDITION (user request, 2026-10-02): how the story screen knows that it has been read (StoryScreen).
 #:
-#: The game's own voice - SAPI 5, the Mac's system voice, the phone's - says when it has finished
-#: (`Speech.still_speaking`), and the story goes on once it has been quiet for STORY_QUIET seconds: long
-#: enough to be heard as the end of the reading and not a cut, short enough not to be sat through.
-STORY_QUIET = 1.0
-#: A screen reader cannot be asked - NVDA's controller client can only speak, cancel, braille and say whether
-#: NVDA is running, and Prism and VoiceOver's Apple Event only hand a line over - so the reading is timed:
-#: the words at the pace the hints are timed at too (ui/reading.py: DEFAULT_WORDS_PER_MINUTE, an ordinary
-#: speaking pace), and STORY_MARGIN on top for the reader to start and for the pauses at full stops.
+#: The reading is timed, whatever speaks it: the words at the pace the hints are timed at too
+#: (ui/reading.py: as measured in Speech calibration, or DEFAULT_WORDS_PER_MINUTE until it has been), and
+#: STORY_MARGIN on top, so the end is heard as the end of the reading and not a cut.  The game's own voices
+#: were followed to their real end at first, and the story went on a second after they fell quiet; since the
+#: same day every voice is timed alike (user request): the player's calibration is what the game follows.
 STORY_MARGIN = 1.5
 #: how often the screen looks
 STORY_POLL = 0.1
 
 
 def story_reading_seconds(text: str) -> float:
-    """How long a screen reader is given to read the story: the time its words take (ui/reading.py), plus
+    """How long the speech is given to read the story: the time its words take (ui/reading.py), plus
     STORY_MARGIN."""
     from .reading import reading_seconds
     return reading_seconds(text) + STORY_MARGIN
@@ -390,9 +383,9 @@ def story_reading_seconds(text: str) -> float:
 class StoryScreen(AccessibleScreen):
     """PORT ADDITION (user request, 2026-10-01): the Extra mode's story, told in text between waves
     (`StoryController`).  The game is paused under it.  The text is read first, and the game plays on by
-    itself once it has been (user request, 2026-10-02): when the game's own voice has finished with it, a
-    moment later, and with a screen reader, which cannot say when it has finished, once the time it takes to
-    read has passed (`story_reading_seconds`).  Continue, Enter wherever the cursor is, and Back go on at once.
+    itself once it has been (user request, 2026-10-02): once the time it takes to read has passed, as the
+    speech has been measured to read (`story_reading_seconds`), whatever speaks it.  Continue, Enter wherever
+    the cursor is, and Back go on at once.
 
     Any other key hands the screen to the player, and then only those go on.  Moving through the text is
     reading it item by item, which the go-on would cut off; and every key here cuts the speech (ui/host.py,
@@ -405,7 +398,6 @@ class StoryScreen(AccessibleScreen):
         self._listening = None                            # the timer that waits for the reading to end
         self._read_at = None                              # when the text was handed to the speech
         self._reading_time = 0.0
-        self._quiet_since = None
 
     def load_view(self) -> None:
         v = View('', (0, 0, 568, 320), accessible=False, name='story')
@@ -432,7 +424,6 @@ class StoryScreen(AccessibleScreen):
         loop = RunLoop.main()
         self._read_at = loop.now()
         self._reading_time = story_reading_seconds(spoken)
-        self._quiet_since = None
         # the game's own timers are stopped while it is paused; the run loop's are not
         self._listening = loop.schedule_timer(STORY_POLL, self._check_reading, True)
 
@@ -442,25 +433,12 @@ class StoryScreen(AccessibleScreen):
             self._listening = None
 
     def _check_reading(self) -> None:
-        from ..platform.speech import Speech
         if not self.presented or self.story.waits_for_player or self.story.gameplay_view_controller is None:
             self._stop_listening()
             return
         if self.host.top() is not self:                   # something over it: wait for it to go
-            self._quiet_since = None
             return
-        now = RunLoop.main().now()
-        speaking = Speech.shared().still_speaking()
-        if speaking is None:                              # a screen reader: the time it takes to read
-            done = now - self._read_at >= self._reading_time
-        elif speaking:
-            self._quiet_since = None
-            done = False
-        else:
-            if self._quiet_since is None:
-                self._quiet_since = now
-            done = now - self._quiet_since >= STORY_QUIET
-        if done:
+        if RunLoop.main().now() - self._read_at >= self._reading_time:
             log.info('the story has been read: going on')
             self._stop_listening()
             self.story.continue_pressed()

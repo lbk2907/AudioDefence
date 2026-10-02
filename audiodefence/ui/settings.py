@@ -256,17 +256,17 @@ class ControlSchemePanel:
                    hint="How long the game waits after reading a row before it reads the row's hint, from 0 to "
                         '3 seconds. ' + self.SAPI_STEP_HINT,
                    action=self.step_hint_pause, shift_action=self.step_hint_pause_back)
-            if screen_reader_speaks():
-                # PORT ADDITION (user request, 2026-10-02): a screen reader cannot say when it has finished, so
-                # how fast it reads is measured (ui/reading.py).  Not while the game's own voice speaks, which
-                # says so itself - and so never on the phone, whose voice always does.
-                word_time = params.speech_word_time()
-                t.cell('Speech calibration',
-                       '%i words a minute' % round(60.0 / word_time) if word_time else 'not done yet',
-                       hint='How fast your screen reader reads. The game cannot ask it, so it measures it, to know '
-                            'when a row has been read and its hint can follow. Press Enter and a sentence is '
-                            'read; press Enter again the moment it ends, or Escape to cancel.',
-                       action=self.start_calibration)
+            # PORT ADDITION (user request, 2026-10-02): how fast the speech reads, measured, by which the game
+            # predicts when a line has been read, whatever speaks it (ui/reading.py).  On every platform and for
+            # every output: the measurement is the speech's, and stays when the output or the voice changes.
+            word_time = params.speech_word_time()
+            t.cell('Speech calibration',
+                   '%i words a minute' % round(60.0 / word_time) if word_time else 'not done yet',
+                   hint='How fast the speech reads. The game works out from it when each row has been read, so '
+                        'that its hint, and the story in Extra, come at the right moment. Calibrate again after '
+                        "changing the voice or its speed, a screen reader's or the game's own. Press Enter and a "
+                        'sentence is read; press Enter again the moment it ends, or Escape to cancel.',
+                   action=self.start_calibration)
         elif self.category == 'keyboard':                 # PORT ADDITION: the key bindings
             keymap = KeyMap.shared()
             scheme = mode_text(keymap.mode())
@@ -568,13 +568,13 @@ class ControlSchemePanel:
         params.set_sapi(voice=None, rate=None, boost=False, pitch=0, volume=None)
         params.set_speak_hints(params.DEFAULT_SPEAK_HINTS)
         params.set_hint_pause(params.DEFAULT_HINT_PAUSE)
-        params.set_speech_word_time(None)                 # the pace measured is forgotten
+        params.forget_speech_word_times()                 # the pace measured is forgotten
         App.apply_menu_music_volume()
         self.reload_data()
         if calibration_wanted():                          # PORT ADDITION (user request, 2026-10-02): the pace
-            # was forgotten with the rest, and a screen reader speaks: asked for again at once, as at
-            # start-up, rather than left guessed until the next start (the line is the one below, which is
-            # where the translators' list finds it)
+            # was forgotten with the rest: asked for again at once, as at start-up, rather than left
+            # guessed until the next start (the line is the one below, which is where the translators' list
+            # finds it)
             self.ask_for_calibration(localization.translate(self.RESET_DONE), row='Reset all settings')
         else:
             self.announce('All settings reset to default. Your key and controller bindings are unchanged.')
@@ -678,9 +678,10 @@ class ControlSchemePanel:
         speech = Speech.shared()
         # speak_automatic takes a line as it is, so these are put in the player's language here (2026-10-02)
         if changed and calibration_wanted():
-            # PORT ADDITION (user request, 2026-10-02): a screen reader speaks now, and how fast it reads has
-            # never been measured: the game asks for a Speech calibration at once, as it does at start-up,
-            # and the choice is said as the question opens rather than cut off by it
+            # PORT ADDITION (user request, 2026-10-02): the speech has never been measured - the question
+            # at start-up found nothing it could be heard through - and it can be now: the game asks for a
+            # Speech calibration at once, and the choice is said as the question opens rather than cut off
+            # by it.  A measurement there is kept whatever the output: it is the speech's, not the voice's.
             self.ask_for_calibration(localization.translate('Speech output: %s' % name))
         elif speech.can_speak(choice):
             self.announce('Speech output: %s' % name)
@@ -1260,27 +1261,17 @@ class PauseScreen(SettingsScreen):
 
 
 # ================================================================================= speech calibration
-# PORT ADDITION (user request, 2026-10-02): a screen reader cannot say when it has finished a line, so the
-# hints and the Extra mode's story time it from the line's words (ui/reading.py), at a pace the player
-# measures.  The Speech tab's Speech calibration row measures it, and the game asks for it - at start-up, and
-# when Speech output is changed to a screen reader - until it has been measured.
-def screen_reader_speaks() -> bool:
-    """Whether what speaks the game is a screen reader, whose end the game cannot know: NVDA, another
-    screen reader through Prism, or VoiceOver on the Mac - chosen, or what Automatic speaks through now.  Not
-    while SAPI 5 or the Mac's system voice speaks, and never on the phone, whose voice is always the game's
-    own: those say when they have finished.  The Speech calibration row is shown by this and the game asks
-    for a calibration by it (`calibration_wanted`), so the two always agree."""
-    return not system.ANDROID and not ControlSchemePanel.sapi_speaking()
-
-
+# PORT ADDITION (user request, 2026-10-02): the hints and the Extra mode's story are timed from a line's words
+# (ui/reading.py), for every voice, at a pace the player measures.  The Speech tab's Speech calibration row
+# measures it, and the game asks for it - at start-up, and after Reset all settings - until it has been.
 def calibration_wanted() -> bool:
-    """Whether the game asks for a Speech calibration: a screen reader speaks the game and how fast it reads
-    has never been measured (`speechWordTime`).  Not while the chosen screen reader is not running, since
-    then nothing could be heard: the game is silent until it is."""
+    """Whether the game asks for a Speech calibration: the speech has never been measured (`speechWordTime`),
+    whatever speaks the game - a screen reader, SAPI 5, the Mac's system voice or the phone's.  Not while a
+    chosen screen reader is not running, since then nothing could be heard: the game is silent until it
+    is."""
     from ..platform.speech import Speech
     params = GameParameters.shared()
-    return (screen_reader_speaks() and params.speech_word_time() is None
-            and Speech.shared().can_speak(params.speech_output()))
+    return params.speech_word_time() is None and Speech.shared().can_speak(params.speech_output())
 
 
 class SpeechCalibration:
@@ -1349,15 +1340,17 @@ class SpeechCalibration:
 @register('Port_SpeechCalibrationViewController')
 class SpeechCalibrationScreen(MenuScreen):
     """The game asks for a Speech calibration (`calibration_wanted`), rather than leave the Speech tab's row
-    saying "not done yet" to a player who may never open it.  It asks at start-up after the logo (and a
-    first run's control scheme), before the opener (`App.go_to_opener`), and in the Speech tab as soon as
-    Speech output is changed to a screen reader (`ControlSchemePanel.take_speech_output`).
+    saying "not done yet" to a player who may never open it.  It asks whatever speaks the game, on every
+    platform, at start-up after the logo (and a first run's control scheme), before the opener
+    (`App.go_to_opener`), and after Reset all settings; and when Speech output is changed with nothing
+    measured (`ControlSchemePanel.take_speech_output`), which happens only when nothing could be heard at
+    start-up.
 
     It says what the calibration is for and how it goes, and lands on Start calibration.  Enter starts it,
     and from there it is the Speech tab's own (`SpeechCalibration`): Enter at the end of the sentence, the
     result turned away when it is far too early or far too late, and any other key cancelling - after which
     it can be tried again.  It cannot be skipped (user request, 2026-10-02): skipped, the game went on timing
-    a screen reader at a guessed pace, which is what the question is there to end.  Escape starts it as Enter
+    the speech at a guessed pace, which is what the question is there to end.  Escape starts it as Enter
     does.  A pace saved is said, and the game goes on once that has
     been read: the next screen's first line would otherwise cut it off.  `then` is where it goes on to - the
     opener, or back to Settings."""
@@ -1368,10 +1361,10 @@ class SpeechCalibrationScreen(MenuScreen):
     def __init__(self, host, then=None, first: str = ''):
         from ..platform.pad import menu_words
         explanation = menu_words(localization.translate(
-            'Speech calibration. Your screen reader cannot tell the game when it has finished speaking. The game '
-            'measures how fast it reads instead, so that hints wait until it has finished. Press Enter to start: '
-            'a sentence is read, and you press Enter again the moment it ends. It is needed once, and can be done '
-            'again in the Speech tab in Settings.'))
+            'Speech calibration. The game works out when its speech has finished from how fast it reads, so that '
+            'hints, and the story in Extra, come at the right moment. Press Enter to start: a sentence is read, '
+            'and you press Enter again the moment it ends. It is needed once. Calibrate again in the Speech tab '
+            'in Settings whenever you change the voice or its speed.'))
         super().__init__(host, title=joined([first, explanation]))   # `first`: what was said as it opened
         self.then = then if then is not None else App.delegate().go_to_main_menu
         self.calibration = SpeechCalibration(self.say)

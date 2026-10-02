@@ -12,13 +12,15 @@ Anything the player does in between takes the hint away, so it never talks over 
 announced, the speech being stopped (`Speech.lines` counts all of those).  An item read again has its hint
 read again.
 
-When the item has been read is known for the game's own voice: SAPI 5, the Mac's system voice and the
-phone's text-to-speech say when they have finished (`Speech.still_speaking`, built for the Extra mode's
-story).  A screen reader cannot be asked - NVDA's controller client only speaks, cancels, brailles and says
-whether NVDA is running, and Prism and VoiceOver's Apple Event only hand a line over - so its reading is
-timed from the words in the line (`reading_seconds`), at the pace the player measured in the Speech tab's
-Speech calibration row, or at DEFAULT_WORDS_PER_MINUTE until they have.  The story's screen uses the same
-timing (ui/gameplay_screen.StoryScreen).
+When the item has been read is predicted, the same way for every voice (user request, 2026-10-02): the
+words in the line times the seconds a word the player measured in the Speech tab's Speech calibration row
+(`reading_seconds`), or at DEFAULT_WORDS_PER_MINUTE until they have.  The pause before the hint counts from
+that moment.  The Extra mode's story is timed the same way (ui/gameplay_screen).  A screen reader cannot be
+asked when it has finished - NVDA's controller client only speaks, cancels, brailles and says whether NVDA is
+running, and Prism and VoiceOver's Apple Event only hand a line over - and the game's own voices (SAPI 5, the
+Mac's system voice, the phone's text-to-speech), which can, were followed to their real end at first.  That
+was given up for one rule for every voice: the player's calibration and settings are what the game follows,
+whatever speaks it.
 
 A braille display is read at the reader's own pace, so it is given the item and its hint together, at once,
 the way NVDA puts an object's description beside its name; the hint said later is not brailled again, which
@@ -28,23 +30,16 @@ from __future__ import annotations
 
 import logging
 
-from ..platform import host as system
-
 log = logging.getLogger('ui.reading')
 
-#: How fast a screen reader is taken to read: an ordinary speaking pace (the pace of an audiobook, and about
-#: what a screen reader's default rate reads English at).  A player who listens faster waits a little longer
-#: than they need, which is the side to err on.  The Extra mode's story and the hints both time a screen
-#: reader by it until the player has measured their own (Speech calibration, ui/settings.py).
+#: How fast the speech is taken to read until it has been measured: an ordinary speaking pace (the pace of an
+#: audiobook, and about what a screen reader's default rate reads English at).  A player who listens faster
+#: waits a little longer than they need, which is the side to err on.  The Extra mode's story and the hints
+#: are both timed by it until the player has measured the speech (Speech calibration, ui/settings.py), and
+#: the game asks for that as it starts.  Pause before hints is added as it is, 0 included: a least pause of a
+#: fifth of a second, kept for a while on 2026-10-02 while nothing was measured and on the phone, was taken
+#: out at the user's request - the game follows the player's setting, not an assumption of its own.
 DEFAULT_WORDS_PER_MINUTE = 180.0
-#: PORT ADDITION (user request, 2026-10-02): seconds a screen reader's hint waits after its item even with
-#: Pause before hints at 0, until Speech calibration has been done.  Timed at the default pace above, the
-#: end of the item is a guess, and a guess a little early hands the hint over before the item is done; a
-#: fifth of a second keeps the two apart.  Once the pace has been measured, 0 means 0.  The game's own
-#: voices say when they have finished, so for them 0 is already "right after the voice ends" - except on
-#: the phone (user request, 2026-10-02), which has no calibration to make 0 mean 0: its engine says when it
-#: has finished, but there is nothing to check that by, so it keeps the same fifth of a second after it.
-UNCALIBRATED_LEAST_PAUSE = 0.2
 #: A measured pace outside these cannot be a press at the end of the reading, and is turned away: faster
 #: than even the fastest listeners set a screen reader with its rate boost, or slower than one at its
 #: slowest rate.
@@ -59,7 +54,8 @@ def word_count(text) -> int:
 
 
 def seconds_per_word() -> float:
-    """The time a screen reader is taken to need for one word: as measured, or at the default pace."""
+    """The time the speech is taken to need for one word, whatever speaks the game: as measured for the
+    speech, or at the default pace."""
     from ..game.parameters import GameParameters
     measured = GameParameters.shared().speech_word_time()
     return measured if measured is not None else 60.0 / DEFAULT_WORDS_PER_MINUTE
@@ -77,7 +73,7 @@ def measured_pace(seconds: float, words: int):
 
 
 def reading_seconds(text) -> float:
-    """How long a screen reader is taken to need to read this."""
+    """How long the speech is taken to need to read this."""
     return word_count(text) * seconds_per_word()
 
 
@@ -98,14 +94,13 @@ def with_hint(element) -> str:
 
 
 class _Waiting:
-    __slots__ = ('hint', 'said', 'line', 'at', 'quiet_since')
+    __slots__ = ('hint', 'said', 'line', 'at')
 
     def __init__(self, hint: str, said: str, line: int, at: float):
         self.hint = hint                                  # what is read when it is due
         self.said = said                                  # the line read before it, which it waits for
         self.line = line                                  # Speech.lines as that line was handed over
         self.at = at                                      # and when
-        self.quiet_since = None                           # the game's own voice: when it fell quiet
 
 
 class Hints:
@@ -143,28 +138,13 @@ class Hints:
             self._timer = None
 
     def due_in(self, now: float):
-        """Seconds until the waiting hint is read - 0 when it is due - or None while the game's own voice is
-        still reading the line before it, or when nothing waits."""
+        """Seconds until the waiting hint is read - 0 when it is due - or None when nothing waits: the time
+        the line before it is taken to need (`reading_seconds`), and then the pause, for every voice."""
         from ..game.parameters import GameParameters
-        from ..platform.speech import Speech
         w = self.waiting
         if w is None:
             return None
-        params = GameParameters.shared()
-        pause = params.hint_pause()
-        speaking = Speech.shared().still_speaking()
-        if speaking is None:                              # a screen reader: the time the line takes to read
-            if params.speech_word_time() is None:         # at a guessed pace: never quite at once
-                pause = max(pause, UNCALIBRATED_LEAST_PAUSE)
-            return max(0.0, w.at + reading_seconds(w.said) + pause - now)
-        if speaking:
-            w.quiet_since = None
-            return None
-        if w.quiet_since is None:                         # the game's own voice has just finished
-            w.quiet_since = now
-        if system.ANDROID:                                # the phone: never quite at once either
-            pause = max(pause, UNCALIBRATED_LEAST_PAUSE)
-        return max(0.0, w.quiet_since + pause - now)
+        return max(0.0, w.at + reading_seconds(w.said) + GameParameters.shared().hint_pause() - now)
 
     def _check(self) -> None:
         from ..platform.runloop import RunLoop
@@ -177,6 +157,6 @@ class Hints:
         if self.due_in(RunLoop.main().now()) != 0.0:
             return
         self.cancel()
-        # queued, not interrupting: a screen reader slower than it is timed at finishes the line first.  Not
-        # brailled: the display has had it since the line was (Screen.speak_element).
+        # queued, not interrupting: speech slower than it is timed at finishes the line first.  Not brailled:
+        # the display has had it since the line was (Screen.speak_element).
         speech.speak(w.hint, interrupt=False, braille='')
