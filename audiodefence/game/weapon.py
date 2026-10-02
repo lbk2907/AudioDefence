@@ -9,6 +9,7 @@ between calls (CACurrentMediaTime), not by the timer's dt; only fireRateTimer us
 from __future__ import annotations
 
 import logging
+import math
 import time
 
 from ..platform import crand
@@ -47,16 +48,19 @@ def _c_div(a: int, b: int) -> int:
 #: (decoder.lead_in), and only up to a quarter of a second, in case the quiet is the sound itself.
 _LEAD_IN: dict = {}
 
+#: PORT DIVERGENCE (user request): the shots in each continuous-fire loop.  Every "_conti" recording is a
+#: whole number of shots, cut in the quiet just before one, so a shot ends at each multiple of the loop's
+#: length over this number - and that is where a burst that has been let go of stops
+#: (`Weapon.burst_can_end`).  Measured from the files: the Tactical Rifle's 1.601 s holds 8 shots (0.200 s
+#: each), the Machine Gun's 2.409 s 36 (0.067 s) and the Micro SMG's 1.160 s 25 (0.046 s).  A loop not
+#: listed is taken to hold a shot every `fireRate`.
+_SHOTS_IN_LOOP = {'weapon_gun_tactical_conti': 8, 'weapon_gun_machinegun_conti': 36,
+                  'weapon_gun_microsmg_conti': 25}
 
-def _debugging() -> bool:
-    """PORT ADDITION: whether the weapon's sounds are written to the log (--log-level debug), so a player
-    can send what a gun did and heard, to the hundredth of a second."""
-    return log.isEnabledFor(logging.DEBUG)
-
-
-def _sound_name(sound) -> str:
-    import os
-    return os.path.basename(getattr(sound, 'path', '') or '') or 'no sound'
+#: How far a playing sound's position moves at a time: OpenAL Soft mixes in 10 ms updates, and
+#: AL_SEC_OFFSET steps by exactly that (measured), so two looks at it 10 ms apart can find it 0, 10 or 20 ms
+#: further on (`Weapon.burst_can_end`).
+_MIX_STEP = 0.01
 
 
 def _at_the_sound(sound):
@@ -86,6 +90,9 @@ class Weapon:
         self.continuous_warning = None
         self.empty_loop = None                            # PORT ADDITION: the warning an empty gun makes
         self.reload_sound = None                          # PORT ADDITION: the one reload actually started
+        self.burst_left = None                            # PORT ADDITION: see let_the_shot_finish
+        self.burst_at = 0.0
+        self.tick_seconds = 0.01                          # PORT ADDITION: how long the last update: was ago
         self.last_announcer_speech = 0.0
         self.previous_tick_time = 0.0
         self.dropped_magasine = False
@@ -127,6 +134,7 @@ class Weapon:
         self.playlist = S3DEngine.engine().play_list_with_name(self.name) if self.name is not None else None
         if self.playlist is not None:
             self.playlist.activate()
+        self.prepare_burst_sounds()                       # PORT ADDITION: see prepare_burst_sounds
         self.set_state(0)
         mods = GameModifiers.shared()
         # PORT DIVERGENCE: once for each card that asked, where the original asks only whether one did.
@@ -171,10 +179,9 @@ class Weapon:
     def set_state(self, state: int) -> None:              # 0x100015210
         if self._state == state:
             return
-        if _debugging():
-            log.debug('%s: %s -> %s after %.3f s', self.name, self.state_to_string(),
-                      STATE_NAMES[state] if 0 <= state <= 8 else state, self.time_in_state)
-        self._state = state
+        if self._state == 4 and self.continuous_sound is not None:
+            self.continuous_sound.stop()                  # DIVERGENCE: the loop finishing its shot goes with
+        self._state = state                               # state 4, whatever ends it (see burst_can_end)
         self.time_in_state = 0.0
 
     def state_to_string(self) -> str:                     # 0x100015240
@@ -208,6 +215,7 @@ class Weapon:
         now = ca_current_media_time()
         previous = self.previous_tick_time
         self.previous_tick_time = ca_current_media_time()
+        self.tick_seconds = min(max(now - previous, 0.01), 0.05)   # PORT ADDITION: see burst_can_end
         self.update_low_ammo_warning()                    # PORT ADDITION: it lives with the clip now
         st = self._state
         if st == 0:
@@ -237,11 +245,8 @@ class Weapon:
             self.fire_rate_timer = self.fire_rate_timer + dt
             self.time_in_continous = self.time_in_state
         elif st == 4:
-            if self.time_in_state + self.time_in_continous > 0.2:
-                if self.continuous_sound is not None:
-                    self.continuous_sound.stop()
-                self.change_state(0)
-                self.play_continuous_tail()
+            if self.burst_can_end(self.tick_seconds):     # DIVERGENCE: see let_the_shot_finish
+                self.end_burst()
         elif st == 5:
             if self.start_empty_loop():                   # PORT ADDITION: held, it warns until it is let go
                 pass
@@ -299,34 +304,118 @@ class Weapon:
             self.continuous_sound.set_spatialized(False)
             self.continuous_sound.set_gain(0.6)
             self.continuous_sound.play(True)
-        if _debugging():
-            s = self.continuous_sound
-            log.debug('%s: trigger held, continuous fire: %s, %.3f s long, played from %.3f s, looped',
-                      self.name, _sound_name(s), s.duration if s else 0.0, getattr(s, 'skip_to', 0.0) or 0.0)
         self.update_low_ammo_warning()                    # due from this shot, if the clip is low enough
 
     def continuous_stop(self) -> None:                    # 0x1000157f8
-        if _debugging():
-            s = self.continuous_sound
-            log.debug('%s: trigger released in %s after %.3f s; %s stopped %.3f s into its %.3f s',
-                      self.name, self.state_to_string(), self.time_in_state, _sound_name(s),
-                      s.elapsed_time() if s is not None and s.playing else 0.0, s.duration if s else 0.0)
         self.stop_empty_loop()                            # PORT ADDITION: let go, and the warning stops
+        if self._state == 3:
+            # DIVERGENCE (user request): the loop is not stopped here but left to finish its shot
+            self.let_the_shot_finish()
+            self.change_state(4)
+            if self.burst_can_end(self.tick_seconds):     # let go at the very end of a shot
+                self.end_burst()
+            return
+        if self._state == 4:                              # let go again while the shot finishes (a
+            return                                        # touch both ended and cancelled): it finishes
         if self.continuous_sound is not None:
             self.continuous_sound.stop()
-        if self._state == 3:
-            self.change_state(4)
-        elif self._state == 5:
+        if self._state == 5:
             self.change_state(0)
+
+    def let_the_shot_finish(self) -> None:
+        """DIVERGENCE (user request): a burst that is let go of ends at the end of a shot, and the gun winds
+        down from there, with nothing in between.
+
+        `continuousStop` 0x1000157f8 stops the "_conti" loop the moment the trigger is let go, wherever it
+        is, and state 4 of `update:` 0x100014c8c plays the "_tail" once 0.2 s have gone by since the burst
+        began.  A hold only turns into continuous fire after 0.2 s, so a short one gave the loop a few
+        hundredths of a second: the shot in it was cut off, there was silence until the 0.2 s were up, and
+        then the gun wound down - heard as a burst chopped short (user report, the Tactical Rifle, with a log
+        of 60-80 ms of loop and 120-140 ms of silence).  Held for longer, the 0.2 s had gone by already and
+        the tail came at once, but over a loop still stopped in the middle of a shot.
+
+        Here the loop plays on to the end of the shot it is in, and to the end of the shot nearest 0.2 s if
+        the burst is younger than that - so the original's shortest burst is kept, filled with the gun
+        rather than with silence - and `burst_can_end` stops it there and plays the tail at once.  The shots
+        come from the recording, not from `fireRate`: each loop is a whole number of them
+        (`_SHOTS_IN_LOOP`), and their spacing is not the gun's - the Tactical Rifle fires every 0.25 s over a
+        recording with a shot every 0.2.  No bullet is fired while the shot finishes: state 4 has never
+        fired one.  Anything that takes the gun out of state 4 first stops the loop with it (`set_state`)."""
+        loop = self.continuous_sound
+        self.burst_left = None
+        if loop is None or not loop.playing or loop.duration <= 0.0:
+            return                                        # nothing sounding: the original's 0.2 s, as it was
+        length, shot = loop.duration, self.shot_length(loop)
+        at = self.burst_at = loop.elapsed_time()
+        soonest = at
+        if self.time_in_state < length * 0.5:             # the loop has not come round yet, so `at` is
+            soonest = max(at, loop.skip_to + 0.2 - shot * 0.5)   # how long it has played: 0.2 s, to a shot
+        self.burst_left = math.ceil(soonest / shot - 1e-6) * shot - at
+
+    def shot_length(self, loop) -> float:
+        shots = _SHOTS_IN_LOOP.get(loop.key)
+        if shots:
+            return loop.duration / shots
+        return self.fire_rate if self.fire_rate > 0.0 else loop.duration
+
+    def burst_can_end(self, tick: float) -> bool:
+        """State 4: whether the loop has reached the end of its shot, or will have before the next look -
+        `tick` is how long until then, and half a mixing step is allowed for the position moving in steps.
+        So it stops in the last 15 ms or so of the shot, where it is quietest, and never after: a few
+        milliseconds of the next shot would be heard as a click.  A look that comes too late, after the
+        next shot has begun, lets that one finish too."""
+        loop = self.continuous_sound
+        if self.burst_left is None:
+            return self.time_in_state + self.time_in_continous > 0.2   # the original's test, 0x100014c8c
+        if loop is None or not loop.playing:
+            return True
+        at = loop.elapsed_time()
+        self.burst_left -= (at - self.burst_at) % loop.duration
+        self.burst_at = at
+        while self.burst_left < -0.002:                   # looked at too late, and the next shot has begun:
+            self.burst_left += self.shot_length(loop)     # that one is finished too
+        return self.burst_left < tick + _MIX_STEP * 0.5
+
+    def end_burst(self) -> None:
+        """The loop stops and the gun winds down at once - state 4's end in `update:` 0x100014c8c."""
+        if self.continuous_sound is not None:
+            self.continuous_sound.stop()
+        self.burst_left = None
+        self.change_state(0)
+        self.play_continuous_tail()
+
+    def prepare_burst_sounds(self) -> None:
+        """DIVERGENCE (user request): the loop and the tail are loaded when the gun is made or deployed.
+
+        A weapon's sounds are not marked `preload` in its playlist, so each is loaded the first time it is
+        played: the first burst's tail was loaded on the spot, a beat late, and if the background decoder
+        had not reached the file yet its opening silence was not known either (`_at_the_sound`), so the
+        Machine Gun's tail could come 133 ms later still.  The files are decoded on the background thread,
+        ahead of the rest (`decoder.decode_async`), and loaded and measured on the main one when ready."""
+        if not self.continuous_fire or self.playlist is None:
+            return
+        from ..s3d import decoder
+        engine, playlist = S3DEngine.engine(), self.playlist
+        prefixes = (f'weapon_gun_{self.name}_conti', f'weapon_gun_{self.name}_tail')
+        for sound in playlist.sounds_matching(lambda key: key.startswith(prefixes)):
+            if sound.loaded:
+                continue
+
+            def ready(sound=sound):
+                if playlist.active and not sound.loaded:  # not if the gun was put away for good meanwhile
+                    sound.activate()
+                _at_the_sound(sound)
+            decoder.decode_async(sound.path, lambda ready=ready: engine.dispatch(ready))
 
     def stop_firing_now(self) -> None:
         """PORT ADDITION: stop this weapon where it stands - the loop, the warning loop, the state.
 
-        `continuous_stop` hands state 3 over to state 4, which stops the sound and plays the tail on the
-        next `update:`.  That is right while the weapon is in hand, and wrong the moment it is not: only
-        the current weapon is updated (`ADWeaponManager update:`), so a gun switched away from mid-burst
-        was left in state 3 with its "_conti" loop playing and nobody to stop it - and since the gun the
-        player then held had never been started, it never ran dry, so no reload was called out either.
+        `continuous_stop` hands state 3 over to state 4, which lets the loop finish its shot and then plays
+        the tail, from `update:`.  That is right while the weapon is in hand, and wrong the moment it is
+        not: only the current weapon is updated (`ADWeaponManager update:`), so a gun switched away from
+        mid-burst was left in state 3 with its "_conti" loop playing and nobody to stop it - and since the
+        gun the player then held had never been started, it never ran dry, so no reload was called out
+        either.
         The same holds when the player dies with the trigger down.
         """
         self.stop_empty_loop()
@@ -342,10 +431,6 @@ class Weapon:
     def play_continuous_tail(self) -> None:               # 0x1000158b0
         tail = _at_the_sound(
             self.playlist.any_sound_with_prefix(f'weapon_gun_{self.name}_tail')) if self.playlist else None
-        if _debugging():
-            log.debug('%s: tail %s, %.3f s long, played from %.3f s%s', self.name, _sound_name(tail),
-                      tail.duration if tail else 0.0, (getattr(tail, 'skip_to', 0.0) or 0.0) if tail else 0.0,
-                      ', the last one still sounding' if tail is not None and tail.playing else '')
         if tail is None:
             return
         # DIVERGENCE: a weapon has one sound per file, so playing the tail again while the last one is still
@@ -581,6 +666,7 @@ class Weapon:
         from .parameters import GameParameters
         self.change_state(1)
         self.time_since_last_shot = self.fire_rate
+        self.prepare_burst_sounds()                       # PORT ADDITION: see prepare_burst_sounds
         pl = self.playlist
         snd = _at_the_sound(pl.any_sound_with_prefix(f'weapon_gun_{self.name}_deploy')) if pl else None
         if snd is not None:

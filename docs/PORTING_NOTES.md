@@ -712,6 +712,46 @@ they were.
   its own instead (`S3DEngine.play_copy_of`), the way an overlapping shot already is in
   `-[ADWeapon playSingleShootSound]`.
 
+* A burst that is let go of ends at the end of a shot, and the gun winds down straight after it (user
+  request).  `-[ADWeapon continuousStop]` 0x1000157f8 stops the "_conti" loop the moment the trigger is let
+  go, wherever it is in the recording, and hands over to state 4, where `update:` 0x100014c8c plays the
+  "_tail" once `timeInState + timeInContinous` passes 0.2 s - 0.2 s from the start of the burst.  A hold
+  only becomes continuous fire after 0.2 s (`-[ADAccessibleGameView update:]` 0x10008a754), so a hold of a
+  quarter of a second gave the loop 60-80 ms: the shot in it was cut off, 120-140 ms of silence followed,
+  and then the tail - a burst heard as chopped short (user report, the Tactical Rifle, from a log of the
+  released game).  A longer burst got its tail at once, over a loop still cut in the middle of a shot.
+
+  The loop now plays on to the end of the shot it is in - and in a burst younger than 0.2 s, to the end of
+  the shot nearest 0.2 s, so the original's shortest burst is kept and filled with the gun rather than with
+  silence - and is stopped there with the tail started in the same call (`Weapon.let_the_shot_finish`,
+  `burst_can_end`, `end_burst`).  The shots are the recording's, not `fireRate`'s, which would put the end
+  in the wrong place: the Tactical Rifle fires every 0.25 s over a recording with a shot every 0.2.  Each
+  loop is a whole number of shots, cut in the quiet just before one, and all three were measured against
+  every multiple of their length over a count (`_SHOTS_IN_LOOP`): the Tactical Rifle's 1.601 s holds 8
+  shots, the Machine Gun's 2.409 s 36 and the Micro SMG's 1.160 s 25 - with these counts each boundary has
+  the quietest stretch before it and an attack after it, and with one more or one fewer some fall inside
+  a shot.  The position is read at every update, 10 ms apart, and moves in OpenAL Soft's 10 ms mixing
+  steps, so the loop is stopped in about the last 15 ms of its shot, where it is quietest, and never once
+  the next has begun; a look that comes too late lets that next shot finish as well.  State 4 fires no
+  bullet, so the bullets are as they were.  Whatever takes the gun out of state 4 first - a tap, a new
+  hold, a reload - stops the loop with it (`set_state`), as the original's release already had; death and
+  a weapon switch (`stop_firing_now`) stop it and wind down at once, as before, and running the clip out
+  still stops it with the click.  A pause holds the loop where it is, and the shot finishes after it.  The
+  Minigun power-up has a loop of its own that ends on a timer, not on a release, and is untouched.
+
+  The first burst's tail was late as well.  A weapon's sounds are not marked `preload` in its playlist, so
+  the tail was loaded the first time it was played, there and then; and had the background decoder not
+  reached its file yet, `_at_the_sound` would not have known its opening silence, and the Machine Gun's
+  would have come 133 ms later still.  `Weapon.prepare_burst_sounds` loads the loop and the tails when the
+  gun is made or deployed - decoded on the background thread ahead of the rest (`decoder.decode_async`),
+  then loaded and measured on the main one.
+
+  Measured headless for all three guns, against the code before: a 0.06 s hold was 0.06 s of loop, 0.17 s
+  of silence and a tail not yet loaded; now it is the loop to the end of a shot (0.17-0.19 s, stopped
+  10-16 ms before the shot's end) and the tail 0.1 ms after it, loaded, the Machine Gun's starting past its
+  133 ms.  Holds of 0.3 s and 1 s end the same way, 0.5-15 ms before the end of a shot.  The bullets fired
+  were the same as before in every case, and a tap is untouched.
+
 * The low-ammo loop lives with the clip, not with the trigger (user request).  `-[ADWeapon
   continuousStart]` 0x1000154a4 resolves the shot that starts the burst and then builds the "_warningloop"
   and sets its gain to 0, whatever the clip holds; `resolveShoot` 0x100015a1c does set that gain by what is

@@ -30,6 +30,7 @@ In a translated game, the Speech tab in Settings speaks in that language when yo
 Hints are read on their own, a moment after the item they belong to. The Speech tab in Settings can turn them off or change the pause.
 The Speech tab in Settings has a Speech calibration row, which measures how fast your screen reader speaks so that hints come once it has finished.
 Your gun stops firing when you die, even with the trigger still held.
+A short burst from a continuous-fire gun is no longer cut off when you let go of the trigger.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.
