@@ -28,6 +28,8 @@ from __future__ import annotations
 
 import logging
 
+from ..platform import host as system
+
 log = logging.getLogger('ui.reading')
 
 #: How fast a screen reader is taken to read: an ordinary speaking pace (the pace of an audiobook, and about
@@ -39,8 +41,9 @@ DEFAULT_WORDS_PER_MINUTE = 180.0
 #: Pause before hints at 0, until Speech calibration has been done.  Timed at the default pace above, the
 #: end of the item is a guess, and a guess a little early hands the hint over before the item is done; a
 #: fifth of a second keeps the two apart.  Once the pace has been measured, 0 means 0.  The game's own
-#: voices say when they have finished, so for them 0 is already "right after the voice ends" and this
-#: does not apply.
+#: voices say when they have finished, so for them 0 is already "right after the voice ends" - except on
+#: the phone (user request, 2026-10-02), which has no calibration to make 0 mean 0: its engine says when it
+#: has finished, but there is nothing to check that by, so it keeps the same fifth of a second after it.
 UNCALIBRATED_LEAST_PAUSE = 0.2
 #: A measured pace outside these cannot be a press at the end of the reading, and is turned away: faster
 #: than even the fastest listeners set a screen reader with its rate boost, or slower than one at its
@@ -159,6 +162,8 @@ class Hints:
             return None
         if w.quiet_since is None:                         # the game's own voice has just finished
             w.quiet_since = now
+        if system.ANDROID:                                # the phone: never quite at once either
+            pause = max(pause, UNCALIBRATED_LEAST_PAUSE)
         return max(0.0, w.quiet_since + pause - now)
 
     def _check(self) -> None:

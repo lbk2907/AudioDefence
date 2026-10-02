@@ -2844,8 +2844,10 @@ they were.
   calibration, below), Pause before hints at 0 still waits a fifth of a second after a screen reader's item
   (`UNCALIBRATED_LEAST_PAUSE`, beside the 180 in `ui/reading.py`; user request, 2026-10-02): the end of the
   item is then a guess, and a guess a little early would hand the hint over before the item is done.  Once
-  the pace is measured 0 means 0, and the game's own voices are untouched either way, since for them 0
-  already means the moment the voice falls quiet.  Checked on a fake clock with a stand-in NVDA: with
+  the pace is measured 0 means 0, and SAPI 5 and the Mac's voice are untouched either way, since for them 0
+  already means the moment the voice falls quiet.  The phone keeps the fifth of a second after its voice
+  falls quiet as well (user request, the same day): it has no calibration that would make 0 mean 0, and
+  its engine's word that it has finished is all there is to go by.  Checked on a fake clock with a stand-in NVDA: with
   nothing measured and the pause at 0, a three-word item's hint came 1.2 s after it (1.0 s and the 0.2);
   with the pause at 0.5 it came after the 0.5 alone; measured at 0.25 s a word, 0.75 s after it; with SAPI 5
   speaking and nothing measured, the moment its 0.5 s line ended.  A braille display is given the item and its hint together as the

@@ -65,7 +65,7 @@ system voice or the phone's own speech the game knows when the item has been
 read; a screen reader cannot tell it, so the game allows the time the item's
 words take at an ordinary pace, 180 words a minute, until you measure your own.
 Until then, a screen reader's hint waits a fifth of a second even with the
-pause at 0. A braille display shows the item and its hint together, at once.
+pause at 0, and so does the phone's, always. A braille display shows the item and its hint together, at once.
 
 To measure it, use **Speech calibration**, the last row of the Speech tab
 while a screen reader speaks the game. Press Enter and a sentence is read;
