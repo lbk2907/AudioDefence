@@ -215,6 +215,33 @@ class GameParameters:
         self.defaults.set_bool(bool(value), 'rememberFocus')
         self.defaults.synchronize()
 
+    #: PORT ADDITION (user request, 2026-10-02): Settings -> Speech -> Hints and Pause before hints.  VoiceOver
+    #: reads an element's hint on its own, a moment after the element, and can be told not to read hints at
+    #: all; the port reads them the same way (ui/reading.py).  On by default, as VoiceOver's are, after a
+    #: second, about VoiceOver's own pause, and from none to three seconds a quarter at a time.
+    DEFAULT_SPEAK_HINTS = True
+    HINT_PAUSES = tuple(step / 4.0 for step in range(0, 13))
+    DEFAULT_HINT_PAUSE = 1.0
+
+    def speak_hints(self) -> bool:
+        value = self.defaults.object('speakHints')
+        return self.DEFAULT_SPEAK_HINTS if value is None else self.defaults.bool('speakHints')
+
+    def set_speak_hints(self, value: bool) -> None:
+        self.defaults.set_bool(bool(value), 'speakHints')
+        self.defaults.synchronize()
+
+    def hint_pause(self) -> float:
+        """Seconds between an item being read and its hint, on one of HINT_PAUSES."""
+        value = self.defaults.object('hintPause')
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return self.DEFAULT_HINT_PAUSE
+        return min(self.HINT_PAUSES, key=lambda pause: abs(pause - value))
+
+    def set_hint_pause(self, value: float) -> None:
+        self.defaults.set_float(min(self.HINT_PAUSES, key=lambda pause: abs(pause - float(value))), 'hintPause')
+        self.defaults.synchronize()
+
     #: PORT ADDITION: whether the main menu looks for a new build when it opens.  The App Store did this
     #: for the phone game; on Windows the game has to ask.  On by default, because a player who never
     #: opens Settings is exactly the one who would otherwise never hear that a fix exists.  The check is

@@ -243,6 +243,17 @@ class ControlSchemePanel:
             self.sapi_shown = self.sapi_speaking()
             if self.sapi_shown:                           # only while SAPI 5 is what speaks
                 self.sapi_rows(t, params)
+            # PORT ADDITION (user request, 2026-10-02): a row's hint, read on its own after a pause, as
+            # VoiceOver reads one (ui/reading.py).  After the voice's rows, which come and go above them.
+            t.cell('Hints', 'ON' if params.speak_hints() else 'OFF',
+                   hint='Press Enter to toggle: when on, each row is read first and its hint, like this one, '
+                        'follows after a pause.',
+                   action=self.toggle_hints, shift_action=self.toggle_hints)
+            pause = params.hint_pause()
+            t.cell('Pause before hints', ('%s second' if pause == 1 else '%s seconds') % self.seconds_text(pause),
+                   hint="How long the game waits after reading a row before it reads the row's hint, from 0 to "
+                        '3 seconds. ' + self.SAPI_STEP_HINT,
+                   action=self.step_hint_pause, shift_action=self.step_hint_pause_back)
         elif self.category == 'keyboard':                 # PORT ADDITION: the key bindings
             keymap = KeyMap.shared()
             scheme = mode_text(keymap.mode())
@@ -540,6 +551,8 @@ class ControlSchemePanel:
         params.set_speech_output(params.DEFAULT_SPEECH_OUTPUT)
         params.set_language(params.DEFAULT_LANGUAGE)
         params.set_sapi(voice=None, rate=None, boost=False, pitch=0, volume=None)
+        params.set_speak_hints(params.DEFAULT_SPEAK_HINTS)
+        params.set_hint_pause(params.DEFAULT_HINT_PAUSE)
         App.apply_menu_music_volume()
         self.reload_data()
         self.announce('All settings reset to default. Your key and controller bindings are unchanged.')
@@ -730,6 +743,36 @@ class ControlSchemePanel:
                         'you interrupt it. Turn it off to let Windows play it, which is slower to stop.'
                         % VOICE_NAME,
                    action=self.toggle_modern_audio, shift_action=self.toggle_modern_audio)
+
+    # --- hints (PORT ADDITION, user request) ------------------------------------------------------
+    @staticmethod
+    def seconds_text(value: float) -> str:
+        """A number of seconds as it is read: 1, 1.25, 0.5."""
+        return ('%.2f' % value).rstrip('0').rstrip('.')
+
+    def row_said(self, title: str) -> str:
+        """What the row whose English starts with `title` says now - said again as it changes, so the
+        change is heard the way the row reads."""
+        row = next((r for r in self.table_view.children if r.traits == CELL and r._label.startswith(title)),
+                   None)
+        return row.label if row is not None else title
+
+    def toggle_hints(self) -> None:
+        params = GameParameters.shared()
+        params.set_speak_hints(not params.speak_hints())
+        self.reload_data()
+        self.announce('Hints %s' % ('ON' if params.speak_hints() else 'OFF'))
+
+    def step_hint_pause(self, step: int = 1) -> None:
+        params = GameParameters.shared()
+        pauses = params.HINT_PAUSES
+        i = max(0, min(len(pauses) - 1, pauses.index(params.hint_pause()) + step))   # the ends hold
+        params.set_hint_pause(pauses[i])
+        self.reload_data()
+        self.announce(self.row_said('Pause before hints'))
+
+    def step_hint_pause_back(self) -> None:
+        self.step_hint_pause(-1)
 
     def toggle_modern_audio(self) -> None:
         """PORT ADDITION: whether the game plays SAPI 5 itself (speech_audio.py) or Windows does."""

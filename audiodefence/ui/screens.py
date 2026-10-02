@@ -49,8 +49,18 @@ class Screen:
         """Called once per main-loop pass."""
 
     @staticmethod
-    def speak(text, interrupt: bool = True) -> None:
-        Speech.shared().speak(text, interrupt)
+    def speak(text, interrupt: bool = True, braille=None) -> None:
+        Speech.shared().speak(text, interrupt, braille)
+
+    def speak_element(self, element, prefix: str | None = None) -> None:
+        """PORT ADDITION: what the cursor has landed on - a menu item or an element, after `prefix` when
+        there is one - and then, on its own once that has been read and the Speech tab's pause has passed,
+        its hint (ui/reading.py), as VoiceOver reads a hint.  A braille display gets the two at once."""
+        from .reading import Hints, hint_for
+        said = joined([prefix or '', element.spoken()])
+        hint = hint_for(element)
+        self.speak(said, braille=joined([said, hint]) if hint else None)
+        Hints.shared().follow(said, hint)
 
 
 def menu_music_volume_key(screen, event) -> bool:
@@ -94,13 +104,17 @@ class MenuItem:
         return bool(self._enabled() if callable(self._enabled) else self._enabled)
 
     def spoken(self) -> str:
+        """The label, and whether it is dimmed.  The hint is read after it, on its own (`spoken_hint`)."""
         text = self.label
         if not self.enabled:
             text += ', ' + localization.translate('dimmed')
-        if self.hint:
-            from ..platform.pad import menu_words         # PORT ADDITION: in a controller's words, if chosen
-            text += f'. {menu_words(self.hint)}'
         return text
+
+    def spoken_hint(self) -> str:
+        if not self.hint:
+            return ''
+        from ..platform.pad import menu_words             # PORT ADDITION: in a controller's words, if chosen
+        return menu_words(self.hint)
 
 
 #: what already ends a sentence, so a full stop after it would be a second one
@@ -143,13 +157,12 @@ class MenuScreen(Screen):
         self.announce_screen()
 
     def announce_screen(self) -> None:
-        parts = []
-        if self.title:
-            parts.append(localization.translate(self.title))            # PORT ADDITION: chosen language
+        title = localization.translate(self.title) if self.title else ''   # PORT ADDITION: chosen language
         if self.items:
             self.index = min(self.index, len(self.items) - 1)
-            parts.append(self.items[self.index].spoken())
-        self.speak(joined(parts))
+            self.speak_element(self.items[self.index], title)
+        else:
+            self.speak(title)
 
     def current(self) -> MenuItem | None:
         return self.items[self.index] if self.items else None
@@ -161,7 +174,7 @@ class MenuScreen(Screen):
         # VoiceOver stops at the first and last element rather than wrapping round, and so does this
         self.index = max(0, min(len(self.items) - 1, self.index + step))
         menu_tick()                                       # PORT ADDITION: felt as well as heard
-        self.speak(self.items[self.index].spoken())
+        self.speak_element(self.items[self.index])
 
     def activate(self) -> None:
         from .accessibility import menu_toggle           # imported here: accessibility imports this module
@@ -169,7 +182,7 @@ class MenuScreen(Screen):
         if item is None:
             return
         if not item.enabled:
-            self.speak(item.spoken())
+            self.speak_element(item)
             return
         menu_toggle()                                   # PORT ADDITION: felt as well as heard
         if item.action is not None:
@@ -187,7 +200,7 @@ class MenuScreen(Screen):
         elif move in ('first', 'last') and self.items:
             self.index = 0 if move == 'first' else len(self.items) - 1
             menu_tick()
-            self.speak(self.items[self.index].spoken())
+            self.speak_element(self.items[self.index])
         elif k in (pygame.K_RETURN, pygame.K_KP_ENTER):   # not Space: it is the fire key in a game
             self.activate()
         elif k == pygame.K_ESCAPE and self.back_action is not None:

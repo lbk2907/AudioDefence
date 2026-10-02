@@ -188,6 +188,7 @@ class Speech:
         self.choice = 'auto'
         self.sapi_config = dict(SAPI_DEFAULTS)
         self.nvda = None
+        self.lines = 0                                    # PORT ADDITION: as speech.py's Speech.lines
 
     @property
     def readers(self):
@@ -208,9 +209,11 @@ class Speech:
     def screen_reader_running(self) -> bool:
         return True                                       # the accessible screens are the only ones there are
 
-    def speak(self, text, interrupt: bool = True) -> None:
+    def speak(self, text, interrupt: bool = True, braille=None) -> None:
+        """`braille` is taken as speech.py's Speech.speak takes it, and not used: the phone has no display."""
         if not text:
             return
+        self.lines += 1
         text = phone_words(localization.translate(str(text)))
         log.debug('speak: %s', text)
         self._sapi.speak(text, interrupt)
@@ -239,4 +242,5 @@ class Speech:
         pass                                              # a key press does not cut the phone's voice
 
     def stop(self) -> None:
+        self.lines += 1                                   # PORT ADDITION: a hint waiting is not read now
         self._sapi.stop()

@@ -641,7 +641,10 @@ class ArmoryScreen(ViewControllerScreen):
         self._pending_focus = None                        # the tab's own reload posted one; this wins
         self._pending_prefix = None
         self.focus = inside[0] if inside else None
-        self.speak('%s. %s' % (button.label, self.focus.spoken() if self.focus is not None else 'empty'))
+        if self.focus is not None:
+            self.speak_element(self.focus, button.label)      # and its hint after it (ui/reading.py)
+        else:
+            self.speak('%s. %s' % (button.label, 'empty'))
 
     def dealloc(self) -> None:
         for tab in self.tabs.values():

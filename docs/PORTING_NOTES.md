@@ -55,8 +55,8 @@ a placeholder with "Main menu", or "Close" when it was presented.
 ## Menu controls (VoiceOver stand-in)
 
 Menu screens are built from the iPhone nibs (the 568x320 tag-2781 layout) and read like VoiceOver reads
-them: elements top to bottom, then left to right, with their accessibility labels, "button", "dimmed" and
-hints.
+them: elements top to bottom, then left to right, with their accessibility labels, "button" and "dimmed",
+and then, on their own once those have been read and a pause has passed, their hints (see Divergences).
 
 PORT INPUT: `UIAccessibilityIsVoiceOverRunning()` is always true here (`Speech.screen_reader_running`).
 The original's other branch is its sighted game - `ADChallengeSelectorViewController`,
@@ -2398,9 +2398,10 @@ they were.
   `UtteranceProgressListener`), with `isSpeaking` behind it.
   A screen reader cannot be asked: NVDA's controller client exports speakText, cancelSpeech, testIfRunning
   and brailleMessage and nothing else, and Prism and VoiceOver's Apple Event only hand a line over.  For
-  those the reading is timed, the words at `STORY_WORDS_PER_MINUTE` (180, an ordinary speaking pace, which
+  those the reading is timed, the words at `DEFAULT_WORDS_PER_MINUTE` (180, an ordinary speaking pace, which
   a player listening faster than that waits a little longer than they need) and `STORY_MARGIN` (1.5 s) on
-  top - so 15 words go on after 6.5 seconds and 55 after 19.8.  All three are in `ui/gameplay_screen.py`.
+  top - so 15 words go on after 6.5 seconds and 55 after 19.8.  `STORY_QUIET` and `STORY_MARGIN` are in
+  `ui/gameplay_screen.py`; the pace moved to `ui/reading.py` when the hints came to be timed by it too.
   The game's update timers are stopped under the story, so the screen waits on a run-loop timer of its own.
   Any key but Enter and Back hands the screen to the player, and it then waits for Continue: moving through
   the text is reading it item by item, which the go-on would cut off, and every key on this screen cuts the
@@ -2767,6 +2768,50 @@ they were.
 * A challenge with no stars reads "0 stars unlocked" (user request, 2026-10-01, found in the Android
   version).  `statusForChallengeWithDict:` 0x100054960 adds the s only above one star, so the original said
   "0 star unlocked"; the port adds it for every count but one.
+* A hint is read on its own, after a pause (user request, 2026-10-02).  The menus' VoiceOver stand-in read an
+  element's label, its traits and its hint as one sentence (`View.spoken`, `MenuItem.spoken`): "Language,
+  English. The language the port's own text is shown and spoken in...".  VoiceOver does not.  It reads the
+  label and the traits, waits a moment once it has finished - about a second - and reads the hint on its
+  own, and a player can turn hints off (Speak Hints, in its Verbosity settings).  Every `accessibilityHint`
+  the original sets was written to be heard that way, so this brings the port closer to how the original
+  was heard.  There is no method of the original's to depart from: the reading was VoiceOver's, and the
+  port's stand-in for it is what changed.  The item is read now, and its hint once the item has been read
+  and the pause set in Settings -> Speech -> Pause before hints has passed (`Screen.speak_element`,
+  `ui/reading.py`); Settings -> Speech -> Hints, on by default, turns them off.  The pause runs from none
+  to three seconds a quarter at a time, a second by default, about VoiceOver's own.  Both are settings
+  (`speakHints`, `hintPause`), and Reset all settings puts them back.  A key, a touch on the phone, a move of
+  the cursor or anything else said takes a waiting hint away (`Speech.lines` counts every line said and
+  every stop), so a hint never talks over what the player did next; an item read again has its hint again.
+
+  When the item has been read is known for the game's own voice - SAPI 5, the Mac's system voice and the
+  phone's text-to-speech say so through `Speech.still_speaking`, built for the Extra mode's story - and the
+  pause starts when it falls quiet.  A screen reader cannot be asked, so the item's words are timed at
+  `DEFAULT_WORDS_PER_MINUTE`, the 180 the story already used, which moved from `ui/gameplay_screen.py` to
+  `ui/reading.py` so that the two share it.  The hint is queued, not interrupting, so a screen reader slower
+  than that finishes the item first.  A braille display is given the item and its hint together as the
+  item is read (`nvdaController_brailleMessage`; Prism's `braille` beside its `speak`), and the spoken hint
+  is not brailled again: a display is read at the reader's own pace, and a second message would take the
+  item off it a second after it came, as NVDA itself shows an object's description beside its name.
+  VoiceOver on the Mac speaks and brailles a line as one, so there the display follows the speech.  The
+  phone's two-finger swipe, which reads a whole screen as one line, keeps each hint inline, and leaves them
+  out with Hints off.  Every place that reads an element goes through `speak_element`: a screen opening on
+  its first element, the arrows and the ends, a menu screen's items, a dimmed item pressed, and the
+  armory's tabs.  There is no key that reads the current item again, and none was added.
+
+  Some elements say what they are only in their hint, and with Hints off they are heard without it: the
+  first control scheme screen's descriptions of Gyro, Swipe and Tilt (GYRO_DESCRIPTION and the others), an
+  Extra arena's objective in its chapter's list, the armory's "This tab is currently selected", a locked
+  Endless button's "Finish the tutorial to unlock", the Shuffle button's price, and the version on Check for
+  updates.  They are left as they were; VoiceOver with hints off loses the same.
+
+  Checked headless with stand-ins for the voice and for NVDA, on a fake clock: with a voice taking 0.5 s
+  the hint came 1.5 s after the item, and 3.0 s with the pause at 2.5; for NVDA "Bravo two words" was
+  followed 2.0 s later (3 words at 180 a minute and the 1 s pause), queued and not brailled again, while
+  the display had had the item and hint together; a key, Control, a move of the cursor and another line
+  said before it was due each took it away, and Hints off read none.  On the real settings screen the rows
+  stepped and held at 0 and 3, were saved in settings.json and were put back by Reset all settings; on the
+  Android build's Python with the fake Bridge the hint, in the phone's words, came 0.87 s after a 0.3 s line
+  with a 0.5 s pause, and a touch before then took it away.
 
 
 ## Original quirks kept on purpose

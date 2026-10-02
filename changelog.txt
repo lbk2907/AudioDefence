@@ -27,6 +27,7 @@ In Tilt mode, turning left and right no longer goes the wrong way.
 A challenge with no stars yet says 0 stars unlocked, not 0 star.
 Pausing the game now pauses every sound in it, power-ups included, and they carry on when you go back.
 In a translated game, the Speech tab in Settings speaks in that language when you change the voice or its rate, pitch or volume.
+Hints are read on their own, a moment after the item they belong to. The Speech tab in Settings can turn them off or change the pause.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.

@@ -32,7 +32,7 @@ import pygame
 from ..platform import host as system
 from .. import localization
 from ..s3d.engine import S3DEngine
-from .screens import Screen, joined, menu_music_volume_key
+from .screens import Screen, menu_music_volume_key
 
 log = logging.getLogger('ui.a11y')
 
@@ -171,6 +171,8 @@ class View:
         return True
 
     def spoken(self) -> str:
+        """What VoiceOver reads on landing here: the label and the traits.  The hint is read after it, on
+        its own (`spoken_hint`, ui/reading.py)."""
         label = self.label
         if getattr(self, 'label_key_words', False):       # PORT ADDITION: see __init__
             from ..platform.pad import menu_words
@@ -186,11 +188,15 @@ class View:
             parts.append(localization.translate('heading'))
         if getattr(self, 'adjust', None) is not None:      # PORT ADDITION (Android): a slider
             parts.append(localization.translate('slider'))
-        text = ', '.join(p for p in parts if p)
-        if self.hint:
-            from ..platform.pad import menu_words         # PORT ADDITION: in a controller's words, if chosen
-            text += f'. {menu_words(self.hint)}'
-        return text
+        return ', '.join(p for p in parts if p)
+
+    def spoken_hint(self) -> str:
+        """The hint as it is read, after the element (ui/reading.py), or '' where there is none."""
+        hint = (self.hint or '').strip()
+        if not hint:
+            return ''
+        from ..platform.pad import menu_words             # PORT ADDITION: in a controller's words, if chosen
+        return menu_words(hint)
 
     def activate(self, shift: bool = False) -> bool:
         """accessibilityActivate: a double tap sends a touch to the element's centre.  PORT ADDITION: with
@@ -513,7 +519,7 @@ class AccessibleScreen(Screen):
                 element = self.first_content_element(elements)
             self.focus = element
             if element is not None:
-                self.speak(joined([prefix, element.spoken()]) if prefix else element.spoken())
+                self.speak_element(element, prefix)
             elif prefix:
                 self.speak(prefix)
 
@@ -565,14 +571,14 @@ class AccessibleScreen(Screen):
         i = max(0, min(len(elements) - 1, i))           # VoiceOver does not wrap
         self.focus = elements[i]
         menu_tick()
-        self.speak(self.focus.spoken())
+        self.speak_element(self.focus)
 
     def _jump(self, last: bool) -> None:
         elements = self.elements()
         if elements:
             self.focus = elements[-1] if last else elements[0]
             menu_tick()
-            self.speak(self.focus.spoken())
+            self.speak_element(self.focus)
 
     def key_down(self, event) -> None:
         if menu_music_volume_key(self, event):             # PORT ADDITION: Page Up / Page Down

@@ -84,7 +84,9 @@ class VoiceOver:
         except Exception:
             return False
 
-    def speak(self, text: str, interrupt: bool) -> bool:
+    def speak(self, text: str, interrupt: bool, braille=None) -> bool:
+        """`braille` is taken as speech.py's _Nvda takes it, and not used: VoiceOver's `output` speaks a line
+        and puts it on the display as one, so the display always shows what is said."""
         if not self.running():
             return False
         if self.apple_events is None:                     # the first line: find out, on this thread

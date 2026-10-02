@@ -160,6 +160,10 @@ class ScreenManager:
                 self._pad_input(pressed, source, name)
             return
         if event.type == pygame.KEYDOWN:
+            # PORT ADDITION: a key is the player doing something, so a hint still waiting to be read after
+            # what the cursor last landed on is not read over it (ui/reading.py)
+            from .reading import Hints
+            Hints.shared().cancel()
             if event.key in (pygame.K_LCTRL, pygame.K_RCTRL) and not getattr(event, 'pad', False):
                 # PORT ADDITION: Control stops the speech, as it does in a screen reader (user request).
                 # The key goes on to the screen as well: it is the melee key, and held with an arrow it

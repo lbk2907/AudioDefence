@@ -62,13 +62,17 @@ class _Nvda:
     def running(self) -> bool:
         return bool(self.dll is not None and self.dll.nvdaController_testIfRunning() == 0)
 
-    def speak(self, text: str, interrupt: bool) -> bool:
+    def speak(self, text: str, interrupt: bool, braille=None) -> bool:
+        """`braille` is what the display shows, when it is not the line itself; '' leaves the display alone
+        (PORT ADDITION: ui/reading.py)."""
         if not self.running():
             return False
         if interrupt:
             self.dll.nvdaController_cancelSpeech()
         self.dll.nvdaController_speakText(text)
-        self.dll.nvdaController_brailleMessage(text)
+        braille = text if braille is None else braille
+        if braille:
+            self.dll.nvdaController_brailleMessage(braille)
         return True
 
     def stop(self) -> None:
@@ -194,12 +198,18 @@ class _Readers:
                     break
         return self.reader
 
-    def speak(self, text: str, interrupt: bool, only=None) -> bool:
+    def speak(self, text: str, interrupt: bool, only=None, braille=None) -> bool:
+        """`braille` as for _Nvda.speak: what the display shows instead, or '' for nothing."""
         reader = self.current(only)
         if reader is None:
             return False
         try:
-            if reader.features.supports_output:           # speech, and braille where there is a display
+            features = reader.features
+            if braille is not None and features.supports_speak:
+                reader.speak(text, interrupt)             # the line, and the display apart from it
+                if braille and features.supports_braille:
+                    reader.braille(braille)
+            elif features.supports_output:                # speech, and braille where there is a display
                 reader.output(text, interrupt)
             else:
                 reader.speak(text, interrupt)
@@ -786,7 +796,7 @@ class _NoReaders:
     def current(self, only=None):
         return None
 
-    def speak(self, text: str, interrupt: bool, only=None) -> bool:
+    def speak(self, text: str, interrupt: bool, only=None, braille=None) -> bool:
         return False
 
     def stop(self) -> None:
@@ -814,6 +824,9 @@ class Speech:
         self.sapi_config = dict(SAPI_DEFAULTS)            # SAPI 5's voice and the rest, likewise
         self._silent = False                              # the chosen one could not speak the last line
         self.spoken_by = None                             # PORT ADDITION: see still_speaking
+        #: PORT ADDITION: how many lines have been spoken or stopped, so that a hint waiting to be read can
+        #: tell that something else has been said since (ui/reading.py)
+        self.lines = 0
 
     @property
     def readers(self) -> _Readers:
@@ -851,21 +864,27 @@ class Speech:
         a game that was not described."""
         return True
 
-    def speak(self, text, interrupt: bool = True) -> None:
+    def speak(self, text, interrupt: bool = True, braille=None) -> None:
+        """`braille`, PORT ADDITION: what a braille display shows instead of the line - an item with its hint,
+        which is spoken after a pause (ui/reading.py) - or '' to leave the display as it is.  Only a screen
+        reader has a display; the voices take no notice of it."""
         if not text:
             return
+        self.lines += 1
         text = localization.translate(str(text))          # PORT ADDITION: the player's chosen language
+        if braille:
+            braille = localization.translate(str(braille))
         log.debug('speak: %s', text)
         choice = self.choice
         if choice not in PRISM_NAMES and choice not in (SCREEN_READER, 'sapi'):
-            self.speak_automatic(text, interrupt)
+            self._speak_automatic(text, interrupt, braille)
             return
         if choice == SCREEN_READER:
-            spoken = self.nvda.speak(text, interrupt)
+            spoken = self.nvda.speak(text, interrupt, braille)
         elif choice == 'sapi':
             spoken = self.sapi.speak(text, interrupt)
         else:
-            spoken = self.readers.speak(text, interrupt, PRISM_NAMES[choice])
+            spoken = self.readers.speak(text, interrupt, PRISM_NAMES[choice], braille)
         self.spoken_by = (('voice' if choice == 'sapi' else 'reader') if spoken else None)
         if spoken == self._silent:                        # said once, as it starts or stops
             self._silent = not spoken
@@ -876,10 +895,14 @@ class Speech:
         """The first of NVDA, another screen reader and SAPI 5 that can speak, whatever Speech output says.
         The game speaks this way on Automatic, and Settings says through it that a chosen screen reader
         is not running, which it could not say through that one."""
+        self.lines += 1
+        self._speak_automatic(text, interrupt)
+
+    def _speak_automatic(self, text, interrupt: bool, braille=None) -> None:
         self.spoken_by = 'reader'
-        if self.nvda.speak(text, interrupt):
+        if self.nvda.speak(text, interrupt, braille):
             return
-        if self.readers.speak(text, interrupt):
+        if self.readers.speak(text, interrupt, braille=braille):
             return
         self.spoken_by = 'voice' if self.sapi.speak(text, interrupt) else None
 
@@ -947,6 +970,7 @@ class Speech:
             sapi.stop()
 
     def stop(self) -> None:
+        self.lines += 1                                   # PORT ADDITION: a hint waiting is not read now
         choice = self.choice
         if choice == SCREEN_READER:
             if self.nvda.running():

@@ -354,18 +354,18 @@ class ReviveScreen(AccessibleScreen):
 STORY_QUIET = 1.0
 #: A screen reader cannot be asked - NVDA's controller client can only speak, cancel, braille and say whether
 #: NVDA is running, and Prism and VoiceOver's Apple Event only hand a line over - so the reading is timed:
-#: the words at STORY_WORDS_PER_MINUTE, an ordinary speaking pace (the pace of an audiobook, and about what
-#: a screen reader's default rate reads English at; a player who listens faster waits a little, which is the
-#: side to err on), and STORY_MARGIN on top for the reader to start and for the pauses at full stops.
-STORY_WORDS_PER_MINUTE = 180.0
+#: the words at the pace the hints are timed at too (ui/reading.py: DEFAULT_WORDS_PER_MINUTE, an ordinary
+#: speaking pace), and STORY_MARGIN on top for the reader to start and for the pauses at full stops.
 STORY_MARGIN = 1.5
 #: how often the screen looks
 STORY_POLL = 0.1
 
 
-def reading_seconds(text: str) -> float:
-    """How long a screen reader is given to read this, at STORY_WORDS_PER_MINUTE plus STORY_MARGIN."""
-    return len(str(text).split()) * 60.0 / STORY_WORDS_PER_MINUTE + STORY_MARGIN
+def story_reading_seconds(text: str) -> float:
+    """How long a screen reader is given to read the story: the time its words take (ui/reading.py), plus
+    STORY_MARGIN."""
+    from .reading import reading_seconds
+    return reading_seconds(text) + STORY_MARGIN
 
 
 class StoryScreen(AccessibleScreen):
@@ -373,7 +373,7 @@ class StoryScreen(AccessibleScreen):
     (`StoryController`).  The game is paused under it.  The text is read first, and the game plays on by
     itself once it has been (user request, 2026-10-02): when the game's own voice has finished with it, a
     moment later, and with a screen reader, which cannot say when it has finished, once the time it takes to
-    read has passed (`reading_seconds`).  Continue, Enter wherever the cursor is, and Back go on at once.
+    read has passed (`story_reading_seconds`).  Continue, Enter wherever the cursor is, and Back go on at once.
 
     Any other key hands the screen to the player, and then only those go on.  Moving through the text is
     reading it item by item, which the go-on would cut off; and every key here cuts the speech (ui/host.py,
@@ -412,7 +412,7 @@ class StoryScreen(AccessibleScreen):
     def _listen(self, spoken: str) -> None:
         loop = RunLoop.main()
         self._read_at = loop.now()
-        self._reading_time = reading_seconds(spoken)
+        self._reading_time = story_reading_seconds(spoken)
         self._quiet_since = None
         # the game's own timers are stopped while it is paused; the run loop's are not
         self._listening = loop.schedule_timer(STORY_POLL, self._check_reading, True)

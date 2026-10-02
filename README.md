@@ -54,6 +54,18 @@ Enter and Shift+Enter change each one, and each change is said in SAPI 5 at the
 new setting, even while NVDA speaks the rest, so you hear what you chose. Reset
 all settings puts all five back to Control Panel's.
 
+Many items and rows carry a hint, such as "Press Enter for the list". As
+VoiceOver does, the game reads the item first and the hint on its own after
+it, once the item has been read and a pause has passed. Two rows at the end
+of the Speech tab set this, on the phone too: **Hints** (on by default) turns
+hints off, and **Pause before hints** sets the pause, from 0 to 3 seconds in
+quarters of a second, 1 second by default. A key, a touch, or a move to
+another item before the hint comes takes it away. With SAPI 5, the Mac's
+system voice or the phone's own speech the game knows when the item has been
+read; a screen reader cannot tell it, so the game allows the time the item's
+words take at an ordinary pace, 180 words a minute. A braille display shows
+the item and its hint together, at once.
+
 On the Mac the same page lists **Automatic**, **VoiceOver** and **System
 voice**: VoiceOver when it is on, the system voice when it is not, and the
 system voice's own five rows — voice, rate, pitch and volume, with no rate
@@ -366,7 +378,7 @@ Settings, saves and the log live in `%APPDATA%\AudioDefence` (on the Mac,
 | file | what is in it |
 |---|---|
 | `save.json` | progress: coins, diamonds, weapons, power-ups, missions, challenges, statistics |
-| `settings.json` | control scheme, button mode, turn sensitivity, menu arrows, cursor memory, tutorial text, the announcer, the game volume, menu music volume, the update check and a version you skipped, how strong the vibration and the trigger feel are, and whether hints name keys or controller buttons, and which controller's, and the speech output and SAPI 5's voice, rate, rate boost, pitch and volume; on the phone, the speech engine and the shake sensitivity too |
+| `settings.json` | control scheme, button mode, turn sensitivity, menu arrows, cursor memory, tutorial text, the announcer, the game volume, menu music volume, the update check and a version you skipped, how strong the vibration and the trigger feel are, and whether hints name keys or controller buttons, and which controller's, the speech output and SAPI 5's voice, rate, rate boost, pitch and volume, and whether hints are read and the pause before them; on the phone, the speech engine and the shake sensitivity too |
 | `keys.json` | the key bindings, and each kind of controller's, by its name |
 
 Deleting the folder starts a fresh profile — the first run then begins on Gyro
@@ -1102,7 +1114,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **171 divergences** and **15 original quirks kept on purpose** in the notes, of which 78 are
+There are **172 divergences** and **15 original quirks kept on purpose** in the notes, of which 78 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -1117,7 +1129,7 @@ port's own work and has no counterpart in the binary.
   the tutorial has a separate announcer clip for each, but on a keyboard they differ only in speed — about
   110, 160 and 190 degrees a second at the default sensitivity, all scaling in proportion to it.
 - The menus are driven by a VoiceOver stand-in: elements are read in the nibs' frame order with their
-  labels, hints and traits. Which arrow pair moves the cursor is a setting; the other pair changes tab.
+  labels and traits, and their hints on their own after a pause, as VoiceOver reads them. Which arrow pair moves the cursor is a setting; the other pair changes tab.
   Holding a movement key repeats it.
 - Settings gained categories, a turn sensitivity (a sighted-only slider in the original) and the key
   bindings. The main menu gained a Quit button, which no iOS app needs.
@@ -1276,8 +1288,9 @@ replacing them.
   announcer tells you to tilt the device, swipe, or tap a corner button, none of which a keyboard can do.
   **Settings → Miscellaneous → Tutorial text** chooses when, or turns it off: Enter steps to the next
   setting, Shift+Enter to the previous.
-- **Settings → Speech**: Speech output — Automatic, or one screen reader or voice only — and SAPI 5's
-  voice, rate, rate boost, pitch and volume. See [Accessibility](#accessibility).
+- **Settings → Speech**: Speech output — Automatic, or one screen reader or voice only — SAPI 5's
+  voice, rate, rate boost, pitch and volume, and whether hints are read and how long after their item.
+  See [Accessibility](#accessibility).
 - **Settings → Miscellaneous → Remember cursor position** (off by default) returns the cursor to the row
   you left a screen on.
 - **A menu music volume**: Page Up and Page Down, on any menu, in steps of 10% from 100% — the original's

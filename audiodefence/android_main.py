@@ -147,6 +147,10 @@ class TouchInput:
     def handle(self, kind, pid, x, y, now) -> None:
         if kind == DOWN:
             if not self.fingers:
+                # PORT ADDITION: a touch is the player doing something, so a hint still waiting to be read is
+                # not read over it (ui/reading.py), as a key on the desktop takes it away
+                from .ui.reading import Hints
+                Hints.shared().cancel()
                 self._start(pid, x, y, now)
             self.fingers[pid] = _Finger(x, y, now)
             self.gesture_max = max(self.gesture_max, len(self.fingers))
@@ -336,8 +340,10 @@ class TouchInput:
             took_over()
 
     def _read_all(self, from_top: bool) -> None:
-        """VoiceOver's two-finger swipe: read the screen from the top, or on from the element in focus."""
+        """VoiceOver's two-finger swipe: read the screen from the top, or on from the element in focus.  It is
+        one reading, so each element's hint is read with it, with no pause - none at all with Hints off."""
         from .ui.accessibility import AccessibleScreen
+        from .ui.reading import with_hint
         from .ui.screens import joined
         top = self.host.top()
         if not isinstance(top, AccessibleScreen):
@@ -347,7 +353,7 @@ class TouchInput:
         if not from_top and top.focus in elements:
             elements = elements[elements.index(top.focus):]
         if elements:
-            top.speak(joined(e.spoken() for e in elements))
+            top.speak(joined(with_hint(e) for e in elements))
 
     def _menu_one_up(self, f, now) -> None:
         if self.long_done:
