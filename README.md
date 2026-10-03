@@ -1710,8 +1710,7 @@ settings and nobody else's. The file turns HRTF on, says where the game's HRTF
 files are (`hrtf-paths`, the `assets\hrtf` folder) and which one to use
 (`default-hrtf`, `audiodefence_ircam1050`). Editing it does nothing: it is
 written again at the next start. Your own OpenAL settings for other programs,
-`%APPDATA%\alsoft.ini`, are never read or changed. Builds before October 2026
-wrote the file to `%APPDATA%\AudioDefence`; a copy left there can be deleted.
+`%APPDATA%\alsoft.ini`, are never read or changed.
 
 **Updating OpenAL Soft on Windows:**
 
