@@ -1712,36 +1712,57 @@ files are (`hrtf-paths`, the `assets\hrtf` folder) and which one to use
 written again at the next start. Your own OpenAL settings for other programs,
 `%APPDATA%\alsoft.ini`, are never read or changed.
 
+**What is in OpenAL Soft's Windows zip.** The binaries,
+`openal-soft-<version>-bin.zip`, come from
+[OpenAL Soft's website](https://openal-soft.org/) or its
+[releases on GitHub](https://github.com/kcat/openal-soft/releases). Unzipped,
+the folders this game cares about are:
+
+- `bin\Win64\soft_oal.dll`: the library itself, 64-bit. `bin\Win32` holds the
+  32-bit one, which the game does not use.
+- `makemhr\makemhr.exe`, with `zlib1.dll` beside it: the tool that makes an
+  HRTF file. Keep the two together.
+- `hrtf_defs`: example definition files for well-known research sets
+  (`MIT_KEMAR.def`, `MIT_KEMAR_sofa.def`, `IRC_1005.def`, `SCUT_KEMAR.def`,
+  `CIAIR.def`). Each says at the top where its recordings can be downloaded,
+  and under what terms.
+- `openal-info64.exe`: lists the sound devices and the HRTFs OpenAL Soft can
+  find.
+- The rest (`include`, `libs`, `cxx-modules`, `presets`, `alsoft-config`)
+  is for programmers and for other programs' settings; the game needs none of
+  it.
+
 **Updating OpenAL Soft on Windows:**
 
-1. Download the Windows binaries, `openal-soft-<version>-bin.zip`, from
-   [OpenAL Soft's website](https://openal-soft.org/) or its
-   [releases on GitHub](https://github.com/kcat/openal-soft/releases).
-2. Take `soft_oal.dll` from the zip's 64-bit folder, `bin\Win64`.
-3. Put it in place of `vendor\openal\soft_oal.dll`.
-4. Start the game, then look in its log, `audiodefence.log` in
+1. Download and unzip the binaries, as above.
+2. Copy `bin\Win64\soft_oal.dll` over `vendor\openal\soft_oal.dll`.
+3. Start the game, then look in its log, `audiodefence.log` in
    `%APPDATA%\AudioDefence`. A line saying `game HRTF audiodefence_ircam1050
    not in use` means the new version did not take the game's HRTF; no such line
    means it did.
 
-**Making another HRTF.** OpenAL Soft's `makemhr` turns a recording of how a
-head hears sound from every direction into an `.mhr` file. Research sets of
-these usually come as SOFA files (`.sofa`), which `makemhr` reads directly; it
-also reads its own `.def` definition files.
+**Making another HRTF.** `makemhr` turns a recording of how a head hears sound
+from every direction into an `.mhr` file, with no C++ or anything else to
+install. Research sets of these usually come as SOFA files (`.sofa`), which
+`makemhr` reads directly; it also reads its own `.def` definition files, like
+the ones in `hrtf_defs`.
 
-- Windows: Papa Sangre for Windows takes `makemhr.exe` from the same
-  OpenAL Soft binaries zip. If your download does not have it, it can be built
-  from OpenAL Soft's source code (`utils/makemhr`) with CMake and Visual
-  Studio: the only step here that needs a C++ compiler.
-- Make the file at the game's sample rate, 44100:
+1. Download the research set's recordings: each `.def` in `hrtf_defs` says
+   where.
+2. In a Command Prompt, in the folder with the recordings, run `makemhr.exe`
+   at the game's sample rate, 44100. For a SOFA file:
 
-      makemhr -r 44100 -i set.sofa -o set.mhr
+       "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i set.sofa -o set.mhr
 
-- Put the `.mhr` in `assets\hrtf`. OpenAL Soft then lists it beside the
-  game's own, but the game still uses `audiodefence_ircam1050`: it has no
-  setting to choose another yet.
-- Check the research set's licence before giving the file to anyone: some
-  may not be passed on with a game.
+   Or with one of the definition files:
+
+       "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i MIT_KEMAR.def -o MIT_KEMAR.mhr
+
+3. Put the `.mhr` in `assets\hrtf`. OpenAL Soft then lists it beside the
+   game's own, but the game still uses `audiodefence_ircam1050`: it has no
+   setting to choose another yet.
+4. Check the research set's licence before giving the file to anyone: some
+   may not be passed on with a game.
 
 ## Building an executable
 
