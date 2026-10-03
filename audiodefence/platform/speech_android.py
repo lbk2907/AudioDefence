@@ -298,3 +298,13 @@ class Speech:
         self._sapi.stop()
         # not the second speech (user request, 2026-10-03): the two-finger tap stops the first, and the second
         # reads what is said during a game, which nobody should miss
+
+    def stop_in_game(self) -> None:
+        """As speech.py's: what is read during a game stops - a part of the Extra mode's story, skipped or
+        paused - which is the first speech with Use second speech off and the second with it on."""
+        if not self.second_on:
+            self.stop()
+            return
+        self.lines += 1
+        if self._second_sapi is not None:
+            self._second_sapi.stop()

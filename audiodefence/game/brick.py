@@ -36,6 +36,14 @@ class Brick:
         #: passer-by manager; the wave's own list is how a wave held for a hand-over of weapons holds its own
         #: and no others (`BrickManager.update`).
         self.passers_by: list = []
+        #: PORT ADDITION (user request, 2026-10-03): the enemies with neither a `spawn_time` nor a
+        #: `spawn_after`, in a wave that tells a part of the Extra mode's story (`Story`).  The original spawns
+        #: such an enemy as its wave is made, which here would set it in the arena - heard, and there to be shot
+        #: with the clock stopped - while the story is read and the wave held
+        #: (`ChallengeGameplayController.narrate`).  They are spawned on the wave's first update instead, the
+        #: first tick it is not held; with no story read (the referee, a wave fought again after a revive) that
+        #: is the tick after it was made, which is also when the original's would first have moved.
+        self.held_spawns: list = []
         enemies = self.brick_dictionary.get('Enemies') or {}
         for key, d in enemies.items():
             e = Enemy(key)
@@ -64,6 +72,8 @@ class Brick:
                 e.set_state(0)
             elif d.get('spawn_after') is not None:
                 e.spawn_after = d.get('spawn_after')
+            elif self.brick_dictionary.get('Story'):      # PORT ADDITION: see `held_spawns`
+                self.held_spawns.append(e)
             else:
                 e.spawn()
         self.init_passers_by()
@@ -179,6 +189,11 @@ class Brick:
 
     def update(self, dt: float) -> None:                      # 0x1000a0ed0
         from .brick_manager import BrickManager
+        if self.held_spawns:                                  # PORT ADDITION: see `held_spawns`
+            held, self.held_spawns = self.held_spawns, []
+            for e in held:
+                if e.life > 0.0:                              # not cleared away meanwhile (a revive's skip)
+                    e.spawn()
         self.time_in_brick += dt
         for e in list(self.enemies):
             e.update(dt)

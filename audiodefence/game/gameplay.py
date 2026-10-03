@@ -488,38 +488,33 @@ class ReviveController:
             no.play()
 
 
-class StoryController:
-    """PORT ADDITION (user request, 2026-10-01): a part of the Extra mode's story, told in text when the wave
-    that carries it (`Story`) begins - once what was already being said as it began has been heard out, the
-    challenge's start clip, the announcer or a gun naming itself (user request, 2026-10-02; see
-    `ChallengeGameplayController.tell_story_if_due`).  The game is paused under it (`pause_game`, as the
-    pause menu pauses it) while it is read, and then plays on from the start of the wave by itself (user
-    request, 2026-10-02): the screen (`StoryScreen`) goes on once the reading is done, and Continue goes on
-    at once.  Once the player takes the screen over, or leaves the game's window - while the story is up,
-    or while it waits to be shown - it waits for Continue instead (`wait_for_player`).  An epilogue is told
-    the same way, and goes on to the completed screen (`after`)."""
+class Narration:
+    """PORT ADDITION (user request, 2026-10-03): a part of the Extra mode's story, read out as a line of the
+    game's while the game goes on - as the original's challenges play Dr. Bastard's recorded lines
+    (`ChallengeGameplayController.narrate`).
 
-    def __init__(self, gameplay, text: str, after=None):
-        self.gameplay_view_controller = gameplay          # weak
+    It waits first (WAITING) for the lines that were already being said as it became due - `lines`, a list
+    of the engine's sounds - and for the speech to finish reading what the game last announced; then it is
+    due (DUE), and is handed to the speech (READING) at `read_at`, for `seconds`, the time the speech that
+    reads it is taken to need.  A pause puts it back to DUE, to be read again from the start.  `after` is
+    what comes once it has been read or skipped: None for a wave's story, whose wave then begins, and the
+    completed screen for an epilogue."""
+
+    WAITING, DUE, READING = 'waiting', 'due', 'reading'
+
+    def __init__(self, text: str, lines=(), after=None):
         self.text = text
-        self.after = after                                # what Continue does instead of playing on
-        self.waits_for_player = False                     # no longer goes on by itself
+        self.waiting_for = list(lines)
+        self.after = after
+        self.state = self.WAITING
+        self.read_at = 0.0
+        self.seconds = 0.0
 
-    def wait_for_player(self) -> None:
-        """The story is no longer carried on by itself: only Continue (or Back) plays on."""
-        self.waits_for_player = True
-
-    def continue_pressed(self) -> None:
-        gvc, self.gameplay_view_controller = self.gameplay_view_controller, None
-        if gvc is None:                                   # pressed twice
-            return
-        if gvc.host is not None:
-            gvc.host.dismiss_story()
-        gvc.story_view = None
-        if self.after is not None:
-            self.after()
-        else:
-            gvc.resume_game()
+    def skippable(self) -> bool:
+        """Whether skipping the dialogue skips it: once it is being read, as a recorded line is skippable once
+        it plays (`skipAllSkippableSounds` 0x1000a2e40 skips a sound in state 2) - and when a pause has put it
+        back to be read again, so that the phone's Skip dialogue, which resumes and then skips, reaches it."""
+        return self.state != self.WAITING
 
 
 # ======================================================================================= controller
@@ -702,9 +697,11 @@ class GameplayController:
         machine, which stay from wave to wave.  (A cow of the wave before is gone by then: a challenge's wave
         waits for its cows, `BrickManager.current_brick_is_cleared`.  An enemy with no spawn time at all is
         spawned as its wave is made, `Brick.__init__`, and heard then, though it goes nowhere until the hold
-        is over; every wave that hands over weapons gives each of its enemies and passers-by a time.)  Only an
-        Extra wave handing over a new set of weapons asks for it (`ChallengeGameplayController.arm`), and the
-        challenge's clock does not run meanwhile either (`update_stats`).  Endless never holds a wave."""
+        is over; every wave that hands over weapons gives each of its enemies and passers-by a time, and a wave
+        that tells a part of the story spawns those only once it begins, `Brick.held_spawns`.)  Only an Extra
+        wave asks for it - while it hands over a new set of weapons (`ChallengeGameplayController.arm`) and
+        while its part of the story is read (`ChallengeGameplayController.narrate`) - and the challenge's
+        clock does not run meanwhile either (`update_stats`).  Endless never holds a wave."""
         return False
 
     # --- input -----------------------------------------------------------------------------------
@@ -793,7 +790,7 @@ class GameplayController:
         self.kill_gameplay()
         App.delegate().go_to_game_over_endless()
 
-    def pause_game(self, keep=()) -> None:                # 0x10005b5fc
+    def pause_game(self) -> None:                         # 0x10005b5fc
         self.stop_timers()
         BrickManager.shared().pause_all_bricks()
         AmbientManager.shared().pause()
@@ -801,11 +798,11 @@ class GameplayController:
             self.weapon_manager.pause()
         if self.player is not None:                       # PORT ADDITION: see Player.pause
             self.player.pause()
-        self.hold_every_sound(keep)                       # PORT ADDITION: and everything else
+        self.hold_every_sound()                           # PORT ADDITION: and everything else
         self.paused = True
         self.announcer_value_on_entering_pause = GameParameters.shared().last_announcer_value()
 
-    def hold_every_sound(self, keep=()) -> None:
+    def hold_every_sound(self) -> None:
         """PORT ADDITION (user request): whatever is still sounding when the game pauses is held with it.
 
         `pauseGame` 0x10005b5fc stops the timers and pauses the bricks and the ambience, and `resumeGame`
@@ -814,12 +811,9 @@ class GameplayController:
         `PowerUp.pause`); this is the net under them - a power-up's launch and explosions, a projectile, a
         shot's tail, any one-shot nobody thought of - so that a paused game is a paused game, and only the
         sounds held here are let go again (`S3DEngine.hold`).  The room keeps sounding, as it already did
-        (`AmbientManager.room_sounds`), and so does anything in `keep`: the lines a story waits to be heard
-        out (`ChallengeGameplayController.tell_story_if_due`).  A second pause keeps what the first is
-        holding."""
+        (`AmbientManager.room_sounds`).  A second pause keeps what the first is holding."""
         if self.held_sounds is None:
-            keep = AmbientManager.shared().room_sounds() | set(keep or ())
-            self.held_sounds = S3DEngine.engine().hold(keep=keep)
+            self.held_sounds = S3DEngine.engine().hold(keep=AmbientManager.shared().room_sounds())
 
     def let_go_of_every_sound(self, stop: bool = False) -> None:
         """PORT ADDITION: the other half of `hold_every_sound` - play on, or, when the game is over rather
@@ -936,10 +930,6 @@ class GameplayController:
 #: the shared BrickManager and WeaponManager cleaned.  Anything that starts another game has to wait
 #: for it, or the clean-up lands on the new game instead of the old one.
 KILL_GAMEPLAY_CLEANUP = 0.1
-
-#: PORT ADDITION: how often a story waiting for its wave's opening lines looks to see whether they are over
-#: (`ChallengeGameplayController.tell_story_when_quiet`)
-STORY_WAIT_POLL = 0.05
 
 
 def _ns_int(text) -> int:
@@ -1060,8 +1050,7 @@ class ChallengeGameplayController(GameplayController):
         self.challenge_dictionary = challenge_dictionary
         self.check_skip_button_counter = 0
         self.stories_told = set()                         # PORT ADDITION: see tell_story_if_due
-        self.story_view = None
-        self.story_wait = None                            # PORT ADDITION: see tell_story_if_due
+        self.narration = None                             # PORT ADDITION: see narrate
         self.epilogue_told = False                        # PORT ADDITION: see go_to_score_screen
         self.arming = False                               # PORT ADDITION: see hand_over_weapons
         self.draw_left = 0.0
@@ -1107,17 +1096,26 @@ class ChallengeGameplayController(GameplayController):
         Tracker.shared().set_value_for_dimension('Challenge mode', 'Game mode', 0, 0)
 
     def skip_button_pressed(self) -> None:                # 0x1000da728
+        if self.narration is not None and self.narration.skippable():   # PORT ADDITION: see narrate
+            self.skip_narration()
+            return
         BrickManager.shared().skip_skippable_sounds()
 
     def update(self) -> None:                             # 0x1000da794
         if self.arming:                                   # PORT ADDITION: see hand_over_weapons
             self.arming = self.arm()
-        if not self.arming and self.tell_story_if_due():  # PORT ADDITION
-            return
+        if not self.arming and self.narration is None:    # PORT ADDITION: see tell_story_if_due
+            self.tell_story_if_due()
+        if self.narration is not None:                    # PORT ADDITION: see narrate
+            self.narrate()
+            if self.player is None:                       # the epilogue has been read: the game is over
+                return
         self.check_skip_button_counter = self.check_skip_button_counter + 1
         if self.check_skip_button_counter == 20:
             self.check_skip_button_counter = 0
-            if BrickManager.shared().has_skippable_sounds_playing():
+            # PORT ADDITION: the story being read is a line that can be skipped (`narrate`)
+            if (BrickManager.shared().has_skippable_sounds_playing()
+                    or (self.narration is not None and self.narration.skippable())):
                 self.skip_button_hidden = False
                 if self.host is not None:
                     self.host.layout_changed()            # UIAccessibilityLayoutChangedNotification
@@ -1151,57 +1149,46 @@ class ChallengeGameplayController(GameplayController):
     #: 10X" - ten, so that a skip stays the exception it is meant to be)
     REVIVE_SKIP_FACTOR = 10
 
-    def tell_story_if_due(self) -> bool:
-        """PORT ADDITION (user request, 2026-10-01): a wave that carries `Story` - the Extra mode's story, in
-        text - pauses the game as it begins and shows it (`StoryController`), and the wave is played once it
-        has been read, or sooner if the player goes on.  Each part is told once a game: a wave fought again
-        after a revive does not tell it twice.  With no screen to read it on (a run with none, as the referee
-        plays) it is passed over.
+    def tell_story_if_due(self) -> None:
+        """PORT ADDITION (user request, 2026-10-01): a wave that carries `Story` - a part of the Extra mode's
+        story, in text - has it read out as the wave begins, and the wave waits until it has been
+        (`narrate`).  Each part is told once a game: a wave fought again after a revive does not tell it
+        twice.  With no screen to read it on (a run with none, as the referee plays) it is passed over.
 
         A wave that hands over a new set of weapons tells it once they have been read out and the new gun
         drawn and ready (`hand_over_weapons`, `arm`; user request, 2026-10-03), so the order there is the
         line, the pause, the draw and the gun's name, the story and the wave.
 
-        It is shown once what was already being said as the wave began has been heard out (user request,
+        It is read once what was already being said as the wave began has been heard out (user request,
         2026-10-02): the challenge's start clip, the announcer, a gun naming itself, the revive's answer and
-        the weapons a wave hands over (`opening_lines`, `GameplayScreen.still_announcing`).  The game is
-        paused at once all the same, holding everything else (`pause_game`), so the wave does not begin
-        before its story; those lines are left out of the hold and play to their end, and the story comes
-        when they have (`tell_story_when_quiet`).  A pause holds every sound playing, and held under the
-        story the start clip used to finish only after it.
-
-        The start clip is `start_level_button`, which the overview's Play (`playButtonSound` 0x1000d8d50),
-        the failed screen's Try again (0x1000720c4) and the pause menu's Restart play as they start the game:
-        three seconds, two of them heard.  Nothing in the original waits for it - `goToChallengeWithDict:`
-        loads the game at once and its timers run from `viewDidLoad` - but its challenges are written round
-        it: not one of the thirty first waves has a zombie on a clock, each waiting on a line or on another
-        zombie, and twenty-nine of them open with a second or two of nothing before the line.  The Extra
-        mode's first waves have no line, and most send a zombie at once, so the wave waits here instead."""
+        the weapons a wave hands over (`opening_lines`, `GameplayScreen.still_announcing`).  The start clip
+        is `start_level_button`, which the overview's Play (`playButtonSound` 0x1000d8d50), the failed
+        screen's Try again (0x1000720c4) and the pause menu's Restart play as they start the game: three
+        seconds, two of them heard.  Nothing in the original waits for it - `goToChallengeWithDict:` loads
+        the game at once and its timers run from `viewDidLoad` - but its challenges are written round it: not
+        one of the thirty first waves has a zombie on a clock, each waiting on a line or on another zombie, and
+        twenty-nine of them open with a second or two of nothing before the line.  The wave is held while
+        the story waits, as while it is read (`holds_the_wave`)."""
         b = BrickManager.shared().current_brick()
         text = (b.brick_dictionary or {}).get('Story') if b is not None else None
         if not text or b.name in self.stories_told:
-            return False
+            return
         self.stories_told.add(b.name)
         if self.host is None:
-            return False
-        self.story_view = StoryController(self, text)
-        self.pause_game(keep=self.opening_lines())
-        if self.still_opening():
-            self.story_wait = RunLoop.main().schedule_timer(STORY_WAIT_POLL, self.tell_story_when_quiet, True)
-        else:
-            self.host.present_story(self.story_view)
-        return True
+            return
+        self.narration = Narration(text, self.opening_lines())
 
     #: PORT ADDITION: the sounds, by name, that a story waits for when they are playing as its wave begins:
     #: the challenge's start clip, and the revive's answer when the revive skipped to the story's wave
     STORY_WAITS_FOR = ('start_level_button', 'revive_yes')
 
     def opening_lines(self) -> list:
-        """PORT ADDITION: the sounds playing now that a wave's story waits for (`tell_story_if_due`): those in
-        STORY_WAITS_FOR, anything of the announcer's, and a gun being drawn and naming itself
-        (`Weapon.deploy`, when a wave hands over weapons).  The wave's own recordings are never among them:
-        its story is told before its first tick, and the last wave's were stopped as it loaded
-        (`BrickManager.load_brick_with_name`)."""
+        """PORT ADDITION: the sounds playing now that a part of the story waits for (`tell_story_if_due`):
+        those in STORY_WAITS_FOR, anything of the announcer's, and a gun being drawn and naming itself
+        (`Weapon.deploy`, when a wave hands over weapons).  Only what is playing as it becomes due: a gun
+        switched to or an announcement made after that does not keep it waiting.  The wave's own recordings
+        are never among them: the wave is held until the story has been read, and the last wave's were
+        stopped as it loaded (`BrickManager.load_brick_with_name`)."""
         engine = S3DEngine.engine()
         announcer = engine.play_list_with_name('announcer')
         voices = set(announcer.agent_cache.values()) if announcer is not None else set()
@@ -1213,30 +1200,76 @@ class ChallengeGameplayController(GameplayController):
                 lines.append(sound)
         return lines
 
-    def still_opening(self) -> bool:
-        """PORT ADDITION: whether a story due to be told still has something to wait for: a line playing
-        (`opening_lines`), or the speech still reading what the game announced (the weapons handed over)."""
-        if self.opening_lines():
-            return True
-        announcing = getattr(self.host, 'still_announcing', None)
-        return bool(announcing is not None and announcing())
+    def narrate(self) -> None:
+        """PORT ADDITION (user request, 2026-10-03): one tick of a part of the story being told
+        (`Narration`), as the original's challenges tell theirs through Dr. Bastard's recordings.
 
-    def tell_story_when_quiet(self) -> None:
-        """PORT ADDITION: the story waiting for the wave's opening lines is shown once they are over.  The
-        game's own timers are stopped, so this runs on a run-loop timer (`tell_story_if_due`)."""
-        story = self.story_view
-        if story is None or story.gameplay_view_controller is None or self.host is None or self.player is None:
-            self.stop_story_wait()                        # the game has been left meanwhile
-            return
-        if self.still_opening():
-            return
-        self.stop_story_wait()
-        self.host.present_story(story)
+        Those are a wave's own `Sounds`, mostly `blocker` and `skippable`, and the game does not stop for
+        them: a recording plays for its length (`-[ADSound update:]` 0x1000b3914) while the player turns,
+        switches, reloads and fires.  Its enemies wait on it through `spawn_after` - when it ends or is
+        skipped (`finishSoundWithSkip:` 0x1000b4060), `soundOrEnemyWithNameWasDeactivated:withSkip:`
+        0x1000c6bb0 starts what waits on it (`checkSpawnAfterKill:withSkip:` 0x1000a20ac) - and a wave is not
+        cleared while a blocking one has not finished (`brickIsCleared` 0x1000a1658).  While a skippable one
+        plays the Skip button shows (`update` 0x1000da794, `hasSkippableSoundsPlaying` 0x1000a2c98) and the
+        challenge's clock stands still (`updateStats` 0x1000daa68).
 
-    def stop_story_wait(self) -> None:
-        if self.story_wait is not None:
-            self.story_wait.invalidate()
-            self.story_wait = None
+        The story is that, in text.  Once what it waits for is over it is handed to the speech that reads
+        what is said during a game (`Speech.speak_in_game`: the second speech while Use second speech is on),
+        and the wave is held (`holds_the_wave`) - nothing of it spawns, moves or counts, and the challenge's
+        clock stands still - until the time that speech is taken to need for it has passed: its words at the
+        speech's own calibration (ui/reading.py).  The game itself runs all the while: turning, switching,
+        reloading, firing, the ambience.  Skipping the dialogue stops the speech and begins the wave at once
+        (`skip_narration`).  Until 2026-10-03 the story was a screen of its own, with a Continue button, and
+        the game was paused under it; the user asked for it to be the original's lines in text instead ("just
+        follow how the original challenge behave, just replace the audio thing with text")."""
+        from ..platform.speech import Speech
+        from ..ui.reading import in_game_speech, reading_seconds
+        from .. import localization
+        n = self.narration
+        if self.paused or getattr(self, 'death_overlay_visible', False):
+            return
+        if n.state == n.WAITING:
+            announcing = getattr(self.host, 'still_announcing', None)
+            if any(s.playing for s in n.waiting_for) or (announcing is not None and announcing()):
+                return
+            n.state = n.DUE
+        now = RunLoop.main().now()
+        if n.state == n.DUE:
+            Speech.shared().speak_in_game(n.text)
+            n.read_at = now
+            n.seconds = reading_seconds(localization.translate(n.text), in_game_speech())
+            n.state = n.READING
+            return
+        if now - n.read_at >= n.seconds:
+            log.info('the story has been read')
+            self.end_narration()
+
+    def skip_narration(self) -> None:
+        """PORT ADDITION: the dialogue skipped while a part of the story is read, by whatever skips the
+        original's lines (`skip_button_pressed` 0x1000da728): the speech reading it stops, and the wave begins
+        - or the completed screen comes - at once."""
+        from ..platform.speech import Speech
+        if self.narration.state == Narration.READING:
+            Speech.shared().stop_in_game()
+        log.info('the story was skipped')
+        self.end_narration()
+
+    def end_narration(self) -> None:
+        n, self.narration = self.narration, None
+        if n is not None and n.after is not None:
+            n.after()
+
+    def pause_game(self) -> None:
+        """PORT ADDITION to `pauseGame` 0x10005b5fc: a part of the story being read stops with the game, and
+        is read again from its start once the game runs again (`narrate`).  Speech cannot be paused where it
+        is, and left to go on it read over the pause menu, or was cut by it; a pause held for any time loses
+        the thread of a sentence anyway.  The wave stays held meanwhile."""
+        super().pause_game()
+        n = self.narration
+        if n is not None and n.state == n.READING:
+            from ..platform.speech import Speech
+            Speech.shared().stop_in_game()
+            n.state = n.DUE
 
     def allows_revive(self) -> bool:
         """PORT ADDITION (user request, 2026-10-01): an arena of the Extra mode offers the revive that Endless
@@ -1360,8 +1393,9 @@ class ChallengeGameplayController(GameplayController):
         return weapons.current_weapon.state == 1
 
     def holds_the_wave(self) -> bool:
-        """PORT ADDITION: while a new set of weapons is being handed over (`arm`)."""
-        return self.arming
+        """PORT ADDITION: while a new set of weapons is being handed over (`arm`), and while a part of the
+        story waits to be read or is read (`narrate`)."""
+        return self.arming or self.narration is not None
 
     def init_brick_manager(self) -> None:                 # 0x1000daf74
         bm = BrickManager.shared()
@@ -1399,13 +1433,14 @@ class ChallengeGameplayController(GameplayController):
 
     def go_to_score_screen(self) -> None:                 # 0x1000db588
         # PORT ADDITION (user request, 2026-10-01): an arena of the Extra mode whose story ends with it
-        # (`Epilogue`) tells that end once the last wave is won, before the completed screen.
+        # (`Epilogue`) tells that end once the last wave is won, before the completed screen - read out as a
+        # part of the story is (`narrate`), where the original's challenges play a closing line as a last wave
+        # of nothing but a blocking recording.  The completed screen comes once it has been read, or at once
+        # when it is skipped.
         text = (self.challenge_dictionary or {}).get('Epilogue')
         if text and self.host is not None and not self.epilogue_told:
             self.epilogue_told = True
-            self.pause_game()
-            self.story_view = StoryController(self, text, after=self.go_to_score_screen)
-            self.host.present_story(self.story_view)
+            self.narration = Narration(text, self.opening_lines(), after=self.go_to_score_screen)
             return
         InGameStats.singleton().force_complete_accuracy()
         self.go_to_challenge_completed_screen()

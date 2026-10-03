@@ -74,8 +74,8 @@ The game works out when the item has been read from how fast your speech
 reads, whatever speaks it: a screen reader, SAPI 5, the Mac's system voice or
 the phone's own. It counts the item's words, allows each the time you measured
 with **Speech calibration**, and starts the pause from there. The Extra mode's
-story waits the same way before it goes on. Until the speech has been
-measured, the game allows an ordinary pace, 180 words a minute.
+story is timed the same way: its wave comes once it has been read. Until the
+speech has been measured, the game allows an ordinary pace, 180 words a minute.
 
 **Speech calibration** is a row of each speech's page, on Windows, the Mac
 and the phone, and it says the pace measured, such as "240 words a minute".
@@ -621,7 +621,8 @@ In a game, Settings → Controls chooses between two modes, as the original did.
 | the phone's Back | pause | the same |
 
 In a challenge, Skip dialogue is the first button on the pause screen while
-there is a line to skip. In the intro, a triple tap with one finger skips it.
+there is a line to skip: one of Dr. Bastard's, or a part of the Extra mode's
+story. In the intro, a triple tap with one finger skips it.
 
 ### Building the app
 
@@ -898,7 +899,7 @@ In a game, these are the defaults; all of them can be rebound in
 | R, or Down arrow under Gesture | reload |
 | Left / Right arrow | turn |
 | Escape | pause: Resume, Restart challenge (in a challenge), End Game |
-| Enter | skip the narration |
+| Enter | skip the narration: Dr. Bastard's lines, and the Extra mode's story |
 | T | read the challenge timer |
 
 Those two follow the control scheme, because the scheme changes what the action
@@ -968,7 +969,7 @@ In a game:
 | L1, or a stick flicked up or D-pad up under Gesture | next weapon |
 | L2, or a stick flicked down or D-pad down under Gesture | reload |
 | Options | pause, and Options again to resume |
-| Cross (A) | skip the narration |
+| Cross (A) | skip the narration: Dr. Bastard's lines, and the Extra mode's story |
 | Square | read the challenge timer |
 
 Under **Gesture** a stick flicked up or down is the swipe, as the Up and Down
@@ -1386,11 +1387,11 @@ replacing them.
   selector does for the original's, and none of them says how it is beaten. Between them they use every
   weapon in the armory, every power-up a crate can hold and every kind of zombie; from chapter 4 on some
   want guns upgraded with diamonds, so a player may have to play Endless before going on. They tell a
-  story, *The Long Way Home*, in text between waves, and end with **Reprise**, every chapter again in one
-  long arena with the weapons changing hands between acts. The game waits while a part of the story is
-  read and goes on by itself when it has been; Enter goes on sooner, and moving through the text waits for
-  Continue. A death offers a revive for diamonds, which plays the wave again, or a skip to the next wave
-  for ten times as much.
+  story, *The Long Way Home*, in text, and end with **Reprise**, every chapter again in one long arena with
+  the weapons changing hands between acts. A part of the story is read out as a wave begins, the way the
+  original's challenges play Dr. Bastard's lines: the game goes on, so you can turn, switch, reload and
+  fire, and the wave comes once it has been read, or at once if you skip the narration. A death offers a
+  revive for diamonds, which plays the wave again, or a skip to the next wave for ten times as much.
 - **Game controllers**: a DualSense, DualShock, Xbox, Switch Pro or most other pads, in the menus and in
   play, with a stick that turns as fast as it is pushed, vibration for the heartbeat, hits, kills,
   explosions and your death, the phone's shake, and a DualSense's triggers that feel like a gun, each at

@@ -329,16 +329,6 @@ class TouchInput:
                 import pygame
                 self._key(pygame.K_ESCAPE)
 
-    @staticmethod
-    def _took_over(top) -> None:
-        """PORT ADDITION: stopping the speech or reading the screen again is the player reading it for
-        themselves, and a screen that would go on by itself waits for them instead once it is told
-        (ui/gameplay_screen.StoryScreen).  Swipes and taps tell it as the keys they stand for; these two
-        gestures are not keys, so they tell it here."""
-        took_over = getattr(top, 'player_took_over', None)
-        if took_over is not None:
-            took_over()
-
     def _read_all(self, from_top: bool) -> None:
         """VoiceOver's two-finger swipe: read the screen from the top, or on from the element in focus.  It is
         one reading, so each element's hint is read with it, with no pause - none at all with Hints off."""
@@ -348,7 +338,6 @@ class TouchInput:
         top = self.host.top()
         if not isinstance(top, AccessibleScreen):
             return
-        self._took_over(top)
         elements = top.elements()
         if not from_top and top.focus in elements:
             elements = elements[elements.index(top.focus):]
@@ -409,7 +398,6 @@ class TouchInput:
                 if self.gesture_max == 2:                  # VoiceOver's two-finger tap: stop speaking
                     from .platform.speech import Speech
                     Speech.shared().stop()
-                    self._took_over(self.host.top())
                 elif self.gesture_max == 4:                # four-finger tap: first or last element
                     import pygame
                     y = sum(self.gesture_ys) / len(self.gesture_ys)

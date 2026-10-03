@@ -15,12 +15,12 @@ read again.
 When the item has been read is predicted, the same way for every voice (user request, 2026-10-02): the
 words in the line times the seconds a word the player measured in the Speech tab's Speech calibration row
 (`reading_seconds`), or at DEFAULT_WORDS_PER_MINUTE until they have.  The pause before the hint counts from
-that moment.  The Extra mode's story is timed the same way (ui/gameplay_screen).  A screen reader cannot be
-asked when it has finished - NVDA's controller client only speaks, cancels, brailles and says whether NVDA is
-running, and Prism and VoiceOver's Apple Event only hand a line over - and the game's own voices (SAPI 5, the
-Mac's system voice, the phone's text-to-speech), which can, were followed to their real end at first.  That
-was given up for one rule for every voice: the player's calibration and settings are what the game follows,
-whatever speaks it.
+that moment.  The Extra mode's story is timed the same way (`ChallengeGameplayController.narrate`).  A
+screen reader cannot be asked when it has finished - NVDA's controller client only speaks, cancels, brailles
+and says whether NVDA is running, and Prism and VoiceOver's Apple Event only hand a line over - and the game's
+own voices (SAPI 5, the Mac's system voice, the phone's text-to-speech), which can, were followed to their real
+end at first.  That was given up for one rule for every voice: the player's calibration and settings are what
+the game follows, whatever speaks it.
 
 A braille display is read at the reader's own pace, so it is given the item and its hint together, at once,
 the way NVDA puts an object's description beside its name; the hint said later is not brailled again, which

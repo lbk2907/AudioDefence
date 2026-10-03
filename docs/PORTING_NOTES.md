@@ -1216,15 +1216,15 @@ they were.
   `pause_game` holds every sound still playing in the engine as it runs - a Fireworks launch and its
   explosions, the Tornado's wind, the Tesla's zap, a shot's tail, a projectile, any one-shot - and
   `resume_game` lets go of exactly those, each from where it was (`hold_every_sound`, `S3DEngine.hold`).
-  Only what is playing at that moment is held, so the pause menu's own sounds, the revive screen, the story
-  screen and anything else started afterwards play as they always did.  A held sound tells the dispatcher
+  Only what is playing at that moment is held, so the pause menu's own sounds, the revive screen and
+  anything else started afterwards play as they always did.  A held sound tells the dispatcher
   nothing, so one that ends while held does not fire its end callback early: a power-up paused during its
   announcement starts when the announcement has finished, after the game is back.  A second pause keeps
   what the first is holding, and a resume lets go once.  Speech is not the engine's - the screen readers
   speak for themselves, and SAPI 5, when the game plays it, through a sound card of its own
   (`platform/speech_audio.py`) - so a pause is never silent for want of it.  The room keeps sounding, as
   the entry on the pause menu above has it (`AmbientManager.room_sounds`).  A game ended from a pause -
-  End Game, Restart, an epilogue - stops what was held instead of letting it go over the next screen
+  End Game or Restart - stops what was held instead of letting it go over the next screen
   (`kill_gameplay`).
 * Being killed by a Berserk counts (user request).  `-[ADEnemy update:]`'s case 3 posts `PLAYER_DIED` at
   0x10005f16c and then attacks; case 8, the berserk charge, goes straight to `attack` at 0x10005f468 with no
@@ -2633,66 +2633,87 @@ they were.
   nothing and played no deploy or voice, the same gun in hand with full ammunition; a revive in Reprise's
   ninth wave and in its tenth kept the Police Shotgun, Bazooka and Wok; a skip from the eighth to the ninth
   read out the new set and drew the Police Shotgun, as reaching it by winning does.
-* PORT ADDITION: the Extra mode tells a story, in text, between waves (user request, 2026-10-01).  A wave
-  that carries `Story` pauses the game as it begins - `pause_game`, as the pause menu pauses it - and shows
-  the text on a screen of its own (`StoryScreen`), where the screen reader reads it first; Continue, or
-  Back, plays the wave from its start (`ChallengeGameplayController.tell_story_if_due`).  The original's
-  challenges talk through Dr. Bastard's recordings (`Sounds`), which no arena of the port's has; a story in
-  text needs no recordings and can be translated, so `tools/verify_localization.py` offers a wave's
-  `Story` to translators as it offers an arena's title.  Each part is told once a game: a wave fought again
-  after a revive does not tell it twice.  An arena's `Epilogue` is told once its last wave is won and the
-  last death heard out, before the completed screen (`go_to_score_screen` 0x1000db588) - where the
-  original's challenges play their closing lines, as a last wave of nothing but recordings.  Checked
-  headless: two waves each told their part before anything moved, the wave's clock stood still for the
-  three seconds the text was up, and both played on; an epilogue came between the last wave and the
-  completed screen.  The story itself, The Long Way Home, is `additions.STORY` and `EPILOGUES`.
+* PORT ADDITION: the Extra mode tells a story, in text, read out as its waves begin (user request,
+  2026-10-01).  A wave that carries `Story` has it read out as a line of the game's as the wave begins
+  (`ChallengeGameplayController.tell_story_if_due`, `narrate`), and an arena's `Epilogue` is read once its
+  last wave is won and the last death heard out, before the completed screen (`go_to_score_screen`
+  0x1000db588).  The original's challenges talk through Dr. Bastard's recordings (`Sounds`), which no arena
+  of the port's has; a story in text needs no recordings and can be translated, so
+  `tools/verify_localization.py` offers a wave's `Story` to translators as it offers an arena's title.  Each
+  part is told once a game: a wave fought again after a revive does not tell it twice.  With no screen at
+  all - the referee - it is passed over.  The story itself, The Long Way Home, is `additions.STORY` and
+  `EPILOGUES`.
 
-  It carries on by itself once it has been read (user request, 2026-10-02), and an epilogue goes on to the
-  completed screen the same way; Continue, Enter wherever the cursor is, and Back still go on at once.  The
-  reading is timed, the same way whatever speaks it (user request, 2026-10-02): the words at the pace
-  measured in Speech calibration (`ui/reading.py`), or at `DEFAULT_WORDS_PER_MINUTE` (180, an ordinary
-  speaking pace) until it has been, and `STORY_MARGIN` (1.5 s, `ui/gameplay_screen.py`) on top - so at 180,
-  15 words go on after 6.5 seconds and 55 after 19.8.  This replaces the first design, of the same day, in
-  which only a screen reader was timed, since it cannot be asked when it has finished (NVDA's controller
-  client exports speakText, cancelSpeech, testIfRunning and brailleMessage and nothing else, and Prism and
-  VoiceOver's Apple Event only hand a line over), and the game's own voices were followed to their real end,
-  the story going on a second after they fell quiet: SAPI 5 through its thread, by the voice's
-  `RunningState` spoken to Windows and by the end of the line's stream going past the game's stream object
-  written into the game; the Mac's system voice through `isSpeaking`; the phone's through a `speechBusy` on
-  the Bridge, an `UtteranceProgressListener` with `isSpeaking` behind it.  The user asked for one rule for
-  every voice - what the game follows is the player's calibration and settings, not what a voice reports -
-  and with nothing left asking, all of that was taken out again.  Checked headless with a stand-in SAPI 5
-  that fell quiet after a second, the speech measured at 0.1 s a word: The Barnyard's 55 words went on after
-  6.95 s against the 7.0 predicted (5.5 s and the margin).
-  The game's update timers are stopped under the story, so the screen waits on a run-loop timer of its own.
-  Any key but Enter and Back hands the screen to the player, and it then waits for Continue: moving through
-  the text is reading it item by item, which the go-on would cut off, and every key on this screen cuts the
-  speech (`ui/host.py`, as screen readers do), after which there is no telling what was heard.  The phone's
-  two-finger tap and two-finger swipe, which stop and reread, count as keys here.  Leaving the game's window,
-  or the app going into the background, makes it wait too (`App.pause_game`), so the game never plays on
-  with nobody there.  With no screen at all - the referee - the story is passed over as before.
+  It follows the original's lines (user request, 2026-10-03: "just follow how the original challenge
+  behave, just replace the audio thing with text").  Those are a wave's own `Sounds`, most of them
+  `blocker` and `skippable` (104 and 97 of the 131 in the game's plists, 79 both), and the game does not
+  stop for them.  A recording plays for its length (`-[ADSound update:]` 0x1000b3914) while the player
+  turns, switches, reloads and fires; the enemies that wait on it through `spawn_after` start when it ends
+  or is skipped (`finishSoundWithSkip:` 0x1000b4060, `soundOrEnemyWithNameWasDeactivated:withSkip:`
+  0x1000c6bb0, `checkSpawnAfterKill:withSkip:` 0x1000a20ac); a wave is not cleared while a blocking one
+  has not finished (`brickIsCleared` 0x1000a1658), which is how a challenge's closing line - a last wave of
+  nothing but that recording - comes before the completed screen; and while a skippable one plays, the Skip
+  button shows (`update` 0x1000da794, `hasSkippableSoundsPlaying` 0x1000a2c98), Skip skips it
+  (`skipButtonPressed:` 0x1000da728, `skipSkippableSounds` 0x1000c7a34, `skipAllSkippableSounds`
+  0x1000a2e40), and the challenge's clock stands still (`updateStats` 0x1000daa68).  So a part of the story
+  is handed to the speech that reads what is said during a game (`Speech.speak_in_game`, the second speech
+  while Use second speech is on) and the game runs on, while the wave is held as it is for a hand-over of
+  weapons (`holds_the_wave`): nothing of it spawns, moves or counts, and the challenge's clock stands
+  still, until the time that speech is taken to need for the text has passed - its words at that speech's
+  own calibration (`ui/reading.py`), or 180 words a minute until it has one.  Then the wave begins, or,
+  after an epilogue, the completed screen comes.  The original's skip skips it - Enter, a controller's
+  Cross (A), and on the phone the pause menu's Skip dialogue, offered while it is read - stopping the speech
+  that reads it (`Speech.stop_in_game`) and beginning the wave, or bringing the completed screen, at once.
 
-  It waits for what is already being said as its wave begins (user request, 2026-10-02).  A pause holds
-  every sound playing, so the challenge's start clip - `start_level_button`, which Play on the overview
-  (`playButtonSound` 0x1000d8d50), Try again (0x1000720c4) and the pause menu's Restart play as they start
-  the game, three seconds of which two are heard - was held under the first wave's story and finished after
-  it.  The game is still paused at once, so the wave does not begin before its story, but the start clip,
-  the announcer, a gun being drawn and naming itself (`Weapon.deploy`, when a wave hands weapons over), the
-  revive's answer and the weapons read out are left out of the hold and play to their end, and the story is
-  shown once they are over (`opening_lines`, `GameplayScreen.still_announcing`, looked at on a run-loop
-  timer, `pause_game(keep=)`); the weapons' line is timed from its words, as a hint is, whatever speaks it.
-  Nothing in the original waits for the clip: `goToChallengeWithDict:`
-  0x100082278 loads the game at once and its timers run from `viewDidLoad`.  Its challenges are written
-  round it instead - none of the thirty first waves has a zombie on a clock, each waiting on a line or on
-  another zombie, and twenty-nine open with a second or two of nothing before Dr. Bastard's or the
-  announcer's line - while most of the Extra mode's first waves send a zombie at once; so here the wave
-  waits.  A wave's own recordings cannot be playing then: its story is told before its first tick, and the
-  last wave's are stopped as it loads.  Checked headless with the overview's own Play on The Barnyard: the
-  game paused at once with the clip playing and not held, the wave not moved on, and the story shown 0.05 s
-  after the clip ended at 3.00 s with nothing held under it; without the clip, at once as before; leaving
-  the window during the wait made the story wait for Continue; on Reprise's third wave the story waited for
-  the Hunting Rifle's deploy and voice and for "New weapons: Hunting Rifle, Micro SMG, Golf" to be read
-  (2.35 s against 2.33); the referee still passed it over.
+  A wave's enemies with neither a spawn time nor a `spawn_after` are spawned as the wave is made
+  (`initBrickWithName:` 0x10009ea80), which would set them in the arena while the story is read, to be
+  heard and shot with the clock stopped.  In a wave with a story they are spawned on its first update
+  instead, the first tick it is not held (`Brick.held_spawns`); with nothing read - the referee, a wave
+  fought again - that is the tick after it was made.  Six waves have such enemies: Three Bullets', No
+  Wake's, Survivor's two, Keg Ring's first ring and Hydra's.
+
+  A pause stops the reading with the game, and it is read again from its start, and waited for again, when
+  the game runs again (`ChallengeGameplayController.pause_game`): speech cannot be paused where it is, and
+  left to run on it read over the pause menu or was cut by it.  Leaving the window pauses the game, as it
+  always does, and so the same.  End Game while an epilogue is read is the failed screen, as it is during
+  the original's closing line.
+
+  From 2026-10-01 to 2026-10-03 it was a screen of its own (`StoryScreen`) with a Continue button, under
+  which the game was paused (`pause_game`); it went on by itself once the reading had been timed out
+  (`STORY_MARGIN`, 1.5 s, on top), but a key pressed on it - an arrow, pressed as though to turn - left it
+  waiting for Continue, even after the player went back to the text.  The user asked for no screen and no
+  Continue button: the original's lines do not stop the game.
+
+  It waits for what is already being said as its wave begins (user request, 2026-10-02): the challenge's
+  start clip - `start_level_button`, which Play on the overview (`playButtonSound` 0x1000d8d50), Try again
+  (0x1000720c4) and the pause menu's Restart play as they start the game, three seconds of which two are
+  heard - the announcer, a gun being drawn and naming itself (`Weapon.deploy`, when a wave hands weapons
+  over), the revive's answer and the weapons read out (`opening_lines`, `GameplayScreen.still_announcing`):
+  whichever of them are playing as it becomes due, with the wave held meanwhile.  So a wave that hands over
+  weapons goes the line, the pause, the draw and the gun's name, the story, and then the wave.  Nothing in
+  the original waits for the clip: `goToChallengeWithDict:` 0x100082278 loads the game at once and its
+  timers run from `viewDidLoad`.  Its challenges are written round it instead - none of the thirty first
+  waves has a zombie on a clock, each waiting on a line or on another zombie, and twenty-nine open with a
+  second or two of nothing before Dr. Bastard's or the announcer's line - while most of the Extra mode's
+  first waves send a zombie at once; so here the wave waits.
+
+  Checked headless with a scratch profile, a stand-in NVDA and stand-ins for both SAPI 5 voices, Prism
+  stubbed out and the listener muted, through the real screens and keys, with the first speech measured at
+  0.1 s a word and the second at 0.15.  The Barnyard from the overview's Play waited for the start clip with
+  the wave held and the game not paused, and its 55 words went to NVDA 0.03 s after the clip ended; while
+  they were read the player turned, fired and reloaded (and switched, in Reprise), the Skip button showed,
+  nothing of the wave spawned or moved and the clock stood still; the wave began 5.55 s after the story
+  against 5.50 predicted.  With the second speech on it was the second's, and timed at 8.25 s.  Enter, the
+  controller's skip and the phone's Skip dialogue each skipped it, stopping the second speech and not the
+  first, and the wave began at once.  Paused, the reading stopped and was read again on Resume, and the
+  wave began 5.50 s after that; leaving the window brought the pause menu and stopped it the same way.
+  Three Bullets' figure was not in the arena, nor could it be shot, until the wave began.  In Reprise's
+  third wave: "New weapons", the draw 0.50 s after its predicted end, the gun ready, the story once the
+  draw's sound had ended, and the wave 1.80 s after the story against 1.80.  The Survivor's epilogue was
+  read once the last wave was won, and the completed screen came 4.15 s after it against 4.10, or at once
+  when it was skipped.  A revive replayed the wave without telling its story again.  With no screen the
+  story and the epilogue were passed over, and the held figure stood from the first tick.  No story screen
+  came up at any point.
 * PORT ADDITION: Extra holds campaigns, and a campaign holds chapters (user request, 2026-10-01).  Play,
   Extra opens on a list of campaigns (`additions.CAMPAIGNS`, `ExtraMenuScreen`), each row its name and the
   stars won of the stars it holds - "The Long Way Home, 30 of 147 stars" - and each opening its chapters
@@ -3219,19 +3240,17 @@ they were.
   SAPI 5, the system voice or the phone's engine with that speech's voice, rate, pitch and volume.  An output
   that cannot speak just now says so through one that can, as choosing it does (`say_silent`).
 
-  While Use second speech is on, the second speech reads what is read out during a game: the story screen's
-  text and the epilogue's (`StoryScreen.speak_element`; its Continue button is read by the first, as every
-  button is), the tutorial's lines (`ADSound.speak_tutorial_text`), the game's announcements
-  (`GameplayScreen.announce`: the weapons a wave hands over) and the challenge
-  timer's key.  All of them go through one door, `Speech.speak_in_game`, which with the switch off is
-  `Speech.speak` - the first speech, line for line as before - and anything added later that reads text
-  during a game is to go through it too.  Everything else stays with the first speech: the menus, the hints,
-  the pause menu, Settings, a controller coming and going, the phone's Pause button read as it is touched.
-  The second speech's own rows and calibration speak through `Speech.speak_second`, whether it is used or
-  not.  A line is timed by the measurement of the speech that reads it (`reading.reading_seconds(text,
-  speech)`, `reading.in_game_speech`): the story's wait, and the wait for the weapons read out as a wave
-  begins (`GameplayScreen.still_announcing`), by the second's while it is on; the hints always by the
-  first's.
+  While Use second speech is on, the second speech reads what is read out during a game: the Extra mode's story
+  and its epilogue (`ChallengeGameplayController.narrate`), the tutorial's lines
+  (`ADSound.speak_tutorial_text`), the game's announcements (`GameplayScreen.announce`: the weapons a wave hands
+  over) and the challenge timer's key.  All of them go through one door, `Speech.speak_in_game`, which with the
+  switch off is `Speech.speak` - the first speech, line for line as before - and anything added later that reads
+  text during a game is to go through it too.  Everything else stays with the first speech: the menus, the
+  hints, the pause menu, Settings, a controller coming and going, the phone's Pause button read as it is
+  touched.  The second speech's own rows and calibration speak through `Speech.speak_second`, whether it is
+  used or not.  A line is timed by the measurement of the speech that reads it (`reading.reading_seconds(text,
+  speech)`, `reading.in_game_speech`): the story's wait, and the wait for the weapons read out as a wave begins
+  (`GameplayScreen.still_announcing`), by the second's while it is on; the hints always by the first's.
 
   Calibration is per speech, not per voice.  `speechWordTime` holds {"first": ..., "second": ...}; Speech
   calibration on the second speech's page reads the sample through the second speech, with its own output,
@@ -3262,12 +3281,12 @@ they were.
   engine gives way to the phone's default as the first's does (`settle_second_speech_engine`), and says so.
   A line interrupts only what its own speech is saying, unless both are the same screen reader, where an
   interrupting line cuts it as it always did; so a second-speech line never cuts a first-speech line that it
-  did not cut before.  On the story screen the text and Continue can therefore overlap when the player moves
-  to Continue while the second speech is still reading.  Nothing a player presses stops the second speech
-  (user request, 2026-10-03): it reads what is said during a game, and a key pressed to play must not cost a
-  line of it.  A key in the menus cuts the first SAPI 5 voice only (`interrupt_sapi`), and Control and the
-  phone's two-finger tap stop the first speech only (`Speech.stop`); when both speeches use the same screen
-  reader they are one voice, and stopping it stops both.  The opener's "Press Enter to skip intro" is said
+  did not cut before.  Nothing a player presses stops the second speech (user request, 2026-10-03): it reads
+  what is said during a game, and a key pressed to play must not cost a line of it.  Only the game does, when
+  a part of the story is skipped or paused (`Speech.stop_in_game`).  A key in the menus cuts the first SAPI 5
+  voice only (`interrupt_sapi`), and Control and the phone's two-finger tap stop the first speech only
+  (`Speech.stop`); when both speeches use the same screen reader they are one voice, and stopping it stops
+  both.  The opener's "Press Enter to skip intro" is said
   by the first speech (`OpenerGameplayController`): the opener is not a game being played.  A second output
   that cannot speak - a chosen screen reader not running - leaves the second speech silent, as the first is
   in the same case, and choosing it says so through the first.  `interrupt_sapi` now asks a voice for its

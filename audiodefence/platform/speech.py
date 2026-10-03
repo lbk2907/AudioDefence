@@ -762,8 +762,9 @@ class Speech:
     client, the others through the same Prism context - so its lines simply go to it, and one that interrupts
     cuts what it is saying, as it always has.  SAPI 5 is two voices (`_Sapi`), each with its own thread, its own
     settings and its own device for Use modern output, so neither cuts the other off; on the Mac, two system
-    voices.  A line interrupts only the output it is sent to.  A key in the menus cuts both SAPI 5 voices
-    (`interrupt_sapi`), and Control both speeches (`stop`), as they cut the one speech before.
+    voices.  A line interrupts only the output it is sent to.  A key in the menus cuts the first SAPI 5 voice
+    (`interrupt_sapi`) and Control the first speech (`stop`); the second is stopped only by the game, when a part
+    of the story is skipped or paused (`stop_in_game`).
     """
     _shared: 'Speech | None' = None
 
@@ -1036,3 +1037,29 @@ class Speech:
         # Not the second speech (user request, 2026-10-03): Control stops the first, and the second reads what is
         # said during a game, which nobody should miss.  When both speak through the same screen reader, stopping
         # it stops both: they are one voice then.
+
+    def stop_in_game(self) -> None:
+        """PORT ADDITION (user request, 2026-10-03): stop what is being read during a game (`speak_in_game`) - a
+        part of the Extra mode's story, skipped or paused (`ChallengeGameplayController.narrate`).  With Use
+        second speech off that is the first speech, and this is `stop`; with it on, the second, which nothing a
+        player presses stops - this is the one way to it, and only the game asks."""
+        if not self.second_on:
+            self.stop()
+            return
+        self.lines += 1
+        choice = self.second_choice
+        if choice == SCREEN_READER:
+            if self.nvda.running():
+                self.nvda.stop()
+        elif choice == 'sapi':
+            if self._second_sapi is not None:
+                self._second_sapi.stop()
+        elif choice in PRISM_NAMES:
+            if self._readers is not None:
+                self._readers.stop()
+        elif self.nvda.running():                         # Automatic, as `speak_second` chooses
+            self.nvda.stop()
+        elif self._readers is not None and self._readers.reader is not None:
+            self._readers.stop()
+        elif self._second_sapi is not None:
+            self._second_sapi.stop()
