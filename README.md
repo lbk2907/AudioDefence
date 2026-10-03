@@ -1687,6 +1687,63 @@ first — and note that the extractor needs the thin arm64 slice, not the fat
     py tools/extract_hrtf.py analysis/bin/audiodefence_arm64      needs capstone
     py tools/build_hrtf.py
 
+`build_hrtf.py` writes the `.mhr` file itself, in Python with `numpy`: no
+other program and no C++ compiler is needed for the game's own HRTF.
+
+### OpenAL Soft and the HRTF
+
+The game's 3D sound is played by [OpenAL Soft](https://openal-soft.org/), an
+open-source sound library. Its copy comes with the repository, so there is
+nothing to install:
+
+- Windows: `vendor\openal\soft_oal.dll`, version 1.25.1.
+- Mac: `vendor/openal-mac/libopenal.dylib`, built by
+  `tools/build_openal_mac.sh`.
+- The phone does not use it: the Android app has a small mixer of its own
+  that reads the same HRTF file.
+
+**How the game sets it up.** Every time it starts, the game writes OpenAL
+Soft's settings file, `alsoft.ini`, to the system's temporary folder
+(`%TEMP%\AudioDefence\alsoft.ini` on Windows), and points OpenAL Soft at it
+with the `ALSOFT_CONF` environment variable, so OpenAL Soft reads the game's
+settings and nobody else's. The file turns HRTF on, says where the game's HRTF
+files are (`hrtf-paths`, the `assets\hrtf` folder) and which one to use
+(`default-hrtf`, `audiodefence_ircam1050`). Editing it does nothing: it is
+written again at the next start. Your own OpenAL settings for other programs,
+`%APPDATA%\alsoft.ini`, are never read or changed. Builds before October 2026
+wrote the file to `%APPDATA%\AudioDefence`; a copy left there can be deleted.
+
+**Updating OpenAL Soft on Windows:**
+
+1. Download the Windows binaries, `openal-soft-<version>-bin.zip`, from
+   [OpenAL Soft's website](https://openal-soft.org/) or its
+   [releases on GitHub](https://github.com/kcat/openal-soft/releases).
+2. Take `soft_oal.dll` from the zip's 64-bit folder, `bin\Win64`.
+3. Put it in place of `vendor\openal\soft_oal.dll`.
+4. Start the game, then look in its log, `audiodefence.log` in
+   `%APPDATA%\AudioDefence`. A line saying `game HRTF audiodefence_ircam1050
+   not in use` means the new version did not take the game's HRTF; no such line
+   means it did.
+
+**Making another HRTF.** OpenAL Soft's `makemhr` turns a recording of how a
+head hears sound from every direction into an `.mhr` file. Research sets of
+these usually come as SOFA files (`.sofa`), which `makemhr` reads directly; it
+also reads its own `.def` definition files.
+
+- Windows: Papa Sangre for Windows takes `makemhr.exe` from the same
+  OpenAL Soft binaries zip. If your download does not have it, it can be built
+  from OpenAL Soft's source code (`utils/makemhr`) with CMake and Visual
+  Studio: the only step here that needs a C++ compiler.
+- Make the file at the game's sample rate, 44100:
+
+      makemhr -r 44100 -i set.sofa -o set.mhr
+
+- Put the `.mhr` in `assets\hrtf`. OpenAL Soft then lists it beside the
+  game's own, but the game still uses `audiodefence_ircam1050`: it has no
+  setting to choose another yet.
+- Check the research set's licence before giving the file to anyone: some
+  may not be passed on with a game.
+
 ## Building an executable
 
     py -m pip install pyinstaller
