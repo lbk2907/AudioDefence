@@ -66,6 +66,9 @@ class BrickManager:
         self.challenge_is_over = False
         self.started_main_menu_music = False
         self.gameplay_view_controller = None
+        #: PORT DIVERGENCE: seconds a challenge's cleared wave has waited for its passers-by, or None while it
+        #: is not waiting (`current_brick_is_cleared`)
+        self.passers_by_wait = None
 
     # --- configuration ---------------------------------------------------------------------------
     def load_brick_chance_plist(self, name: str) -> None:       # 0x1000c15d4
@@ -98,6 +101,7 @@ class BrickManager:
         self.current_wave = 0
         self.time_elapsed = 0.0
         self.started_main_menu_music = False
+        self.passers_by_wait = None                       # PORT DIVERGENCE: see current_brick_is_cleared
         # PORT ADDITION: Air Drop Inbound.  This runs once per game, which the power-up manager's own
         # init does not - it is built with the brick manager and lives as long as the app - so the card
         # is spent here rather than there, and only the first drop of the game is the free one.
@@ -229,6 +233,7 @@ class BrickManager:
 
     def load_next_brick(self) -> None:                          # 0x1000c3058
         self.player_is_dead = False
+        self.passers_by_wait = None                       # PORT DIVERGENCE: see current_brick_is_cleared
         self.current_wave += 1
         if self.mode == 1:
             self.current_random_angle = crand.c_mod(crand.rand(), 360)
@@ -268,15 +273,25 @@ class BrickManager:
         return b.enemies if b is not None else []
 
     # --- update ----------------------------------------------------------------------------------
-    def update(self, dt: float) -> None:                        # 0x1000c37b0
+    def update(self, dt: float, hold_current: bool = False) -> None:   # 0x1000c37b0
+        """`hold_current`, PORT ADDITION (user request, 2026-10-03): the wave just loaded is held while a new
+        set of weapons is handed over (`GameplayController.holds_the_wave`), and nothing else is.  Its own
+        `update:`, which counts its enemies' spawn times and moves them, plays its recordings and drops its
+        power-up crate, is not sent, and its own passers-by (`Brick.passers_by`) are not moved: nothing of it
+        is heard arriving or due.  Everything else goes on - the waves before it, whose last enemies may still
+        be dying and are heard to the end (each wave stays in `bricks`, and is updated, for the rest of the
+        game), a passer-by or a power-up crate already about, the diamonds, and Endless's timers, which never
+        hold."""
         if self.player_is_dead:
             return
         self.time_elapsed += dt
+        held = self.current_brick() if hold_current else None
         for b in list(self.bricks):
-            b.update(dt)
+            if b is not held:                             # PORT ADDITION: see hold_current
+                b.update(dt)
         for d in list(self.diamonds):
             d.update(dt)
-        self.passer_by_manager.update(dt)
+        self.passer_by_manager.update(dt, held.passers_by if held is not None else ())
         if self.mode == 1:
             self.power_up_manager.update(dt)
             if self.next_diamond_time < 0.0:
@@ -284,6 +299,15 @@ class BrickManager:
                 self.add_diamond()
             elif not self.player_is_dead:
                 self.next_diamond_time -= dt
+        if self.passers_by_wait is not None:              # PORT DIVERGENCE: see current_brick_is_cleared
+            self.passers_by_wait += dt
+            about = [p.name for p in self.passer_by_manager.all_passer_by() if p.holds_a_wave()]
+            if not about or self.passers_by_wait >= self.PASSERS_BY_WAIT_MOST:
+                if about:
+                    log.warning('wave %i goes on after %.0f s with %s still about', self.current_wave,
+                                self.passers_by_wait, ', '.join(about))
+                self.passers_by_wait = None
+                self.go_past_current_brick()
         self.minimum_squared_distance = float('inf')
         b = self.current_brick()
         for e in (b.enemies if b is not None else []):
@@ -495,7 +519,40 @@ class BrickManager:
             self.check_enemies_spawn_after_kill(name, skipped)
 
     def current_brick_is_cleared(self) -> None:                 # 0x1000c6ca0
+        """DIVERGENCE (user request, 2026-10-03): in a challenge - the original's and the Extra mode's alike -
+        a wave whose zombies are dead goes on to the next, or ends the challenge, only once its passers-by
+        have gone too: a cow still to come, arriving or walking (`PasserBy.holds_a_wave`).  The original
+        goes on the moment the last zombie dies, so a cow walked on through the next wave - for about fifty
+        seconds, the time one takes to cross the arena - and through a wave's hand-over of weapons.  The wait
+        is ended by `update`, the first tick none is left - walked off, or shot - and the challenge's clock
+        stands still meanwhile (`waits_for_passers_by`), since there is nothing left for the player to do but
+        wait or shoot the cow.  A car alarm, the jukebox, the machine and a power-up crate never hold a wave:
+        none of them leaves by itself.  PASSERS_BY_WAIT_MOST is a guard against one that somehow never goes.
+        Endless is untouched: there a cow is the cows card's, and comes and goes on its own clock."""
+        if self.passers_by_wait is not None:              # cleared already, and waiting
+            return
         notify_stats('DEFEATED_BRICK', None)
+        if self.mode == 2 and self.passers_by_about():
+            self.passers_by_wait = 0.0
+            return
+        self.go_past_current_brick()
+
+    #: PORT DIVERGENCE: the longest a cleared wave waits for its passers-by (`current_brick_is_cleared`).  A
+    #: cow is gone 52 s after it starts to walk from eleven units out, through the player and out to fifteen
+    #: on the other side; the latest in any challenge is gone 90 s into its wave (Cattle Call's third), and
+    #: every one of them earlier.  This only stops one that cannot leave from holding a wave for ever.
+    PASSERS_BY_WAIT_MOST = 120.0
+
+    def passers_by_about(self) -> bool:
+        """PORT DIVERGENCE: whether a passer-by a challenge's wave waits for is still to come or still about."""
+        return any(p.holds_a_wave() for p in self.passer_by_manager.all_passer_by())
+
+    def waits_for_passers_by(self) -> bool:
+        """PORT DIVERGENCE: whether a cleared wave is waiting for its passers-by (`current_brick_is_cleared`)."""
+        return self.passers_by_wait is not None
+
+    def go_past_current_brick(self) -> None:
+        """The rest of `currentBrickIsCleared` 0x1000c6ca0: the next wave, or the end of the challenge."""
         m = self.mode
         if m in (1, 3):
             self.load_next_brick()

@@ -657,7 +657,9 @@ class GameplayController:
             return
         if BrickManager.shared().has_skippable_sounds_playing():
             return
-        if self.holds_the_wave():                         # PORT ADDITION: not begun, so not counted
+        # PORT ADDITION: a wave held for a hand-over of weapons has not begun, and one waiting for its passers-by
+        # is over (BrickManager.current_brick_is_cleared): neither is counted
+        if self.holds_the_wave() or BrickManager.shared().waits_for_passers_by():
             return
         notify_stats('TIME_ELAPSED', 0.25)
         notify_stats('BRICK_TIME_ELAPSED', 0.25)
@@ -683,8 +685,7 @@ class GameplayController:
             mm.last_tilt_angle = mm.get_tilt_angle()
         for v in list(self.infinite_scroll_views):
             v.update()
-        if not self.holds_the_wave():                     # PORT ADDITION: see holds_the_wave
-            BrickManager.shared().update(0.05)
+        BrickManager.shared().update(0.05, hold_current=self.holds_the_wave())   # PORT ADDITION: see there
         if self.player is not None:
             self.player.update(0.05)
         if self.accessible_game_view is not None:
@@ -692,15 +693,18 @@ class GameplayController:
         self.update_score_view_with_animation(True)
 
     def holds_the_wave(self) -> bool:
-        """PORT ADDITION (user request, 2026-10-03): whether the wave is kept from beginning while the game
-        goes on round it - the turning, the ambience, the guns.  A wave runs on the brick manager's `update:`
-        0x1000c37b0: its enemies' spawn times, their walk, its recordings, its passers-by and its power-up
-        drop all count from it, so not sending it holds the whole wave, as its own `playerIsDead` test does.
-        (An enemy with no spawn time at all is spawned as the wave is made, `Brick.__init__`, and its spawn
-        sound is heard then, though it goes nowhere until this runs; every wave that hands over weapons gives
-        each of its enemies a time.)  Only an Extra wave handing over a new set of weapons asks for it
-        (`ChallengeGameplayController.arm`), and the challenge's clock does not run meanwhile either
-        (`update_stats`).  Endless never holds a wave."""
+        """PORT ADDITION (user request, 2026-10-03): whether the wave just loaded is kept from beginning while
+        the game goes on round it.  The brick manager's `update:` 0x1000c37b0 is sent as always, told to hold
+        that wave (`BrickManager.update`): its own update - its enemies' spawn times and their walk, its
+        recordings, its power-up drop - and its own passers-by are held, and nothing else is.  So the turning,
+        the ambience, the guns and a power-up in use go on, and so does what is left of the wave before: its
+        last zombie dying and heard to the end, a power-up crate it dropped, and a car alarm, jukebox or
+        machine, which stay from wave to wave.  (A cow of the wave before is gone by then: a challenge's wave
+        waits for its cows, `BrickManager.current_brick_is_cleared`.  An enemy with no spawn time at all is
+        spawned as its wave is made, `Brick.__init__`, and heard then, though it goes nowhere until the hold
+        is over; every wave that hands over weapons gives each of its enemies and passers-by a time.)  Only an
+        Extra wave handing over a new set of weapons asks for it (`ChallengeGameplayController.arm`), and the
+        challenge's clock does not run meanwhile either (`update_stats`).  Endless never holds a wave."""
         return False
 
     # --- input -----------------------------------------------------------------------------------
@@ -1125,7 +1129,8 @@ class ChallengeGameplayController(GameplayController):
         super().update_stats()
         if self.paused or BrickManager.shared().has_skippable_sounds_playing():
             return
-        if self.holds_the_wave():                         # PORT ADDITION: see GameplayController.update_stats
+        # PORT ADDITION: see GameplayController.update_stats
+        if self.holds_the_wave() or BrickManager.shared().waits_for_passers_by():
             return
         notify_stats('UPDATE_CHALLENGE_TIME_ELAPSED', 0.25)
 
@@ -1273,8 +1278,10 @@ class ChallengeGameplayController(GameplayController):
         Drawn together, as they were, the draw and the name were heard over the list.  Until the draw the
         guns are holstered (`WeaponManager.holstered`): fire, tapped or held, melee, the switch and the
         reload do nothing, by key, gesture, Button mode, controller or shake.  And the wave waits until
-        the drawn gun is ready, its switch's second over (`arm`, `holds_the_wave`): no enemy is spawned or
-        moves, no spawn time runs and the challenge's clock stands still.  Only then is a story the
+        the drawn gun is ready, its switch's second over (`arm`, `holds_the_wave`): none of its enemies or
+        passers-by is spawned or moves, none of its spawn times runs, and the challenge's clock stands still,
+        while what is left of the wave before - a zombie still dying, a power-up crate - goes on, as does a
+        power-up in use.  Only then is a story the
         wave carries told (`tell_story_if_due`), and the wave begins after it.  The wait is counted in the
         game's own ticks, so a pause holds it and it goes on after.  With no screen to read the line on
         (the referee) the gun is drawn at once, as before.

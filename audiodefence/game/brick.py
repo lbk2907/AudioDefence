@@ -32,6 +32,10 @@ class Brick:
         self.time_in_brick = 0.0
         self.sounds_playlist = None
         self.ambiant_name = None
+        #: PORT ADDITION: the passers-by this wave brought.  They live with every other passer-by in the
+        #: passer-by manager; the wave's own list is how a wave held for a hand-over of weapons holds its own
+        #: and no others (`BrickManager.update`).
+        self.passers_by: list = []
         enemies = self.brick_dictionary.get('Enemies') or {}
         for key, d in enemies.items():
             e = Enemy(key)
@@ -108,6 +112,7 @@ class Brick:
             else:
                 p.spawn()
             BrickManager.shared().add_passer_by(p)
+            self.passers_by.append(p)                     # PORT ADDITION: see `passers_by`
 
     # --- playlists -------------------------------------------------------------------------------
     def activate_all_playlists(self) -> None:                 # 0x10009fc98

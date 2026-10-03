@@ -122,6 +122,21 @@ class PasserBy(Enemy):
     def get_type(self) -> int:                            # 0x10000c0a4
         return 1
 
+    def holds_a_wave(self) -> bool:
+        """PORT ADDITION (user request, 2026-10-03): whether a challenge's wave waits for this passer-by before
+        the next wave begins or the challenge ends (`BrickManager.passers_by_about`): one that walks past and
+        off, a cow, from the moment it is due until it has walked out of the arena or been killed.  One whose
+        `spawn_after` is never answered (`Brick.check_spawn_after_kill` looks only at enemies and sounds) is
+        never due, and does not hold anything.
+
+        One that stays where it is - a car alarm, the jukebox, the machine, all of speed 0 - never leaves by
+        itself: a car alarm sounds until it is shot, the jukebox cannot be killed at all (a hundred million
+        life) and the machine wakes again after it is shot.  Waited for, they would hold a wave for ever, so
+        they stay for the waves after theirs, as they always have.  A power-up crate says no for itself."""
+        if self.destroyed or self._state == -1 or self._life <= 0.0:
+            return False
+        return self.speed > 0.0
+
 
 class CarAlarm(PasserBy):
     def __init__(self, name: str):                        # -[ADCarAlarm initWithName:] 0x1000ae8b8
@@ -402,3 +417,8 @@ class PowerUpContainer(PasserBy):
 
     def get_type(self) -> int:                            # 0x100069d90 -> [super getType] (ADPasserBy: 1)
         return super().get_type()
+
+    def holds_a_wave(self) -> bool:
+        """PORT ADDITION: a power-up crate never holds a wave (`PasserBy.holds_a_wave`): a power-up may carry
+        over into the next wave (user request, 2026-10-03)."""
+        return False

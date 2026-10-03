@@ -1186,7 +1186,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **176 divergences** and **15 original quirks kept on purpose** in the notes, of which 78 are
+There are **177 divergences** and **15 original quirks kept on purpose** in the notes, of which 79 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -1311,6 +1311,11 @@ Faults in the game's own logic, not in how it describes itself. Each was read ag
 - **A wave that is only a cutscene plays it.** Its sounds are built asynchronously, so for an instant the
   wave looks empty — and a wave with no enemies looked finished the moment it loaded, ending the challenge
   before its closing line existed.
+- **A challenge's next wave waits for its cows** (user request). A cow still to come or still walking when
+  a wave's last zombie died used to wander on through the next wave, for up to a minute. Now the next
+  wave, and the end of the challenge, wait until the cows have walked off or been shot, and the challenge's
+  clock stops meanwhile, so a time star is no harder. Car alarms, the jukebox and the machine stay from wave
+  to wave as before, since they never leave by themselves, and a power-up crate never holds a wave up.
 - **Dying in a challenge starts no music.** This is the one item on this list taken from a recording rather
   than the disassembly: the binary has a line that would start the game-over theme, the real game plays none,
   and the mechanism that suppresses it could not be found.

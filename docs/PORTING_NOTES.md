@@ -2430,26 +2430,91 @@ they were.
   gesture, Button mode quarter, controller button and shake reaches the guns through the manager, so that is
   where they are turned away - fire and melee in `isWeaponReadyToShoot` 0x1000aa350, which both already ask,
   the switch in `selectNextWeapon` 0x1000a9e04 and the reload in `reloadGestureDown` 0x1000aac7c and
-  `reloadGestureUp` 0x1000aacd8.  The wave waits until the drawn gun is ready, its switch's second over
-  (`ChallengeGameplayController.arm`): the brick manager's `update:` 0x1000c37b0, which every spawn time,
-  step, recording and drop of a wave counts from, is not sent (`holds_the_wave`), as its own `playerIsDead`
-  test holds it, and the challenge's clock does not run.  Turning, the ambience and the guns go on.  The wait is counted in the update timer's ticks,
-  so a pause holds it and it goes on after.  A story on the wave is told once the hand-over is over and the
-  deploy and the name have been heard, so the order is the line, the pause, the draw, the story and the
-  wave.  The first wave's set and a revive's are in hand at once with nothing said or drawn, as before, and
-  with no screen to read the line on (the referee) the gun is drawn at once, as before.  An old gun's reload
-  still sounding is stopped with it: a death puts the gun back at rest (`stop_firing_now`) and left its
-  reload playing, which a revive into the same set played on.  Every gun of every set arrives as
+  `reloadGestureUp` 0x1000aacd8.  The new wave waits until the drawn gun is ready, its switch's second over
+  (`ChallengeGameplayController.arm`), and only the new wave waits (user request, 2026-10-03): the brick
+  manager's `update:` 0x1000c37b0 is sent as always, told to hold the wave just loaded (`holds_the_wave`,
+  `BrickManager.update`).  That wave's own `update:` 0x1000a0ed0 - its enemies' spawn times and their walk,
+  its recordings, its crate's drop - is not sent, and its own passers-by are not moved (`Brick.passers_by`,
+  the ones its `initPassersBy` 0x10009f6b4 made; they live with all the others in the passer-by manager); the
+  challenge's clock does not run.  Everything else goes on.  Every wave stays in the brick manager's list and
+  is updated for the rest of the game, so the wave before - its last zombie still dying, heard to the end and
+  finished, its playlists let go as it falls quiet - carries on, and so do a power-up crate, a car alarm, the
+  jukebox or the machine already about, a power-up in use (it runs on the weapons' timer), the diamonds,
+  turning, the ambience and the guns.  At first the whole of `update:` was held, as its own `playerIsDead`
+  test holds it, which stood everything left of the wave before still while its sounds went on.  A cow of the
+  wave before is gone by then: a challenge's wave waits for its cows (below).  The wait is counted in the
+  update timer's ticks, so a pause holds it and it goes on after.  A story on the wave is told once the
+  hand-over is over and the deploy and the name have been heard, so the order is the line, the pause, the
+  draw, the story and the wave.  The first wave's set and a revive's are in hand at once with nothing said or
+  drawn, as before, and with no screen to read the line on (the referee) the gun is drawn at once, as before.
+  An old gun's reload still sounding is stopped with it: a death puts the gun back at rest (`stop_firing_now`)
+  and left its reload playing, which a revive into the same set played on.  Every gun of every set arrives as
   `Weapon.__init__` makes it, a full clip of its capacity after the modifiers and the rounds its entry gives;
   none of the six sets Reprise hands over gives fewer rounds than a clip at any level.  Checked headless in
   Reprise through the real keys, the speech measured at 0.6 s a word: "New weapons: Hunting Rifle, Micro SMG,
-  Golf" said, the rifle drawn 4.74 s after it against 4.70 due and its name with it, the hand-over over
-  1.05 s later and the story at 1.50, once the deploy had ended, with nothing spawned or moved until it had
-  been read; fire, melee, switch and reload by key, Button mode, controller, shake and the plain layout's
-  buttons all did nothing in the wait and worked after it; paused for 2.10 s in the wait, the gun was drawn
-  4.38 s after the line against 4.35; a revive was silent and immediate, a skip into the third act read out
-  and waited; with the second speech on, the line was its and the wait its measurement's, 3.69 s against
-  3.65; every gun of every set full, with lessBullets too; Endless and the referee as before.
+  Golf" said, the rifle drawn 4.74 s after it against 4.70 due and its name with it, the hand-over over 1.05 s
+  later and the story at 1.50, once the deploy had ended, with nothing spawned or moved until it had been
+  read; fire, melee, switch and reload by key, Button mode, controller, shake and the plain layout's buttons
+  all did nothing in the wait and worked after it; paused for 2.10 s in the wait, the gun was drawn 4.38 s
+  after the line against 4.35; a revive was silent and immediate, a skip into the third act read out and
+  waited; with the second speech on, the line was its and the wait its measurement's, 3.69 s against 3.65;
+  every gun of every set full, with lessBullets too; Endless and the referee as before.  The finer hold was
+  checked the same way in Reprise's first change of weapons (wave 3): a walking cow of wave 2, put there for
+  the test, walked 0.75 units in the first 1.5 s of the hold and stood still while it was paused; the Minigun
+  in use ran on, 0.1 s to 1.6 s; a crate wave 2 dropped counted on; wave 2's last zombie, killed and heard,
+  finished dying inside the hold; wave 3 moved not at all until its story had been continued, and the clock
+  stood still; wave 5's own cow, due 32.44 s into it, stood at 0 through wave 5's hand-over and counted once
+  its story had been read.  Every check above passed again, the wave being compared by its own clock, enemies
+  and passers-by, since the brick manager's own time is no longer the new wave's.
+* A challenge's wave waits for its cows (user request, 2026-10-03: "for the cows thing, we should wait to
+  clear before the next wave comes, or to finish the game. On every chapter and challenge.").  A kill or the
+  end of a recording asks `soundOrEnemyWithNameWasDeactivated:` 0x1000c6bb0, which asks `brickIsCleared`
+  0x1000a1658 - every enemy of the wave at no life, every blocking recording done, and nothing else - and
+  `currentBrickIsCleared` 0x1000c6ca0 then loads the next wave (`loadNextBrick` 0x1000c3058) or sets
+  `challengeIsOver` there and then.  A wave's passers-by are not among its enemies: `initPassersBy`
+  0x10009f6b4 hands them to the passer-by manager, which walks them for the rest of the game (`update:`
+  0x1000d59e4).  So a cow still to come, or crossing the arena, when a wave's last zombie fell walked on
+  through the next wave - a cow takes 52 s to go from eleven units out, through the player and out past
+  fifteen on the other side - and through a hand-over of weapons, and the last wave's cows held nothing up.
+
+  Now, in a challenge (mode 2: the original's thirty and the Extra mode's forty-nine alike),
+  `current_brick_is_cleared` waits while a passer-by that walks past and off is still to come, arriving or
+  walking (`PasserBy.holds_a_wave`), and `BrickManager.update` ends the wait on the first tick none is left,
+  walked off (`squared_distance > 225`, `-[ADPasserBy update:]` 0x10000b770) or killed (a cow has one life),
+  and goes on as `currentBrickIsCleared` would have (`go_past_current_brick`).  The challenge's clock,
+  and the survival time and the weapons' time with it, stand still while it waits (`waits_for_passers_by`,
+  in `updateStats` 0x1000596d0 and 0x1000daa68), so the time-limit star is the time the zombies took, as it
+  was.  Only a passer-by that walks holds a wave.  A car alarm sounds until it is shot, the jukebox cannot be
+  killed at all (a hundred million life) and the machine wakes again 35 to 54 s after it is shot; all three
+  are of speed 0 and never leave by themselves, so waiting for them would hold a wave for ever, and they stay
+  for the waves after theirs as they always have (urban_2's cars, urban_7's jukebox, tutorial_9's machine,
+  and Scrapyard's, Thunder's, Racket's and Barnyard's).  A power-up crate never holds a wave either (a
+  power-up may carry over, the user said), and nor does a passer-by whose `spawn_after` nothing answers -
+  maya_4's "Cow - 2", since `checkSpawnAfterKill:` 0x1000a20ac looks at enemies and recordings only - which
+  never comes.  `PASSERS_BY_WAIT_MOST`, 120 s, is a guard against one that somehow never goes, and says so in
+  the log: the latest cow in any challenge is gone 90 s into its wave.  Endless (mode 1, where a cow is the
+  cows card's) and the opener are untouched, and the tutorial's arenas have no passers-by.
+
+  All 48 passer-by entries of the 79 challenges were measured: 25 cows, every one of speed 0.5 and with a
+  spawn time, gone 43 to 90 s into its wave if nobody shoots it, and "Cow - 2"; the rest stand still.  With a
+  cow walking through, a wave now lasts until the cow has gone, which the referee's player (which never aims
+  at a cow, so these are the longest waits) measured at level 4 (Barnyard at level 1), 8 runs each: Barnyard's
+  waves from 29, 32 and 20 s to 63, 66 and 65 s, the arena from 81 s to 195 s; Cattle Call's from 43, 48 and
+  50 s to 60, 76 and 90 s, 141 s to 226 s; Thunder's last from 34 s to 61 s; Maya Ruin's fourth challenge's
+  second from 55 s to 70 s, 78 s to 93 s; Reprise's first from 47 s to 73 s and its fifth from 47 s to 68 s
+  (86 s at the longest), its other waves as before (the player, which has no revive, fell in the tenth every
+  time, either way); Lightning Rod's not at all, its cows gone before its zombies.  The wins and the losses
+  were the same runs as before in every one, and the challenge's clock the same (Barnyard's 78 s against 81 s,
+  the cows of one wave no longer in the way of the next), so no time star is harder.  Nothing waits for the
+  next wave's zombies: their spawn times count from their own wave's start, so the wait delays the whole of
+  the next wave and changes nothing within it, which is also why `tools/arena_pressure.py`, which measures
+  each wave from its own start and does not count passers-by, reads exactly as before.  Checked headless
+  through the real game: Reprise's first wave, its zombies dead, waited with one cow walking and two to come,
+  the clock and the survival time standing still and the cow walking on; a cow shot, one walked off and a
+  crate still about, it went on the tick the last cow left, and the clock counted again; maya_4's second wave
+  held its closing line back until its cows had gone, and "Cow - 2" was never waited for; Barnyard's end
+  waited for its cows and came with the jukebox still playing; Scrapyard's car alarm and machine held nothing,
+  and nor did a cow in Endless; the guard let a wave go after 120 s and logged it.
 * PORT ADDITION: an arena of the Extra mode offers a revive (user request, 2026-10-01).  A death there
   offers what Endless offers - the revive for diamonds, twice the price each time (`show_revive_view`
   0x10005ba78), or the failed screen, which is starting over - where `-[ADEnemy afterAttackSound]`

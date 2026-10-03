@@ -39,10 +39,14 @@ class PasserByManager:
         for p in list(self.passers_by):                   # makeObjectsPerformSelector:@selector(deactivatePlaylist)
             p.deactivate_playlist()
 
-    def update(self, dt: float) -> None:                  # 0x1000d59e4
+    def update(self, dt: float, held=()) -> None:         # 0x1000d59e4
+        """`held`, PORT ADDITION: passers-by not moved on this tick - those of a wave held while a new set of
+        weapons is handed over (`BrickManager.update`)."""
         from .brick_manager import BrickManager
         # fast enumeration (a mutation during it would raise in the original)
         for p in list(self.passers_by):
+            if any(p is h for h in held):
+                continue
             p.update(dt)
         bm = BrickManager.shared()
         if bm.mode != 1:
