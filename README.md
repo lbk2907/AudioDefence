@@ -1394,7 +1394,8 @@ replacing them.
   the weapons changing hands between acts. A part of the story is read out as a wave begins, the way the
   original's challenges play Dr. Bastard's lines: the game goes on, so you can turn, switch, reload and
   fire, and the wave comes once it has been read, or at once if you skip the narration. A death offers a
-  revive for diamonds, which plays the wave again, or a skip to the next wave for ten times as much.
+  revive for diamonds, which plays the wave again from its start, its story and the clock included, or a
+  skip to the next wave for ten times as much, which gives up that run's time star.
 - **Game controllers**: a DualSense, DualShock, Xbox, Switch Pro or most other pads, in the menus and in
   play, with a stick that turns as fast as it is pushed, vibration for the heartbeat, hits, kills,
   explosions and your death, the phone's shake, and a DualSense's triggers that feel like a gun, each at

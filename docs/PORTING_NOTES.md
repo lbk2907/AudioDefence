@@ -2642,6 +2642,17 @@ they were.
   offered no skip and revives for 2 and 4, the second refused to the failed screen with 8 of 20 diamonds
   left; and an arena outside the Extra mode went to the failed screen at the first death, as before.
 
+  The clock and the story (user request, 2026-10-04).  A revive takes the challenge clock back to where it
+  stood as the wave began (`InGameStats.wave_start_time`, noted by `load_next_brick`), so the go that ended
+  in a death - and the death and the revive screen after it - costs no time, and the wave's story is told
+  again (`stories_told` forgets it).  A skip gives up the time star for the rest of the run
+  (`time_star_given_up`; the completed screen says "not this time: a wave was skipped"), since otherwise the
+  time a skipped wave did not take would buy it; the clock is kept and shown as ever, and the next wave's
+  story is told as it begins.  The skip's button says so: "Skip this wave for N diamonds, giving up the
+  time star".  Checked in The Survivor: a death 50 s into its third wave revived to 60 s on the clock, not
+  110, with the wave's story read again; a skip from the second gave up the star, kept the clock going and
+  told the third wave's story.
+
   Given back, the weapons are not read out, and the gun that was in hand stays in hand (user request,
   2026-10-02).  Handing them back said "New weapons: Bazooka, Police Shotgun, Wok" for the wave the player
   had just died in, while the announcer named the first gun as it was drawn.  The original's revive leaves

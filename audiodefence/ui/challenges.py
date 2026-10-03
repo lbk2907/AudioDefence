@@ -597,7 +597,10 @@ class AccessibleChallengeCompletedScreen(AccessibleGameOverEndlessScreen):
         tl = d.get('time_limit_star') or {}
         time_unlocked = False
         # fcmp double(objective), challengeTimeElapsed (double); b.ge: NaN fails
-        if not float(f32(ns_float_value(tl.get('objective')))) >= float(stats.challenge_time_elapsed):
+        if getattr(stats, 'time_star_given_up', False):   # PORT ADDITION: a wave was skipped (BrickManager)
+            self.time_star_status = 'not this time: a wave was skipped'
+            Tracker.shared().time_objective_reached(0)
+        elif not float(f32(ns_float_value(tl.get('objective')))) >= float(stats.challenge_time_elapsed):
             self.time_star_status = 'objective failed. Time limit was %i seconds' % ns_int_value(tl.get('objective'))
             Tracker.shared().time_objective_reached(0)
         else:

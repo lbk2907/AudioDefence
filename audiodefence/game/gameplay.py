@@ -1152,8 +1152,9 @@ class ChallengeGameplayController(GameplayController):
     def tell_story_if_due(self) -> None:
         """PORT ADDITION (user request, 2026-10-01): a wave that carries `Story` - a part of the Extra mode's
         story, in text - has it read out as the wave begins, and the wave waits until it has been
-        (`narrate`).  Each part is told once a game: a wave fought again after a revive does not tell it
-        twice.  With no screen to read it on (a run with none, as the referee plays) it is passed over.
+        (`narrate`).  Each part is told as its wave begins - and again when a revive begins the wave over
+        (user request, 2026-10-04: `BrickManager.retry_current_brick` forgets it was told).  With no screen
+        to read it on (a run with none, as the referee plays) it is passed over.
 
         A wave that hands over a new set of weapons tells it once they have been read out and the new gun
         drawn and ready (`hand_over_weapons`, `arm`; user request, 2026-10-03), so the order there is the

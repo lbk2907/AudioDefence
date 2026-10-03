@@ -233,6 +233,8 @@ class BrickManager:
 
     def load_next_brick(self) -> None:                          # 0x1000c3058
         self.player_is_dead = False
+        stats = InGameStats.singleton()                         # PORT ADDITION: see retry_current_brick
+        stats.wave_start_time = stats.challenge_time_elapsed
         self.passers_by_wait = None                       # PORT DIVERGENCE: see current_brick_is_cleared
         self.current_wave += 1
         if self.mode == 1:
@@ -622,7 +624,18 @@ class BrickManager:
         `challenge_is_over` to the first wave again, since `scenario_brick_name_for_wave_number` wraps.  So
         the wave is loaded again from its beginning; the skip is a choice of its own, dearer and never from
         the last wave (`skip_current_brick`).  The weapons are given back fresh and without a word
-        (`hand_back_weapons`)."""
+        (`hand_back_weapons`).
+
+        The challenge clock goes back to where it stood as the wave began, and the wave's story is told again
+        (user request, 2026-10-04): the revive is another go at the wave, and a go that ended in a death, with
+        the death and the revive screen after it, costs neither the time star nor the story."""
+        stats = InGameStats.singleton()
+        stats.challenge_time_elapsed = stats.wave_start_time
+        gvc = self.gameplay_view_controller
+        brick = self.current_brick()
+        told = getattr(gvc, 'stories_told', None)
+        if told is not None and brick is not None:
+            told.discard(brick.name)
         self.clear_current_brick()
         self.current_wave -= 1
         self.load_next_brick()
@@ -632,7 +645,12 @@ class BrickManager:
         """PORT ADDITION (user request, 2026-10-01): the revive's other choice in the Extra mode - the wave
         died in is cleared and the next one starts, as Endless's revive does.  `revive_skip_cost` offers it
         only while there is a next wave.  A next wave with weapons of its own hands them over as it loads,
-        read out like any wave's that changes the weapons; otherwise they are handed back without a word."""
+        read out like any wave's that changes the weapons; otherwise they are handed back without a word.
+
+        A skip gives up the time star for the rest of the run (user request, 2026-10-04): the time it shows is
+        a challenge with a wave not played, which would otherwise buy the star.  The time itself goes on being
+        kept and shown as before.  The next wave's story is told as it begins, as any wave's."""
+        InGameStats.singleton().time_star_given_up = True
         self.clear_current_brick()
         self.load_next_brick()
         self.hand_back_weapons()

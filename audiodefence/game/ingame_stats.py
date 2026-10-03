@@ -55,6 +55,10 @@ class InGameStats:
         self.diamond_loot = 0
         self.time_elapsed = 0.0
         self.challenge_time_elapsed = 0.0
+        # PORT ADDITION (user request, 2026-10-04): the challenge clock as the wave being played began, which a
+        # revive takes it back to; and whether a wave has been skipped, which gives up the time star
+        self.wave_start_time = 0.0
+        self.time_star_given_up = False
         self.brick_time = 0.0
         self.num_critical_hits = 0
         self.weapon_critical_hits: dict = {}
@@ -110,6 +114,10 @@ class InGameStats:
         self.diamond_loot = 0
         self.time_elapsed = 0.0
         self.challenge_time_elapsed = 0.0
+        # PORT ADDITION (user request, 2026-10-04): the challenge clock as the wave being played began, which a
+        # revive takes it back to; and whether a wave has been skipped, which gives up the time star
+        self.wave_start_time = 0.0
+        self.time_star_given_up = False
         self.brick_time = 0.0
         self.num_critical_hits = 0
         self.weapon_critical_hits = {}

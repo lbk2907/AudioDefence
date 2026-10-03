@@ -344,7 +344,8 @@ class ReviveScreen(AccessibleScreen):
         if self.revive.skip_cost is not None:
             # PORT ADDITION: the Extra mode's dearer choice (ReviveController.skip_button_pressed), between
             # the two the original has, which keep their places.
-            self.skip_button = Button('Skip this wave for %i diamonds' % self.revive.skip_cost,
+            self.skip_button = Button('Skip this wave for %i diamonds, giving up the time star'
+                                      % self.revive.skip_cost,
                                       (99, 195, 372, 50), parent=box, actions=[self._skip], name='skip')
             self.skip_button.enabled = self.revive.skip_enabled
         Button('Game over', (306, 251, 165, 50), parent=box, actions=[self.revive.game_over_button_pressed],
