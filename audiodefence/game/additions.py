@@ -3449,8 +3449,8 @@ STORY = {
     'port_nowake_1': "Something enormous is asleep in the yard behind the scrapyard. The voice on the radio "
                      "drops to a whisper, which is somehow worse.",
     'port_busker_1': "At the crossroads a man sits on an upturned bucket, playing a banjo to nobody. He "
-                     "sells it to you for everything in your pockets and walks away humming. The crowd he "
-                     "was playing for has not left.",
+                     "sells it to you for everything in your pockets and walks away humming. The things he "
+                     "was playing for have not left.",
     'port_survivor_1': "A woman calls to you from the roof of the last farm before the road. She has been "
                        "up there since it started, she says, and she has heard the radio too. She does not "
                        "believe in the boat. She asks you to stay until morning anyway.",
@@ -3512,7 +3512,7 @@ STORY = {
                    "that says mind the fuse. The radio comes back on, just for a moment, to laugh.",
     'port_shortgame_1': "Behind the depot, of all things, a driving range. You still have the golf club. "
                         "The voice is back for good, and it would like to see your swing.",
-    'port_collateral_1': "A parade ground, and in the middle of every crowd on it something you would "
+    'port_collateral_1': "A parade ground, and in the middle of every pack on it something you would "
                          "rather not disturb. The voice says the show must go on. It is the first time it "
                          "has called it a show.",
     'port_crossfire_1': "Two gates, either side of the depot, both open, both busy. The voice offers no "
@@ -3531,12 +3531,12 @@ STORY = {
                         "up here you can see the coast, and on it, the lights of a boat.",
     'port_blowback_1': "The wind comes off the sea in gusts, and the streets below the ridge funnel it. The "
                        "voice says it ordered the wind specially. You are no longer sure it is joking.",
-    'port_titans_1': "In the stadium, two of the biggest things you have ever seen are waiting, and they "
-                     "are not waiting alone. There is a sound like applause on the radio, and then the "
-                     "voice, apologising for it.",
-    'port_scarecrows_1': "The fields beyond the stadium are full of figures standing in rows, propped up on "
-                         "poles. Somebody put every one of them there, carefully, by hand, and you are "
-                         "beginning to suspect who.",
+    'port_titans_1': "In the abandoned stadium, two of the biggest things you have ever seen are waiting, "
+                     "and they are not waiting alone. There is a sound like applause on the radio, and then "
+                     "the voice, apologising for it.",
+    'port_scarecrows_1': "The fields beyond the abandoned stadium are full of figures standing in rows, "
+                         "propped up on poles. Somebody put every one of them there, carefully, by hand, and "
+                         "you are beginning to suspect who.",
     'port_riotact_1': "The bridge into the harbour district, and everything the city has left between you "
                       "and it. The voice reads you the riot act, word for word. It has clearly been looking "
                       "forward to this.",
@@ -3573,8 +3573,8 @@ STORY = {
                     "this part. So does everything else.",
     'port_remix_7': "The depot, the shotgun, the launcher and the sword. The doctor calls it the interval, "
                     "and does not stop.",
-    'port_remix_9': "The city's edge: the launcher on the ridge, the titans in the stadium, the scarecrows "
-                    "in their rows.",
+    'port_remix_9': "The city's edge: the launcher on the ridge, the titans in the abandoned stadium, the "
+                    "scarecrows in their rows.",
     'port_remix_11': "The foundry, the coil, the machine gun and the doctor's finest work. Over the "
                      "harbour, the sky is going grey.",
 }

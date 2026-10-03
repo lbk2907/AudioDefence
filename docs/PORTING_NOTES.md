@@ -2642,7 +2642,9 @@ they were.
   `tools/verify_localization.py` offers a wave's `Story` to translators as it offers an arena's title.  Each
   part is told once a game: a wave fought again after a revive does not tell it twice.  With no screen at
   all - the referee - it is passed over.  The story itself, The Long Way Home, is `additions.STORY` and
-  `EPILOGUES`.
+  `EPILOGUES`.  No arena plays the crowd ambience since the user asked for it to go (2026-10-01), so the
+  lines that took a crowd for granted were reworded (user request, 2026-10-03): the stadium is an abandoned
+  one, the busker's audience are "the things he was playing for", and Collateral's crowds are packs.
 
   It follows the original's lines (user request, 2026-10-03: "just follow how the original challenge
   behave, just replace the audio thing with text").  Those are a wave's own `Sounds`, most of them
