@@ -52,6 +52,11 @@ _key('K_LALT', _SCANCODE_MASK | 226, 'left alt')
 _key('K_RCTRL', _SCANCODE_MASK | 228, 'right ctrl')
 _key('K_RSHIFT', _SCANCODE_MASK | 229, 'right shift')
 _key('K_RALT', _SCANCODE_MASK | 230, 'right alt')
+_key('K_LGUI', _SCANCODE_MASK | 227, 'left meta')
+_key('K_RGUI', _SCANCODE_MASK | 231, 'right meta')
+_key('K_CAPSLOCK', _SCANCODE_MASK | 57, 'caps lock')
+_key('K_NUMLOCK', _SCANCODE_MASK | 83, 'numlock')
+_key('K_INSERT', _SCANCODE_MASK | 73, 'insert')
 
 # the controller buttons the desktop port's pad module names (unused on Android, kept so imports work)
 for _n, _v in enumerate(('A', 'B', 'X', 'Y', 'BACK', 'GUIDE', 'START', 'LEFTSTICK', 'RIGHTSTICK',

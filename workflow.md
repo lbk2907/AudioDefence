@@ -103,6 +103,12 @@ file, **at the end of that block** - it reads in the order things were done.
   wrong one finds nothing, and nothing says so.  Twice on 2026-10-02: the pause held the power-up on the
   game's manager, so the Minigun fired on through the pause menu, and the death stopped the guns on the
   shared one, so a held trigger kept firing after the player died.
+* **The phone's pygame is a stand-in.**  The Android app has no pygame: `android/python/pygame` gives it the
+  names the shared code uses, and only those.  A key, a constant or a function of pygame's that shared code
+  starts to use must be added there too, or the app stops at start-up with an AttributeError - as it did on
+  2026-10-03, over `K_LGUI` in the Speech calibration's list of keys, while every test on the computer passed
+  with the real pygame.  So a test of the phone's code puts `android/python` first on `PYTHONPATH`, where
+  the phone's stand-in hides the real one.
 * **Shared code reaches the phone too.**  The Android app runs the same `audiodefence` package and the
   same `game` data, so a change to an arena, a weapon or a screen is on the phone with the next APK.  Only
   the `*_android.py` modules, `android_main.py` and the Java under `android/` are the phone's alone.
