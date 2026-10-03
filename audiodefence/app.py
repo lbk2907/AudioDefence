@@ -45,6 +45,11 @@ class App:
         # the logo is presented over the empty root controller
         self.load_view_controller_named('ADLogoScreenViewController')
         self.run_sanity_check()
+        # PORT ADDITION: the second speech's voice is made while the logo shows, not as its settings open
+        from .platform.speech import Speech
+        prepare = getattr(Speech.shared(), 'prepare_second', None)   # the desktop's; the phone makes its own
+        if prepare is not None:
+            RunLoop.main().call_later(0.5, prepare)
 
     def run_sanity_check(self) -> None:                   # 0x100081014
         from .game.brick_manager import BrickManager

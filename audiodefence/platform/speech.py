@@ -305,10 +305,14 @@ class _SapiThread(threading.Thread):
                 log.exception('SAPI thread: %s failed', command[0])
 
     def _configure(self, voice_id, rate: int, volume: int) -> None:
-        if voice_id:
-            token = self.sapi.token_on(self.voice, voice_id)
-            if token is not None and token.Id != self.voice.Voice.Id:
-                self.voice.Voice = token
+        token = self.sapi.token_on(self.voice, voice_id) if voice_id else None
+        if token is None:
+            # Control Panel's voice, as a new SpVoice starts on (`_Sapi.configure` does the same).  Choosing it
+            # after another voice used to leave this one on that other voice: nothing put it back (user
+            # report, 2026-10-03), so the speech kept the last voice picked while the row said Control Panel.
+            token = self.client.CreateObject('SAPI.SpVoice').Voice
+        if token.Id != self.voice.Voice.Id:
+            self.voice.Voice = token
         self.voice.Rate = rate
         self.voice.Volume = volume
 
@@ -832,6 +836,19 @@ class Speech:
     def made_second(self):
         """The second speech's voice if it has been made, else None - asking makes nothing."""
         return self._second_sapi
+
+    def prepare_second(self) -> None:
+        """PORT ADDITION (user report, 2026-10-03): make the second speech's SAPI 5 voice now, while nothing is
+        waiting on it, when its Speech output is SAPI 5.  Made on first need, it was made as Second speech
+        settings opened - its voice, its device and the rate boost measured, a third of a second on Windows -
+        and the page came up that much late.  The app asks while the logo is showing (`App`)."""
+        if self.second_choice != 'sapi' or self._second_sapi is not None:
+            return
+        try:
+            voice = self.second_sapi
+            voice.boost_supported(self.second_config.get('voice'))   # what the page asks first
+        except Exception:
+            log.exception('the second speech could not be prepared')
 
     def configure_second_sapi(self, **config) -> None:
         """The second speech's voice, rate, boost, pitch and volume, from the settings."""
