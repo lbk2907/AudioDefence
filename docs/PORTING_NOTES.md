@@ -1633,6 +1633,14 @@ they were.
   do safely, its ring never outlasting one playing of the file.  What stops is already silent: the fade
   over the last fifth of a ring has taken the gain to nothing by then.
 
+* DIVERGENCE: a revive ends the ringing (user request, 2026-10-03).  `revive` 0x10005bec0 says nothing to the
+  player, so a blast just before the death rang on into the revived game - its sound, and the reverb it
+  swells on every enemy - for as long as it had left, up to `TINNITUS_MAX`.  `Player.reset_tinnitus`, called
+  by `GameplayController.revive`, ends it where it stands: the sound stops, the reverb goes back
+  (`stopTinnitus` 0x1000b6b4c; the ambience the revive starts again sets the rest), and nothing of the ring
+  is left to be extended.  Checked in Endless: a 12-second ring still playing on the death screen was gone,
+  for good, half a second after the revive.
+
 * PORT ADDITION: a diamond and a power-up do not go up with the rest (user request).  Chain Reaction says
   every Zombie explodes, and `DiamondDropper` and `PowerUpContainer` are `ADEnemy` underneath like
   everything else in the arena, so they were being lent a bomb too - and a diamond that blows up when it
@@ -3199,10 +3207,12 @@ they were.
   volume and Use modern output while SAPI 5 speaks (the system voice's on the Mac; on the phone the Android
   speech engine, rate, pitch and volume), and Speech calibration.  Second speech settings has the same rows
   for the second speech - its own output from the same list, its own voice and settings, its own engine on
-  the phone - and Follow the first speech's calibration; it can be set while Use second speech is off, and
-  each change is said by the second speech.  Use modern output is one row for both SAPI 5 voices.  The
-  calibration question at start-up and after Reset all settings is the first speech's, as it was.  Each page
-  has Test speech after the voice's rows and before Speech calibration (user request, 2026-10-03), which reads
+  the phone - and Follow the first speech's calibration, straight after the voice's rows; its own Speech
+  calibration shows only while Follow is off, since following there is nothing of its own to measure, and
+  Test speech is last on both pages (user request, 2026-10-03).  It can be set while Use second speech is
+  off, and each change is said by the second speech.  Use modern output is one row for both SAPI 5 voices.  The
+  calibration question at start-up and after Reset all settings is the first speech's, as it was.  Test
+  speech (user request, 2026-10-03) reads
   "This is how this voice sounds while you play. Change its speed, pitch or volume until every word is
   clear." - the same on both pages, and long enough to judge a voice by; Control cuts it short - through
   `Speech.speak` or `Speech.speak_second`, whether the second is used or not - so a screen reader simply reads it, and
@@ -3212,7 +3222,7 @@ they were.
   While Use second speech is on, the second speech reads what is read out during a game: the story screen's
   text and the epilogue's (`StoryScreen.speak_element`; its Continue button is read by the first, as every
   button is), the tutorial's lines (`ADSound.speak_tutorial_text`), the game's announcements
-  (`GameplayScreen.announce`: the weapons a wave hands over and the opener's way to skip) and the challenge
+  (`GameplayScreen.announce`: the weapons a wave hands over) and the challenge
   timer's key.  All of them go through one door, `Speech.speak_in_game`, which with the switch off is
   `Speech.speak` - the first speech, line for line as before - and anything added later that reads text
   during a game is to go through it too.  Everything else stays with the first speech: the menus, the hints,
@@ -3253,10 +3263,12 @@ they were.
   A line interrupts only what its own speech is saying, unless both are the same screen reader, where an
   interrupting line cuts it as it always did; so a second-speech line never cuts a first-speech line that it
   did not cut before.  On the story screen the text and Continue can therefore overlap when the player moves
-  to Continue while the second speech is still reading - but a key in the menus cuts both SAPI 5 voices
-  (`interrupt_sapi`), as it cut the one, and a screen reader usually stops its own speech at a key, so that
-  is only heard with a second speech on a screen reader that does not.  Control, and the phone's
-  two-finger tap, stop both speeches (`Speech.stop`), once the second has said anything.  A second output
+  to Continue while the second speech is still reading.  Nothing a player presses stops the second speech
+  (user request, 2026-10-03): it reads what is said during a game, and a key pressed to play must not cost a
+  line of it.  A key in the menus cuts the first SAPI 5 voice only (`interrupt_sapi`), and Control and the
+  phone's two-finger tap stop the first speech only (`Speech.stop`); when both speeches use the same screen
+  reader they are one voice, and stopping it stops both.  The opener's "Press Enter to skip intro" is said
+  by the first speech (`OpenerGameplayController`): the opener is not a game being played.  A second output
   that cannot speak - a chosen screen reader not running - leaves the second speech silent, as the first is
   in the same case, and choosing it says so through the first.  `interrupt_sapi` now asks a voice for its
   thread with `getattr`: the Mac's system voice has none, and asking it raised.
