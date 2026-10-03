@@ -15,6 +15,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.hardware.display.DisplayManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -23,8 +24,8 @@ import android.os.Looper;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
+import android.view.Display;
 import android.view.Surface;
-import android.view.WindowManager;
 
 import com.audiodefence.audio.AudioOut;
 import com.audiodefence.audio.MiniAl;
@@ -1058,6 +1059,23 @@ public final class Bridge implements SensorEventListener {
         }
     }
 
+    /** Which way up the screen is, from the display manager's default display - which, unlike the window
+     *  manager's (deprecated in Android 11) or a Context's own display (a screen's Context only, and this is
+     *  the application's), answers on every Android the app runs on.  Sideways with the top to the left if it
+     *  will not say. */
+    private int screenRotation() {
+        try {
+            DisplayManager displays = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+            Display display = displays != null ? displays.getDisplay(Display.DEFAULT_DISPLAY) : null;
+            if (display != null) {
+                return display.getRotation();
+            }
+        } catch (RuntimeException ignored) {
+            // keep the default
+        }
+        return Surface.ROTATION_90;
+    }
+
     /** Python: how far the phone is rolled like a steering wheel, in radians (positive to the right). */
     public double tiltAngle() {
         float ux, uy;
@@ -1065,13 +1083,7 @@ public final class Bridge implements SensorEventListener {
             ux = up[0];
             uy = up[1];
         }
-        int rotation = Surface.ROTATION_90;
-        try {
-            WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-            rotation = wm.getDefaultDisplay().getRotation();
-        } catch (Exception ignored) {
-            // keep the default
-        }
+        int rotation = screenRotation();
         // the screen's own "up" and "right" in the device's axes
         float sUp = rotation == Surface.ROTATION_270 ? -ux : ux;
         float sRight = rotation == Surface.ROTATION_270 ? uy : -uy;

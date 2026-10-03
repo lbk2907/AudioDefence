@@ -3,7 +3,7 @@ pluginManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
-        maven { url "https://chaquo.com/maven" }
+        maven { url = "https://chaquo.com/maven" }
     }
 }
 dependencyResolutionManagement {
@@ -11,7 +11,7 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url "https://chaquo.com/maven" }
+        maven { url = "https://chaquo.com/maven" }
     }
 }
 rootProject.name = "AudioDefence"

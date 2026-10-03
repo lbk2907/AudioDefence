@@ -50,7 +50,7 @@ def buildPythonExe = { ->
 }()
 
 android {
-    namespace 'com.audiodefence'
+    namespace = 'com.audiodefence'
     // The Android platform the app compiles against and the build tools it is made with.  compiler.py reads
     // both from these two lines, and tools/android_setup.py fetches what they name: changing one is all
     // it takes to try another ("Trying newer versions", under On Android in the README).
@@ -69,7 +69,7 @@ android {
             abiFilters "arm64-v8a"
         }
         python {
-            version appPython
+            version = appPython
             if (buildPythonExe) {
                 buildPython buildPythonExe
             }
@@ -115,7 +115,7 @@ android {
         release {
             minifyEnabled false
             if (System.getenv('AD_KEYSTORE')) {
-                signingConfig signingConfigs.release
+                signingConfig = signingConfigs.release
             }
         }
     }

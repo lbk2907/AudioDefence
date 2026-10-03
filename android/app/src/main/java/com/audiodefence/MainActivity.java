@@ -2,10 +2,13 @@ package com.audiodefence;
 
 import android.app.Activity;
 import android.content.res.AssetManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityManager;
 
@@ -56,7 +59,20 @@ public final class MainActivity extends Activity {
         }
     }
 
+    /** The whole screen is the game's: the status and navigation bars hidden, a swipe from an edge showing them
+     *  for a moment.  Android 11 and later have a controller for it; the flags before that were deprecated
+     *  with its arrival, and are only used where there is no controller. */
+    @SuppressWarnings("deprecation")
     private void hideSystemBars() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+            WindowInsetsController bars = getWindow().getInsetsController();
+            if (bars != null) {
+                bars.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                bars.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            }
+            return;
+        }
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                         | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
