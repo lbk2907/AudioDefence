@@ -309,6 +309,27 @@ def _wave(spec, rigged: bool = False, no_blast: bool = False, passers=None) -> d
     return wave
 
 
+#: PORT ADDITION (user request, 2026-10-03): **nothing in the Extra mode appears further out than a gun
+#: reaches.**  Every gun but the Bazooka has a `range` of 11 in Weapons.plist (the Bazooka 15, a melee weapon
+#: 3), and `calculate_hit_enemies` 0x1000c41c4 passes over anything whose squared distance is beyond it - so
+#: a shot fired the moment a zombie was heard arriving twelve units out did nothing at all: no hit, a round
+#: gone, and the accuracy star and the combo with it, until the zombie had walked in.  A player on a phone
+#: found it.  The original sends almost everything from ten units (some 650 of its 750 spawns, and one from
+#: beyond eleven); these arenas had sent 1,430 of their 3,057 from further, most from eleven to fourteen units
+#: and a few from as far as twenty.
+#:
+#: So a distance written in this file is where a thing is written to **start walking from**, and anything
+#: written beyond `REACH` is started at `REACH` instead, as much later as the walk in from where it was written
+#: would have taken (`_bring_into_reach`, after `CHAPTERS`).  It reaches the player exactly when the arena was
+#: built for it to, and every gun reaches it from the moment it is heard.  What that costs a player is warning:
+#: it is heard for as long less as it used to spend walking in out of reach, which every arena was measured
+#: for again.
+REACH = 10.0
+#: How far every gun but the Bazooka reaches, and how far the Bazooka does.
+GUN_REACH = 11.0
+ROCKET_REACH = 15.0
+
+
 #: Bearings a crowd walks in from, well apart so a player has to turn to each in turn rather than sweep.
 #: They are written down rather than worked out so that a wave is the same wave every time it is played:
 #: a challenge has stars on it, and a star won against one arrangement has to mean the same as the next.
@@ -407,9 +428,10 @@ PLISTS['port_barnyard'] = {
 
 # ----------------------------------------------------------------------------------------- The Wall
 #: A revolver against things that do not die to a cylinder.  A Hulk has 100 life and walks at 0.75, which
-#: is sixteen seconds from twelve units and six seconds of shooting - so one is nothing and three at once
-#: are the arena.  The Riot Gear Zombie is the other half of it: 150 life, and `protect` 0x10005ff4c stops
-#: it dead for five seconds every time it is hit, so it delays itself and the Hulks walk on past it.
+#: is thirteen seconds from ten units, where it is heard, and six seconds of shooting - so one is nothing and
+#: three at once are the arena.  The Riot Gear Zombie is the other half of it: 150 life, and `protect`
+#: 0x10005ff4c stops it dead for five seconds every time it is hit, so it delays itself and the Hulks walk on
+#: past it.
 PLISTS['port_wall_1'] = _wave([('Hulk', 90, 12), ('HulkB', 300, 12, 9)], no_blast=True)
 PLISTS['port_wall_2'] = _wave([('Hulk', 40, 12), ('Shield', 175, 12, 8), ('HulkB', 290, 12, 16)],
                               no_blast=True)
@@ -803,10 +825,10 @@ PLISTS['port_hydra'] = {
 }
 
 # ------------------------------------------------------------------------------------ The Long Walk
-#: Five hundred life at a quarter of a unit a second.  A Colossus spawned twelve units out takes
-#: forty-eight seconds to arrive and thirty seconds of level-one shooting to put down, so it is not a
-#: question of whether it can be killed but of what else happens in the half minute it takes - and what
-#: else is a crowd, walking in on the other side of the player while their back is turned.
+#: Five hundred life at a quarter of a unit a second.  A Colossus heard ten units out takes forty seconds to
+#: arrive and thirty seconds of level-one shooting to put down, so it is not a question of whether it can be
+#: killed but of what else happens in the half minute it takes - and what else is a crowd, walking in on the
+#: other side of the player while their back is turned.
 PLISTS['port_longwalk_1'] = _wave(
     [('Colossus', 0, 12.0), ('WeakZombie', 160, 10.0, 6.0), ('Zombie', 200, 10.0, 14.0),
      ('ZombieB', 180, 10.0, 22.0)], no_blast=True)
@@ -1826,10 +1848,10 @@ PLISTS['port_shortgame'] = {
 #: and one: its damage is nearly all distance (`dispersal` 1: 28 at three units, 21 at six, 14 at eight), a
 #: Zombie has 35 and no plain shell kills one, and a Zombie with 14 left dies to a shell at eight units.  So
 #: it is worth most opened when every crowd is inside ten units, and little before.  In wave 1 that is the
-#: moment the crate can first be shot - three crowds walk in from nine, ten and a half and twelve units and
-#: reach five units three seconds apart - so the first one teaches it; in wave 3 the crate is ready five
-#: seconds before the crowd is inside ten units, and two Zombies come in first on a bearing of their own, to
-#: be shot with the crate somewhere beeping - on their side of the player or not.
+#: moment the crate can first be shot - three crowds, written from nine, ten and a half and twelve units and
+#: heard from nine and ten, reach five units three seconds apart - so the first one teaches it; in wave 3 the
+#: crate is ready five seconds before the crowd is inside ten units, and two Zombies come in first on a
+#: bearing of their own, to be shot with the crate somewhere beeping - on their side of the player or not.
 #:
 #: **Tornado** (wave 2): four gusts over ten seconds, each pushing everything outward a quarter of a unit at
 #: level one (1.25 at level four): at level one about two seconds of a Zombie's walk, which is a Sawn-off
@@ -1956,8 +1978,9 @@ def _huddle(kinds, bearing: float, distance: float, at: float):
 
 
 def _file(kinds, bearing: float, first: float, at: float, gap: float = 2.2):
-    """In single file on one bearing, `gap` apart, the front one at `first`: all arrive at once, so they walk
-    as they stand.  Kinds whose arrival roars are within 0.4 s of each other, so no gap opens past three."""
+    """In single file on one bearing, `gap` apart, the front one at `first`: written to arrive at once, so
+    they walk as they stand - the ones written beyond ten come in at ten as their place in the file reaches it
+    (`REACH`).  Kinds whose arrival roars are within 0.4 s of each other, so no gap opens past three."""
     return [(k, bearing, first + i * gap, at) for i, k in enumerate(kinds)]
 
 
@@ -1977,10 +2000,13 @@ def _spaced(kinds, bearing: float, step: float, distance: float, at: float):
 #:
 #: * a **huddle** (`_huddle`): six or so standing within two and a half units of each other.  One death
 #:   takes the lot, and a Hulk in the middle of one takes a blast from each neighbour.
-#: * a **file** (`_file`): one behind another on one bearing, 2.2 units apart, the back of it beyond the
-#:   shotgun's eleven.  The front one's blast takes the next, and so on down the line.  Kinds whose arrival
-#:   roars differ by 0.4 s or less, so the gaps stay under three units whichever roar is played.  A FartyB in
-#:   the third file is a firebreak: it has 50 of life, survives the blast, and its own is 15.
+#: * a **file** (`_file`): one behind another on one bearing, 2.2 units apart.  It was written standing all at
+#:   once, the back of it beyond the shotgun's eleven; since nothing appears beyond ten (`REACH`), the back of
+#:   it comes in one at a time, each as its place in the file walks in to ten, and the file is whole from
+#:   there.  The front one's blast takes the next, and so on down the line, as far as it has come in.  Kinds
+#:   whose arrival roars differ by 0.4 s or less, so the gaps stay under three units whichever roar is
+#:   played.  A FartyB in the third file is a firebreak: it has 50 of life, survives the blast, and its own is
+#:   15.
 #: * a **line** (`_spaced`): twenty-two or twenty-five degrees apart at ten units, 3.8 to 4.3 apart - out of
 #:   each other's reach - and wider than the cone.  They close ranks as they come: three units apart at 7.9
 #:   and 6.9 out.  Started there, one death runs the length of the line; started early, each end has to be
@@ -2667,10 +2693,10 @@ _Z4Q = ('ZombieB', 'QuietZombie', 'Zombie', 'ZombieC')
 #:
 #: Built to the chapter 4 rules: crowds in fours, a group coming within five units about every four seconds
 #: and never more than ten in any eight; every Dodge and Chainsaw on its own between two crowds; Runners in
-#: one small pack from one bearing, never two packs within 2.3 s of each other.  No Berserk (a belt held on
-#: a crowd walking past one would find it) and no Riot Gear Zombie (inside three units it never raises its
-#: shield, but it is three swings).  Hulks come in pairs from eleven units, and either roar (3.7 or 5.7 s)
-#: puts them in reach between two other groups.
+#: one small pack from one bearing, never two packs within 2.3 s of each other.  No Berserk (a belt held on a
+#: crowd walking past one would find it) and no Riot Gear Zombie (inside three units it never raises its
+#: shield, but it is three swings).  Hulks come in pairs, and either roar (3.7 or 5.7 s) puts them in reach
+#: between two other groups.
 PLISTS['port_coldsteel_1'] = _wave(
     _pack(_Z4, 20, 10.0, 0.5)
     + _pack(_Z4, 150, 10.0, 5.5)
@@ -2778,12 +2804,13 @@ _RACKET_H3 = ('Hulk', 'HulkB', 'Hulk')
 
 # -------------------------------------------------------------------------------------------------- Racket
 #: Finding things through noise.  `ambient_foundry` is the original's own factory floor, and on top of it a
-#: Jukebox from the first wave (music at gain 6: from nine units, louder than a Zombie at three), the Machine
-#: from the second (a loud loop, -16 dB at gain 3.5) and a second Jukebox from the third - passers-by stay
-#: for the rest of the challenge, so they add up.  Some groups walk in on the noise's own bearing, from eleven
-#: or twelve units, and cannot be told from it until they are five or six units out; so only loud ones walk
-#: there (Zombies - no Rejects, no Whisperers, no Hulks and no Runners), and what comes from a clear bearing
-#: is everything else.  Groups come within five units four and a half to five seconds apart (`_slots`).
+#: Jukebox from the first wave (music at gain 6: from nine units, louder than a Zombie at three), the
+#: Machine from the second (a loud loop, -16 dB at gain 3.5) and a second Jukebox from the third -
+#: passers-by stay for the rest of the challenge, so they add up.  Some groups walk in on the noise's own
+#: bearing, written from eleven or twelve units and heard from ten, and cannot be told from it until they
+#: are five or six units out; so only loud ones walk there (Zombies - no Rejects, no Whisperers, no Hulks
+#: and no Runners), and what comes from a clear bearing is everything else.  Groups come within five units
+#: four and a half to five seconds apart (`_slots`).
 #:
 #: All of it can be quietened.  A round into a jukebox stops it for ten seconds (`JukeBox.hit_by_weapon`,
 #: `pauseTime` 10); the Machine blown up - 130 life, nine rounds at level four, and seven units out, so its
@@ -2833,8 +2860,9 @@ PLISTS['port_racket'] = {
 #: into a twenty degree cone, a four second reload - is for the Hulks and the crowds that walk in the open,
 #: and the Bazooka is for everything touchy: 80 where it lands and 60 to all within five units at level four
 #: (60 and 45 at one), which is a Dodge in one rocket on target, a crowd of Zombies in one anywhere near, and
-#: a Hulk pair in two.  It reaches fifteen units where the rifle reaches eleven, so the Hulks, which come from
-#: thirteen, can be met early - at four units a second, a rocket there is three seconds in the air.
+#: a Hulk pair in two.  It reaches fifteen units where the rifle reaches eleven, and the Hulks were written to
+#: come from thirteen so that it could meet them early; since nothing here appears beyond ten (`REACH`), they
+#: come in at ten, as late as that walk would have taken, and the rifle reaches them from the first.
 #:
 #: Twenty-five rockets is not enough to use them on everything (every group by rocket is about 35), which is
 #: the arena: the rifle for what can take a bullet, rockets for what cannot.  And a rocket goes to the
@@ -3044,8 +3072,8 @@ _CLOSE_W3 = ('WeakZombie', 'WeakZombieC', 'WeakZombieB')
 #: * a Riot Gear Zombie inside a crowd of Rejects (Collateral): the grenade goes through the shield;
 #: * a Dodge, alone (Sidestep): a grenade does not send it sideways;
 #: * Runners, three from one bearing (Stampede): the rifle, or the belt;
-#: * Hulks in pairs from twelve units (The Wall), a Chainsaw alone (Carousel), two Whisperers (heard by
-#:   their scream at three units, and one swing of the club each);
+#: * Hulks in pairs (The Wall), a Chainsaw alone (Carousel), two Whisperers (heard by their scream at three
+#:   units, and one swing of the club each);
 #: * and in the last wave a Colossus from ten units (The Long Walk), at the player 42 seconds in, with all of
 #:   the above arriving from every other side while it comes.  Twenty rifle hits, or a third of the belt: when
 #:   is the wave.
@@ -3231,7 +3259,7 @@ PLISTS['port_remix_1'] = _wave(
 PLISTS['port_remix_1']['Weapons'] = _REMIX_ARMS[0]
 #: What will not come to you, what should not be woken and what does not die to a cylinder: two Bobs and
 #: the arena's one Diamond standing still, two Berserks resting with walkers passing wide of them, and two
-#: Hulks and a Riot Gear Zombie (two Rejects with it) walking in from twelve.
+#: Hulks and a Riot Gear Zombie (two Rejects with it) walking in.
 PLISTS['port_remix_2'] = _wave(
     [('Bob', 200, 9.0, 0.0), ('Hulk', 300, 12.0, 4.0)]
     + _remix_asleep(100, 1.0)
@@ -3243,9 +3271,9 @@ PLISTS['port_remix_2']['Enemies']['Diamond'] = {'spawn_angle': 175.0, 'spawn_dis
                                                  'spawn_time': 22.0}
 
 # ---- Act two: chapter 2 - The Long Walk, Sidestep and Bad Company; Stampede, Hydra, Fore and Big Game
-#: The Long Walk: a Colossus from twelve units in front, and a crowd coming one at a time from behind while
-#: it walks; then a Dodge alone, and Bad Company's Farty with three Rejects round it, to be shot while they
-#: are round it and not after they are close.
+#: The Long Walk: a Colossus in front, and a crowd coming one at a time from behind while it walks; then a
+#: Dodge alone, and Bad Company's Farty with three Rejects round it, to be shot while they are round it and
+#: not after they are close.
 PLISTS['port_remix_3'] = _wave(
     [('Colossus', 0, 12.0, 0.0), ('Zombie', 160, 10.0, 3.0), ('WeakZombie', 200, 10.0, 9.0),
      ('ZombieB', 180, 10.0, 15.0), ('QuietZombie', 170, 10.0, 21.0), ('Dodge', 90, 12.0, 24.0),
@@ -3287,10 +3315,10 @@ PLISTS['port_remix_6'] = _wave(_remix_beat(
 PLISTS['port_remix_6']['PowerUp'] = {'force_spawn_time': 14.0, 'type': 'minigun'}
 
 # ---- Act four: chapter 4 - Point Blank, Fuse and Bonfire Night; One Swing, Crossfire and Short Game
-#: Packs of four, four and a half seconds apart, from eleven units: grenades for them far out, shells for
-#: them close (Point Blank's 46 at three units against 30 at seven), and Runners in packs of their own;
-#: Bonfire Night's Fireworks while packs are inside ten units; and Crossfire's two packs from opposite sides
-#: half a second apart - Zombies, not Runners, so a shell, a half turn and a shell still leave room.
+#: Packs of four, four and a half seconds apart: grenades for them far out, shells for them close (Point
+#: Blank's 46 at three units against 30 at seven), and Runners in packs of their own; Bonfire Night's
+#: Fireworks while packs are inside ten units; and Crossfire's two packs from opposite sides half a second
+#: apart - Zombies, not Runners, so a shell, a half turn and a shell still leave room.
 PLISTS['port_remix_7'] = _wave(
     _remix_slots(((_Z4, 30, 11.0), (('WeakZombie', 'Zombie', 'WeakZombieC', 'ZombieB'), 150, 11.0),
                   (('ZombieC', 'Zombie', 'ZombieB', 'WeakZombie'), 250, 11.0), (_R3, 100, 11.0), None,
@@ -3698,6 +3726,69 @@ def _derive_order() -> None:
 
 
 _derive_order()
+
+
+#: How fast each kind closes on the player, in units a second, for `_bring_into_reach`: `speed` in
+#: enemies.plist, times the share of it a circling one spends coming in (`1 - circlingFactor`, as
+#: tools/arena_pressure.py has it: a Chainsaw 0.725, a Clown 0.2).  Everything else walks in at 0.5.
+_PACE = {'Runner': 1.3, 'RunnerB': 1.3, 'RunnerC': 1.3, 'Hulk': 0.75, 'HulkB': 0.75, 'Dodge': 0.9,
+         'DodgeB': 0.9, 'Colossus': 0.25, 'Chainsaw': 0.725, 'Clown': 0.2}
+
+#: The arenas built on the Bazooka's reach, where what stands beyond eleven units stands there for it, out of
+#: reach of every other gun: Artillery's objective says so, Riot Act's tip turns on it (choose the weapon by
+#: the distance), and Titans and Scarecrows are built round it - their Colossi and the crowds behind the
+#: dummies are the rocket's.  The Bazooka reaches fifteen, so all of it can be hit the moment it is heard,
+#: with the gun those arenas are about, and it stays where it was written.  What stands between ten and
+#: eleven in them was not put there for the rocket, and comes in to ten like everything else.  Reprise's
+#: fifth act is those arenas again.
+_ROCKET_ARENAS = ('port_artillery', 'port_titans', 'port_scarecrows', 'port_riotact')
+_ROCKET_WAVES = ('port_remix_9', 'port_remix_10')
+
+#: id of a moved entry -> the entry as it was written, for `written`.
+_WRITTEN: dict = {}
+
+
+def written(entry: dict) -> dict:
+    """An entry of a wave as its arena wrote it, before `_bring_into_reach` moved it in; the entry itself
+    if it was not moved.  What tools/arena_pressure.py measures (see `as_written` there)."""
+    return _WRITTEN.get(id(entry), entry)
+
+
+def _bring_into_reach() -> None:
+    """Start everything written beyond `REACH` at `REACH`, later by the time it would have taken to walk the
+    difference, so that it reaches the player exactly when it was written to: the enemies and the passers-by
+    of every wave of every arena in `CHAPTERS` (a cow can be shot as well as a zombie, and in some arenas is
+    meant to be).  A Hydra's head, which `spawn_after` starts when another dies, starts that much later after
+    it instead."""
+    seen = set()
+    for _chapter, arenas in CHAPTERS:
+        for name in arenas:
+            arena = PLISTS[name]
+            flags = list(arena.get('Modifiers') or ())
+            # `fasterEnemies` hastens the walk by a fifth a card (`enemi_speed_modifier` 0x1000de610)
+            quicker = max(0.1, 1.0 + 0.2 * flags.count('fasterEnemies') - 0.1 * flags.count('slowerEnemies'))
+            for brick in arena['bricks']:
+                wave = PLISTS[brick]
+                rockets = name in _ROCKET_ARENAS or brick in _ROCKET_WAVES
+                for group in ('Enemies', 'PasserBy'):
+                    for key, one in (wave.get(group) or {}).items():
+                        d = float(one['spawn_distance'])
+                        if d <= REACH or id(one) in seen or (rockets and GUN_REACH < d <= ROCKET_REACH):
+                            continue
+                        seen.add(id(one))
+                        _WRITTEN[id(one)] = dict(one)
+                        pace = _PACE.get(key.split(' ')[0], 0.5) * quicker
+                        late = (d - REACH) / pace
+                        one['spawn_distance'] = REACH
+                        after = one.get('spawn_after')
+                        if isinstance(after, dict):
+                            late += float(after.get('time') or 0.0)
+                            one['spawn_after'] = dict(after, time=round(late, 2))
+                        else:
+                            one['spawn_time'] = round(float(one.get('spawn_time') or 0.0) + late, 2)
+
+
+_bring_into_reach()
 
 
 def chapter_of(challenge_id: str):

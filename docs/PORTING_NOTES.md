@@ -2202,9 +2202,12 @@ they were.
 
   And the Hulk pair walked in behind a near one of its own, so it could not be grenaded until that one was
   dead - while the Runners were coming (user, the same day).  The pair has no near one now, so it can be
-  grenaded as it roars, eleven units out, and the near ones left are WeakZombieB and WeakZombieC: twenty
+  grenaded as it roars, ten units out, and the near ones left are WeakZombieB and WeakZombieC: twenty
   of life, two revolver shots or one swing of the wok instead of three shots, and the loudest of the weak
-  voices (-27 to -32 dB against a Zombie's -21, and seven units out against a crowd's eleven).
+  voices (-27 to -32 dB against a Zombie's -21, and seven units out against a crowd's ten).  (It said eleven
+  units here until 2026-10-03, when nothing in the Extra mode was let appear beyond ten, below; and at
+  eleven it could not be grenaded as it roared at all - `target_enemi_for_explosive_weapon` 0x1000c57b8
+  wants a target inside the launcher's eleven, not at it.)
 
   Then too many Runners in the last wave (user, the same day): the second pack of three, which arrived with
   the Hulk pair, is gone, leaving one pack early and one Runner on its own later - four where there were
@@ -2225,7 +2228,8 @@ they were.
   crowd at the crowd's pace; a Dodge comes alone or two together; Runners come in a pack of their own with
   nothing in it to disturb; and the crowds are weak ones, one blast each, as in Fuse.  The last wave went
   from 38 enemies in seven crowds to 26 in five groups, and every fast thing in it is heard about twelve
-  seconds before it arrives.  The tool puts it at 12.7 seconds short at level 1, from 32.1 - easier than
+  seconds before it arrives (about eleven since 2026-10-03, when they come in at ten units rather than
+  eleven).  The tool puts it at 12.7 seconds short at level 1, from 32.1 - easier than
   Fuse and than the end of chapter 3 by its reckoning, which counts ringing ears heavily and a grenade as
   never landing on the toughest; the play-test settles it, and chapter 4's order is settled after.
 
@@ -2515,6 +2519,83 @@ they were.
   held its closing line back until its cows had gone, and "Cow - 2" was never waited for; Barnyard's end
   waited for its cows and came with the jukebox still playing; Scrapyard's car alarm and machine held nothing,
   and nor did a cow in Endless; the guard let a wave go after 120 s and logged it.
+* PORT ADDITION: nothing in the Extra mode appears further out than a gun reaches (user request,
+  2026-10-03).  A player on a phone found that in the Extra arenas a shot fired the moment a zombie was heard
+  arriving sometimes did nothing.  Every gun's `range` in Weapons.plist is 11 (the Bazooka's 15, a melee
+  weapon's 3), and `calculateHitEnemies:` 0x1000c41c4 passes over anything whose squared distance is beyond
+  it, so a zombie heard twelve units out could not be hit until it had walked in: no hit, a round gone, and
+  the accuracy star and the combo with it.  Even one at exactly eleven was out of reach on about a quarter of
+  the bearings, its squared distance rounding to a hair over 121.  The original sends some 650 of its 750
+  spawns from ten units and one from beyond eleven; the Extra arenas sent 1,430 of their 3,057 from beyond
+  ten - most from eleven to fourteen, Stampede's crowds from twelve, and the back of Shell Shock's files from
+  as far as twenty.
+
+  Now nothing is further out than ten (`additions.REACH`), the original's own distance.  A spawn written
+  further out starts at ten instead, as much later as walking in from where it was written would have taken
+  (`_bring_into_reach`, run once over every wave of every arena in `CHAPTERS`, by each kind's pace: 0.5 a
+  second for the walkers, 1.3 a Runner, 0.75 a Hulk, 0.9 a Dodge, 0.25 a Colossus, the 0.725 and 0.2 of
+  their speed that a Chainsaw's and a Clown's circling brings them in, and a fifth more for each
+  `fasterEnemies` an arena is played with).  So it reaches the player exactly when the arena was built for
+  it to - every wave keeps its arrivals, its packs and its gaps once they are inside ten - and every gun
+  reaches it from the moment it is heard.  A spawn at ten or closer is untouched; nearer was always a
+  choice.  The passers-by are treated the same way: a cow can be shot, and in Cattle Call and Lightning Rod
+  is meant to be, so the cows written from eleven come in at ten two seconds later and leave when they
+  always did.  The arenas keep the distances they were written with, and the comment at `REACH` says what
+  those mean now.  Checked: of 3,096 spawns and passers-by in the 49 arenas, none is beyond ten but the
+  Bazooka's, below.
+
+  The Bazooka's arenas keep what was put beyond eleven for it.  Artillery's objective says the crowds stand
+  "out of reach of every gun you own but this one", Riot Act's tip is to choose the weapon by the distance,
+  and Titans and Scarecrows are built round a rocket reaching what nothing else does - the Colossi, and the
+  crowds behind the dummies.  The Bazooka reaches fifteen, so all of that can be hit the moment it is heard,
+  with the gun those arenas are about, and 265 spawns from 11.5 to 14.7 units stay where they were
+  (`_ROCKET_ARENAS`, and Reprise's fifth act, `_ROCKET_WAVES`).  What stands between ten and eleven in them
+  was not put there for the rocket and comes in to ten like everything else.  Heavyweights carries the
+  Bazooka too, but for what a bullet would upset, not for range: its Hulks, written from thirteen to be met
+  early by a rocket, come in at ten now, where the rifle reaches them as well.
+
+  Two designs leaned on the distance and change with it.  Shell Shock's files stood all at once, 2.2 units
+  apart on one bearing with the back of each beyond the shotgun's eleven, for one death to run down the
+  line; now the back of a file comes in one at a time as its place in it reaches ten, so a chain started
+  early takes only as much of the file as has come in.  And Fuse's Hulk pair "can be grenaded as it roars"
+  only now: at eleven it stood exactly at the launcher's reach, which `target_enemi_for_explosive_weapon`
+  0x1000c57b8 does not count as inside.
+
+  What the move costs a player is warning, not time: everything still arrives when it did, but is heard for
+  as long less as it used to spend walking in out of reach - under a second for a Runner from eleven, four
+  seconds for a Zombie from twelve, eight for a Colossus - and it can be shot through its arrival roar now,
+  which used to be spent out of range.  Every arena was measured before and after with the referee's scripted
+  player (20 runs a rung at reaction times 0.6 to 2.2 s, level 4 for all 49 and level 1 for chapters 1 to 3;
+  the Police Shotgun and Bazooka arenas with the two corrections chapter 5 was measured with).  Of the 49,
+  nine had nothing moved (Three Bullets, Powder Keg, Hydra, Rust, The Drop, Carousel, One Swing, Artillery,
+  Scarecrows), and of the other forty nearly all read the same within the measure's own noise, which at 20
+  runs a rung is a tenth of a second or two either way and more where the ladder is ragged - Crossfire,
+  Juggernaut and Tempo looked to have moved by 0.15 to 0.54 s and, played forty more times before and after,
+  had not.  Three moved, measured over 60 runs a rung: Stampede at level 1 from 2.31 s to 2.03, losing only
+  at reactions of 1.6 s and slower (level 4 unchanged, never lost); Bad Company at level 4 from 1.03 to
+  0.92; and Big Game at level 1 the other way, from 0.51 to 2.16, since its Hulks and its Colossus can now
+  be shot through their long arrival roars, which they used to spend out of the rifle's reach.  None was
+  re-spaced to win its old figure back: the arenas are to be re-tuned for a human player next, with a more
+  human scripted player (user request, the same day).  Every arena is still won by the scripted player at
+  level 4 in half its runs or more at a reaction of 0.9 s, and all but Bad Company at 1.0 s - except
+  Scrapyard, which it never won (0.46 before, 0.44 after), since it does not shoot the cars the arena is
+  built round.
+
+
+  `tools/arena_pressure.py` reads every wave as its arena wrote it (`as_written`, from `additions.written`),
+  and prints exactly what it printed before for every arena at levels 1 and 4.  By everything it counts
+  that is the same arena: each enemy's deadline is kept, and the tool has never counted the time before an
+  enemy can first be shot.  Read as moved it gives crowd weapons wrong answers - a pack written deeper than
+  ten comes in a member at a time, its back half more than `PACK_TIME` behind the front, and the tool split
+  every such pack in two (Crossfire went from 35.8 seconds short to 114.9) though it walks in exactly as
+  written.  The warning a move takes away is a matter of finding a sound by ear, which only the scripted
+  player can see.
+
+  The stars: no time star needed moving - the scripted player's median winning time at R = 1.0 s moved by
+  seven seconds at the most (Shell Shock, 137 to 144 s against its 190), and was shorter where it moved much
+  (The Wall at level 1, 108 to 91) - and the accuracy stars can only have become easier for a person, since a
+  shot fired the moment something is heard can no longer miss for being out of range.  (The scripted player
+  never fires a shot its target cannot take, so its own accuracy did not move.)
 * PORT ADDITION: an arena of the Extra mode offers a revive (user request, 2026-10-01).  A death there
   offers what Endless offers - the revive for diamonds, twice the price each time (`show_revive_view`
   0x10005ba78), or the failed screen, which is starting over - where `-[ADEnemy afterAttackSound]`

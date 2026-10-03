@@ -69,7 +69,28 @@ def load(name: str):
     if os.path.exists(path):
         with open(path, 'rb') as fh:
             return plistlib.load(fh)
-    return additions.PLISTS.get(name)
+    return as_written(additions.PLISTS.get(name))
+
+
+def as_written(wave):
+    """A wave of the port's as its arena wrote it.
+
+    Since 2026-10-03 nothing in the Extra mode appears further out than ten units (`additions.REACH`): a
+    spawn written beyond that starts at ten instead, as much later as the walk in would have taken, so it
+    reaches the player exactly when it was written to.  This tool measures the wave as written, which is
+    the same thing by everything it counts - each enemy's deadline is kept, and it has never counted the
+    time before an enemy can first be shot.  Measured as moved, a pack written deeper than ten splits in two
+    (its back half arrives later than `PACK_TIME`), though it walks in exactly as written.  What the move
+    does cost - the seconds an enemy used to be heard out of reach - is a matter of finding it by ear, and
+    the scripted player measures that.
+    """
+    if not wave or not wave.get('Enemies'):
+        return wave
+    out = dict(wave)
+    for group in ('Enemies', 'PasserBy'):
+        if wave.get(group):
+            out[group] = {k: additions.written(one) for k, one in wave[group].items()}
+    return out
 
 
 ENEMIES = load('enemies')
