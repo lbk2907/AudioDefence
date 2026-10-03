@@ -433,10 +433,12 @@ class ControlSchemePanel:
         choice = params.second_speech_output() if second else params.speech_output()
         if not speech.can_speak(choice):
             self.say_silent(choice, second)
-        elif second:
-            speech.speak_second('This is how the second speech sounds.')
+        elif second:                                      # one sentence for both (user request): which
+            speech.speak_second('This is how this voice sounds while you play. Change its speed, pitch or '
+                                'volume until every word is clear.')   # page it is, the player knows
         else:
-            self.announce('This is how the first speech sounds.')
+            self.announce('This is how this voice sounds while you play. Change its speed, pitch or '
+                          'volume until every word is clear.')
 
     def toggle_second_speech(self) -> None:
         params = GameParameters.shared()

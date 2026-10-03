@@ -3122,8 +3122,9 @@ they were.
   each change is said by the second speech.  Use modern output is one row for both SAPI 5 voices.  The
   calibration question at start-up and after Reset all settings is the first speech's, as it was.  Each page
   has Test speech after the voice's rows and before Speech calibration (user request, 2026-10-03), which reads
-  "This is how the first speech sounds." through `Speech.speak`, or "This is how the second speech sounds."
-  through `Speech.speak_second` whether the second is used or not - so a screen reader simply reads it, and
+  "This is how this voice sounds while you play. Change its speed, pitch or volume until every word is
+  clear." - the same on both pages, and long enough to judge a voice by; Control cuts it short - through
+  `Speech.speak` or `Speech.speak_second`, whether the second is used or not - so a screen reader simply reads it, and
   SAPI 5, the system voice or the phone's engine with that speech's voice, rate, pitch and volume.  An output
   that cannot speak just now says so through one that can, as choosing it does (`say_silent`).
 
