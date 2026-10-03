@@ -37,12 +37,6 @@ def config_path() -> str:
 
 def write_alsoft_config() -> str:
     path = config_path()
-    old = os.path.join(paths.user_dir(), 'alsoft.ini')   # where builds before 2026-10-03 wrote it: gone
-    try:                                                  # from among the player's own files
-        if os.path.isfile(old):
-            os.remove(old)
-    except OSError:
-        pass
     lines = [
         '# Written by Audio Defence at start-up; edits are overwritten.',
         '[general]',
