@@ -789,7 +789,6 @@ class Speech:
         self.second_config = dict(SAPI_DEFAULTS)          # its SAPI 5 voice and the rest
         self._second_sapi = None
         self._second_silent = False
-        self._second_spoke = False                        # whether it has said anything yet (`_stop_second`)
 
     @property
     def readers(self) -> _Readers:
@@ -862,7 +861,6 @@ class Speech:
         if braille:
             braille = localization.translate(str(braille))
         log.debug('speak (second): %s', text)
-        self._second_spoke = True
         choice = self.second_choice
         if choice not in PRISM_NAMES and choice not in (SCREEN_READER, 'sapi'):
             if self.nvda.speak(text, interrupt, braille):
@@ -996,9 +994,9 @@ class Speech:
         sapi = self._sapi
         if sapi is not None and getattr(sapi, 'thread', None) is not None:   # and what it was about to say
             sapi.stop()
-        second = self._second_sapi                        # PORT ADDITION: the second speech's voice too
-        if second is not None and getattr(second, 'thread', None) is not None:
-            second.stop()
+        # Not the second speech's voice (user request, 2026-10-03): it reads what is said during a game, and a
+        # key pressed to play must not cut a line a player needs to hear.  It plays on its own player, which the
+        # line above does not reach.
 
     def stop(self) -> None:
         self.lines += 1                                   # PORT ADDITION: a hint waiting is not read now
@@ -1018,21 +1016,6 @@ class Speech:
             self._readers.stop()
         elif self._sapi is not None:
             self._sapi.stop()
-        self._stop_second()
-
-    def _stop_second(self) -> None:
-        """PORT ADDITION (user request, 2026-10-03): `stop` stops the second speech too, through its own output -
-        Control stops whatever is being read out.  Only once it has said something: until then there is nothing
-        of its own to stop, and nothing is made just to be stopped."""
-        if not self._second_spoke:
-            return
-        choice = self.second_choice
-        if choice == SCREEN_READER or (choice == 'auto' and self.nvda.running()):
-            if self.nvda.running():
-                self.nvda.stop()
-        elif choice in PRISM_NAMES or (choice == 'auto' and self._readers is not None
-                                       and self._readers.reader is not None):
-            if self._readers is not None:
-                self._readers.stop()
-        elif self._second_sapi is not None:
-            self._second_sapi.stop()
+        # Not the second speech (user request, 2026-10-03): Control stops the first, and the second reads what is
+        # said during a game, which nobody should miss.  When both speak through the same screen reader, stopping
+        # it stops both: they are one voice then.

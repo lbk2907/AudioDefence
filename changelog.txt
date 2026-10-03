@@ -35,6 +35,7 @@ Switching to another window after you die no longer opens the pause menu over th
 The Speech tab in Settings can give the tutorial and what is said during a game a second voice of its own.
 In a challenge, the next wave waits for the cows to walk off or be shot, and so does the end. The clock stops while it waits.
 The game no longer keeps its alsoft.ini sound file with your settings. An old one left in the AudioDefence settings folder can be deleted.
+A revive stops the ringing from an explosion, so you come back with clear ears.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.

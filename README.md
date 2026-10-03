@@ -109,20 +109,20 @@ weapons", and the challenge timer. So the game's text can have a voice of its
 own, or a screen reader of its own, apart from the menus. With it off,
 everything is read as before.
 
-Second speech settings has the same rows as the first speech's page: Speech
-output, the voice, rate, rate boost, pitch and volume while SAPI 5 speaks it
-(the system voice on the Mac; on the phone, its own Android speech engine,
-rate, pitch and volume), Test speech and Speech calibration. It can be set up
-while Use second speech is off, and each change is said in the second speech's
-voice.
+Each page starts with Speech output, then the voice, rate, rate boost, pitch
+and volume while SAPI 5 speaks it (the system voice on the Mac; on the phone,
+its Android speech engine, rate, pitch and volume). The first speech's page
+then has Speech calibration. The second's has **Follow the first speech's
+calibration**, and its own Speech calibration only while that is off. Test
+speech is last on both. Second speech settings can be set up while Use second
+speech is off, and each change is said in the second speech's voice.
 
 Each speech has its own calibration, and the second's sentence is read in the
-second speech's voice. Second speech settings also has **Follow the first
-speech's calibration**, on by default. While it is on, the second speech uses
-the first's measurement, and calibrating the first speech calibrates both.
-Turning it on puts the first's measurement in place of the second's own;
-turning it off leaves the second speech with that measurement until you
-calibrate it, and calibrating the second speech turns it off. The very first
+second speech's voice. Follow the first speech's calibration is on by default.
+While it is on, the second speech uses the first's measurement, and
+calibrating the first speech calibrates both. Turning it on puts the first's
+measurement in place of the second's own; turning it off leaves the second
+speech with that measurement until you calibrate it. The very first
 calibration, the one the game asks for when it starts, turns it on. Changing a
 voice keeps its speech's measurement. Each line is timed by the measurement of
 the speech that reads it, and hints are always the first speech's.
@@ -131,8 +131,10 @@ The two speeches can speak at once. A screen reader that both of them use is
 the same one, so their lines simply go to it. Two SAPI 5 voices are two
 voices, each with its own settings, and a line cuts off only what its own
 speech is saying; Use modern output, on the first speech's page, is for both
-SAPI 5 voices. A key in the menus still stops both SAPI 5 voices, and Control
-stops both speeches. Reset all settings turns the second speech off
+SAPI 5 voices. A key in the menus, and Control, stop only the first speech:
+the second reads what is said during a game, and nothing stops it before it
+has been heard. When both speeches use the same screen reader they are one
+voice, and stopping it stops both. Reset all settings turns the second speech off
 and puts its settings back.
 
 On the Mac each speech's page lists **Automatic**, **VoiceOver** and **System

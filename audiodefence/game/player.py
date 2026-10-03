@@ -132,6 +132,18 @@ class Player:
         engine.set_reverb_room_size(1.5)
         engine.set_reverb_dampening(50.0)
 
+    def reset_tinnitus(self) -> None:
+        """PORT ADDITION (user request, 2026-10-03): a revive gives the player fresh ears.  The original's
+        `revive` 0x10005bec0 says nothing to the player, so a blast heard just before the death went on ringing
+        into the revived game - the sound and the reverb it swells on every enemy - for up to its full length.
+        The ring is ended where it stands: the sound stops, the reverb goes back (`stop_tinnitus`; the
+        ambience the revive starts again sets the rest), and nothing of it is left to extend."""
+        if self.tinnitus_duration > 0.0 or (self.tinnitus_sound is not None and self.tinnitus_sound.playing):
+            self.stop_tinnitus()
+        self.tinnitus_duration = 0.0
+        self.tinnitus_timer = 0.0
+        self.tinnitus_intensity = 0.0
+
     def dealloc(self) -> None:                            # 0x1000b6c10
         if self.tinnitus_sound is not None:
             self.tinnitus_sound.stop()

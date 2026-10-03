@@ -342,8 +342,8 @@ class ControlSchemePanel:
     # --- a speech's own page (PORT ADDITION, user request, 2026-10-03) ----------------------------------
     def speech_page_rows(self, t, params, second: bool) -> None:
         """One speech's settings: its Speech output, its voice's rows while SAPI 5 (the Mac's system voice, the
-        phone's text-to-speech) is what it speaks with, and its Speech calibration - and, for the second, whether
-        it follows the first's calibration."""
+        phone's text-to-speech) is what it speaks with, then - for the second - whether it follows the first's
+        calibration, its Speech calibration (the second's only while it does not follow), and Test speech last."""
         from ..platform.speech import OUTPUTS
         output = params.second_speech_output() if second else params.speech_output()
         # the hints are written out where the rows are made, so the translators' list finds them
@@ -365,31 +365,33 @@ class ControlSchemePanel:
         self.sapi_shown = self.sapi_speaking(second)
         if self.sapi_shown:                               # only while SAPI 5 is what this speech speaks with
             self.sapi_rows(t, params, second)
-        # PORT ADDITION (user request, 2026-10-03): this speech heard as it is set now (`test_speech`)
-        t.cell('Test speech', hint='Press Enter to hear this speech.', action=self.test_speech)
-        # PORT ADDITION (user request, 2026-10-02): how fast the speech reads, measured, by which the game
-        # predicts when a line has been read, whatever speaks it (ui/reading.py).  For every output: the
-        # measurement is the speech's, and stays when the output or the voice changes.  Each speech has its own
-        # (user request, 2026-10-03).
-        word_time = params.speech_word_time(params.SECOND_SPEECH if second else params.FIRST_SPEECH)
-        t.cell('Speech calibration',
-               '%i words a minute' % round(60.0 / word_time) if word_time else 'not done yet',
-               hint=('How fast the second speech reads. While Use second speech is on, the game works out from it '
-                     "when the story in Extra has been read. Calibrating it turns Follow the first speech's "
-                     'calibration off. Press Enter and the second speech reads a sentence; press Enter again the '
-                     'moment it ends, or Escape to cancel.' if second else
-                     'How fast the first speech reads. The game works out from it when each row has been read, so '
-                     'that its hint comes at the right moment, and the story in Extra too while Use second speech '
-                     "is off. Calibrate again after changing the voice or its speed, a screen reader's or the "
-                     "game's own. Press Enter and a sentence is read; press Enter again the moment it ends, or "
-                     'Escape to cancel.'),
-               action=self.start_calibration)
-        if second:
+        if second:                                        # straight after the voice it follows for
             t.cell("Follow the first speech's calibration", 'ON' if params.second_follows() else 'OFF',
                    hint="Press Enter to toggle: when on, the second speech uses the first speech's calibration, and "
                         'calibrating the first speech calibrates both. Turned off, the second speech keeps that '
-                        'calibration until you calibrate it.',
+                        'calibration until you calibrate it, in the Speech calibration row that then appears.',
                    action=self.toggle_follow, shift_action=self.toggle_follow)
+        # PORT ADDITION (user request, 2026-10-02): how fast the speech reads, measured, by which the game
+        # predicts when a line has been read, whatever speaks it (ui/reading.py).  For every output: the
+        # measurement is the speech's, and stays when the output or the voice changes.  Each speech has its own
+        # (user request, 2026-10-03) - the second's row only while it does not follow the first's, since
+        # following, there is nothing of its own to measure (user request, the same day).
+        if not (second and params.second_follows()):
+            word_time = params.speech_word_time(params.SECOND_SPEECH if second else params.FIRST_SPEECH)
+            t.cell('Speech calibration',
+                   '%i words a minute' % round(60.0 / word_time) if word_time else 'not done yet',
+                   hint=('How fast the second speech reads. While Use second speech is on, the game works out from '
+                         'it when the story in Extra has been read. Press Enter and the second speech reads a '
+                         'sentence; press Enter again the moment it ends, or Escape to cancel.' if second else
+                         'How fast the first speech reads. The game works out from it when each row has been read, '
+                         'so that its hint comes at the right moment, and the story in Extra too while Use second '
+                         "speech is off. Calibrate again after changing the voice or its speed, a screen reader's or "
+                         "the game's own. Press Enter and a sentence is read; press Enter again the moment it ends, "
+                         'or Escape to cancel.'),
+                   action=self.start_calibration)
+        # PORT ADDITION (user request, 2026-10-03): this speech heard as it is set now (`test_speech`), last on
+        # the page (user request, the same day)
+        t.cell('Test speech', hint='Press Enter to hear this speech.', action=self.test_speech)
 
     def open_page(self, page: str) -> None:
         """A speech's page, as a list of its own: its first row named after the page.  Escape or Back goes back

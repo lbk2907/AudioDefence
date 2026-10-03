@@ -296,5 +296,5 @@ class Speech:
     def stop(self) -> None:
         self.lines += 1                                   # PORT ADDITION: a hint waiting is not read now
         self._sapi.stop()
-        if self._second_sapi is not None:                 # PORT ADDITION: and the second speech
-            self._second_sapi.stop()
+        # not the second speech (user request, 2026-10-03): the two-finger tap stops the first, and the second
+        # reads what is said during a game, which nobody should miss

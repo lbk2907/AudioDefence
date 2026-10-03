@@ -879,6 +879,8 @@ class GameplayController:
             self.host.dismiss_revive()
         self.revive_view_controller = None
         self.paused = False
+        if self.player is not None:                       # PORT ADDITION: the ringing ends (Player.reset_tinnitus)
+            self.player.reset_tinnitus()
         BrickManager.shared().revive(skip)
         self.init_ambiant_manager()
 
@@ -1458,10 +1460,13 @@ class OpenerGameplayController(GameplayController):
             # the original announces "Triple tap to skip intro" after 2 s; the port names its key.  Skipping
             # before then leaves the opener behind, so the announcement checks it is still the screen: it
             # used to arrive over the main menu, where pressing Enter presses whatever is focused.
+            # PORT ADDITION (user request, 2026-10-03): by the first speech, not the in-game one - the opener is
+            # not a game being played, and the second speech reads only what is said in one.
             def announce_skip() -> None:
                 from ..app import App
+                from ..platform.speech import Speech
                 if App.delegate().view_controller is self:
-                    self.host.announce(self.host.skip_intro_announcement())
+                    Speech.shared().speak(self.host.skip_intro_announcement())
             RunLoop.main().call_later(2.0, announce_skip)
 
     def handle_skip_for_accessible_users(self) -> None:   # 0x100025994
