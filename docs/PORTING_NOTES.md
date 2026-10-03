@@ -3055,7 +3055,12 @@ they were.
   for the second speech - its own output from the same list, its own voice and settings, its own engine on
   the phone - and Follow the first speech's calibration; it can be set while Use second speech is off, and
   each change is said by the second speech.  Use modern output is one row for both SAPI 5 voices.  The
-  calibration question at start-up and after Reset all settings is the first speech's, as it was.
+  calibration question at start-up and after Reset all settings is the first speech's, as it was.  Each page
+  has Test speech after the voice's rows and before Speech calibration (user request, 2026-10-03), which reads
+  "This is how the first speech sounds." through `Speech.speak`, or "This is how the second speech sounds."
+  through `Speech.speak_second` whether the second is used or not - so a screen reader simply reads it, and
+  SAPI 5, the system voice or the phone's engine with that speech's voice, rate, pitch and volume.  An output
+  that cannot speak just now says so through one that can, as choosing it does (`say_silent`).
 
   While Use second speech is on, the second speech reads what is read out during a game: the story screen's
   text and the epilogue's (`StoryScreen.speak_element`; its Continue button is read by the first, as every

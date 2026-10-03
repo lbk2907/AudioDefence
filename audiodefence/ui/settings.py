@@ -365,6 +365,8 @@ class ControlSchemePanel:
         self.sapi_shown = self.sapi_speaking(second)
         if self.sapi_shown:                               # only while SAPI 5 is what this speech speaks with
             self.sapi_rows(t, params, second)
+        # PORT ADDITION (user request, 2026-10-03): this speech heard as it is set now (`test_speech`)
+        t.cell('Test speech', hint='Press Enter to hear this speech.', action=self.test_speech)
         # PORT ADDITION (user request, 2026-10-02): how fast the speech reads, measured, by which the game
         # predicts when a line has been read, whatever speaks it (ui/reading.py).  For every output: the
         # measurement is the speech's, and stays when the output or the voice changes.  Each speech has its own
@@ -416,6 +418,25 @@ class ControlSchemePanel:
     def on_a_page(self) -> bool:
         """Whether a row's list or a speech's page is open: the arrows that change category are theirs then."""
         return self.choosing is not None or self.page is not None
+
+    def test_speech(self) -> None:
+        """PORT ADDITION (user request, 2026-10-03): the Test speech row - a sentence read by the speech whose
+        page is open, the way that speech reads everything: through its Speech output, and with its voice, rate,
+        pitch and volume while SAPI 5 (the Mac's system voice, the phone's engine) is what it speaks with.  The
+        second speech's is read whether Use second speech is on or not, as its other rows are.  An output that
+        cannot speak just now is said to be silent, through a speech that can, as choosing it says
+        (`say_silent`)."""
+        from ..platform.speech import Speech
+        params = GameParameters.shared()
+        speech = Speech.shared()
+        second = self.second_page()
+        choice = params.second_speech_output() if second else params.speech_output()
+        if not speech.can_speak(choice):
+            self.say_silent(choice, second)
+        elif second:
+            speech.speak_second('This is how the second speech sounds.')
+        else:
+            self.announce('This is how the first speech sounds.')
 
     def toggle_second_speech(self) -> None:
         params = GameParameters.shared()
@@ -771,30 +792,47 @@ class ControlSchemePanel:
     def take_second_output(self, choice: str) -> None:
         """PORT ADDITION (user request, 2026-10-03): the second speech's output, said through it so its voice is
         heard - or, when it cannot speak, by the first speech, saying the second will be silent."""
-        from ..platform.speech import OUTPUTS, PRISM_NAMES, Speech
+        from ..platform.speech import OUTPUTS, Speech
         GameParameters.shared().set_second_speech_output(choice)
-        name = dict(OUTPUTS)[choice]
         speech = Speech.shared()
         if speech.can_speak(choice):
-            speech.speak_second('Speech output: %s' % name)
-        elif choice in PRISM_NAMES and speech.readers.ctx is None:
+            speech.speak_second('Speech output: %s' % dict(OUTPUTS)[choice])
+        else:
+            self.say_silent(choice, True)
+
+    def say_silent(self, choice: str, second: bool) -> None:
+        """A speech's Speech output cannot speak just now: said through a speech that can - the first speech for
+        the second's, and the automatic choice for the first's, since it could not be heard otherwise and the
+        player would be left in silence without knowing why."""
+        from ..platform.speech import OUTPUTS, PRISM_NAMES, Speech
+        name = dict(OUTPUTS)[choice]
+        speech = Speech.shared()
+        no_prism = choice in PRISM_NAMES and speech.readers.ctx is None
+        if second and no_prism:
             self.announce('Speech output: %s. It needs Prism, which is not installed, so the second speech will be '
                           'silent.' % name)
-        else:
+        elif second:
             self.announce('Speech output: %s. %s is not running, so the second speech will be silent until it is.'
                           % (name, name))
+        # speak_automatic takes a line as it is, so these are put in the player's language here (2026-10-02)
+        elif no_prism:
+            speech.speak_automatic(localization.translate('Speech output: %s. It needs Prism, which is not '
+                                                          'installed, so the game will be silent.' % name))
+        else:
+            speech.speak_automatic(localization.translate('Speech output: %s. %s is not running, so the game '
+                                                          'will be silent until it is.' % (name, name)))
 
     def take_speech_output(self, choice: str) -> None:
         """The chosen Speech output.  Said through the new one - or, when that one cannot speak, through
         the automatic choice, since it could not be heard otherwise and the player would be left in
         silence without knowing why."""
-        from ..platform.speech import OUTPUTS, PRISM_NAMES, Speech
+        from ..platform.speech import OUTPUTS, Speech
         params = GameParameters.shared()
         changed = choice != params.speech_output()
         params.set_speech_output(choice)
         name = dict(OUTPUTS)[choice]
         speech = Speech.shared()
-        # speak_automatic takes a line as it is, so these are put in the player's language here (2026-10-02)
+        # ask_for_calibration takes a line as it is, so this is put in the player's language here (2026-10-02)
         if changed and calibration_wanted():
             # PORT ADDITION (user request, 2026-10-02): the speech has never been measured - the question
             # at start-up found nothing it could be heard through - and it can be now: the game asks for a
@@ -803,12 +841,8 @@ class ControlSchemePanel:
             self.ask_for_calibration(localization.translate('Speech output: %s' % name))
         elif speech.can_speak(choice):
             self.announce('Speech output: %s' % name)
-        elif choice in PRISM_NAMES and speech.readers.ctx is None:
-            speech.speak_automatic(localization.translate('Speech output: %s. It needs Prism, which is not '
-                                                          'installed, so the game will be silent.' % name))
         else:
-            speech.speak_automatic(localization.translate('Speech output: %s. %s is not running, so the game '
-                                                          'will be silent until it is.' % (name, name)))
+            self.say_silent(choice, False)
 
     # --- SAPI 5 (PORT ADDITION) ------------------------------------------------------------------
     SAPI_STEP_HINT = 'Press Enter for the next setting and Shift plus Enter for the previous.'

@@ -55,6 +55,12 @@ Enter and Shift+Enter change each one, and each change is said in SAPI 5 at the
 new setting, even while NVDA speaks the rest, so you hear what you chose. Reset
 all settings puts all five back to Control Panel's.
 
+**Test speech**, after those rows on each speech's page (straight after Speech
+output when there are none), reads a sentence in that speech as it is set now:
+through its Speech output, with its voice, rate, pitch and volume. A screen
+reader simply reads it. On Second speech settings it works whether Use second
+speech is on or not, and on the phone it reads with that speech's engine.
+
 Many items and rows carry a hint, such as "Press Enter for the list". As
 VoiceOver does, the game reads the item first and the hint on its own after
 it, once the item has been read and a pause has passed. Two rows at the end of
@@ -106,8 +112,9 @@ everything is read as before.
 Second speech settings has the same rows as the first speech's page: Speech
 output, the voice, rate, rate boost, pitch and volume while SAPI 5 speaks it
 (the system voice on the Mac; on the phone, its own Android speech engine,
-rate, pitch and volume), and Speech calibration. It can be set up while Use
-second speech is off, and each change is said in the second speech's voice.
+rate, pitch and volume), Test speech and Speech calibration. It can be set up
+while Use second speech is off, and each change is said in the second speech's
+voice.
 
 Each speech has its own calibration, and the second's sentence is read in the
 second speech's voice. Second speech settings also has **Follow the first
