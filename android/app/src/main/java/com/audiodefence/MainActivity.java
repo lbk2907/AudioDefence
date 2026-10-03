@@ -1,7 +1,6 @@
 package com.audiodefence;
 
 import android.app.Activity;
-import android.content.res.AssetManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -15,23 +14,18 @@ import android.view.accessibility.AccessibilityManager;
 import com.chaquo.python.Python;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 /**
- * Audio Defence for Android.  Opens the touch surface, unpacks the game's data the first time, then runs the
- * game (Python: audiodefence/android_main.py) on a thread of its own.
+ * Audio Defence for Android.  Opens the touch surface, unpacks the game's data the first time and what changed of
+ * it after an update (DataSync), then runs the game (Python: audiodefence/android_main.py) on a thread of its own.
  */
 public final class MainActivity extends Activity {
     private static final String TAG = "AudioDefence";
-    private static final int DATA_VERSION = 2;           // raise it when the layout of the unpacked data changes
+    // raise it when the layout of the unpacked data changes: the next start unpacks all of it again
+    private static final int DATA_VERSION = 2;
 
     private Bridge bridge;
     private boolean started;
-    private int filesDone;
-    private int filesTotal;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -124,37 +118,39 @@ public final class MainActivity extends Activity {
     private void boot() {
         try {
             AccessibilityManager am = (AccessibilityManager) getSystemService(ACCESSIBILITY_SERVICE);
-            if (am != null && am.isTouchExplorationEnabled()) {
+            boolean warned = am != null && am.isTouchExplorationEnabled();
+            if (warned) {
                 bridge.speak("TalkBack is on. The game speaks for itself and needs TalkBack turned off. "
                         + "Turn TalkBack off, then open the game again.", true);
             }
             File home = new File(getFilesDir(), "adhome");
-            // The game's data is built into each APK from the repository it is made in, so it is unpacked
-            // again whenever the app has been installed or updated since it was last unpacked.
-            long installed = getPackageManager().getPackageInfo(getPackageName(), 0).lastUpdateTime;
-            File marker = new File(home, ".data-" + DATA_VERSION + "-" + installed);
-            if (!marker.exists()) {
-                bridge.speak("Setting up the game. This only happens the first time and takes a minute or two.", true);
-                deleteRecursive(new File(home, "game"));
-                filesTotal = countFiles("game") + countFiles("localization") + 1;
-                filesDone = 0;
-                copyTree("game", new File(home, "game"));
-                // the language files and the version number: the ones the app ships are put back, and a
-                // language file of the player's own is left alone
-                copyTree("localization", new File(home, "localization"));
-                copyFile("VERSION", new File(home, "VERSION"));
-                File[] old = home.listFiles((dir, name) -> name.startsWith(".data-"));
-                if (old != null) {
-                    for (File f : old) {
-                        //noinspection ResultOfMethodCallIgnored
-                        f.delete();
+            // The game's data is built into each APK from the repository it is made in.  DataSync compares the
+            // APK's list of it with the list of what was unpacked last time and unpacks only what changed, so a
+            // start after an update that left the data alone goes straight to the game.  A line said here is
+            // queued behind the TalkBack warning rather than cutting it off.
+            DataSync.sync(home, DATA_VERSION, getAssets()::open, new DataSync.Listener() {
+                @Override
+                public void starting(DataSync.Plan plan) {
+                    if (plan.full) {
+                        bridge.speak("Setting up the game. This only happens the first time and takes a minute "
+                                + "or two.", !warned);
+                    } else if (plan.announce()) {
+                        bridge.speak("Unpacking the update.", !warned);
                     }
                 }
-                if (!marker.createNewFile()) {
-                    Log.w(TAG, "could not write the marker");
+
+                @Override
+                public void progress(int percent) {
+                    bridge.speak(percent + " percent", false);
                 }
-                bridge.speak("The game is ready.", false);
-            }
+
+                @Override
+                public void finished(DataSync.Plan plan) {
+                    if (plan.announce()) {
+                        bridge.speak("The game is ready.", false);
+                    }
+                }
+            });
             Python.getInstance().getModule("audiodefence.android_main")
                     .callAttr("run", home.getAbsolutePath());
         } catch (Throwable t) {
@@ -168,64 +164,5 @@ public final class MainActivity extends Activity {
         } finally {
             bridge.gameEnded();
         }
-    }
-
-    private int countFiles(String dir) throws IOException {
-        AssetManager am = getAssets();
-        String[] names = am.list(dir);
-        if (names == null || names.length == 0) {
-            return 1;
-        }
-        int n = 0;
-        for (String name : names) {
-            n += countFiles(dir + "/" + name);
-        }
-        return n;
-    }
-
-    private void copyTree(String assetDir, File target) throws IOException {
-        AssetManager am = getAssets();
-        String[] names = am.list(assetDir);
-        if (names == null || names.length == 0) {
-            copyFile(assetDir, target);
-            return;
-        }
-        if (!target.exists() && !target.mkdirs()) {
-            throw new IOException("cannot create " + target);
-        }
-        for (String name : names) {
-            copyTree(assetDir + "/" + name, new File(target, name));
-        }
-    }
-
-    private void copyFile(String asset, File target) throws IOException {
-        File parent = target.getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            throw new IOException("cannot create " + parent);
-        }
-        try (InputStream in = getAssets().open(asset); OutputStream out = new FileOutputStream(target)) {
-            byte[] buf = new byte[65536];
-            int n;
-            while ((n = in.read(buf)) > 0) {
-                out.write(buf, 0, n);
-            }
-        } catch (java.io.FileNotFoundException e) {
-            Log.w(TAG, "skipping " + asset + " (an empty folder)");   // list() cannot tell one from a file
-        }
-        filesDone++;
-        if (filesTotal > 0 && filesDone % Math.max(1, filesTotal / 5) == 0 && filesDone < filesTotal) {
-            bridge.speak((100 * filesDone / filesTotal) + " percent", false);
-        }
-    }
-
-    private static void deleteRecursive(File f) {
-        File[] kids = f.listFiles();
-        if (kids != null) {
-            for (File k : kids) {
-                deleteRecursive(k);
-            }
-        }
-        //noinspection ResultOfMethodCallIgnored
-        f.delete();
     }
 }

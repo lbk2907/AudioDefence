@@ -201,9 +201,29 @@ they were.
   version is read from `VERSION` as the build is set up: `versionName` is the tag and `versionCode` its digits
   as one number, yymmddNN (`26.10.01-1` is 26100101, 99123199 at the most), so each release is newer to
   Android than the last.  The first builds were fixed at version code 11.
-* **Starting.**  `MainActivity` unpacks the assets into the app's own files folder the first time and after
-  every install or update, then calls `android_main.run`, the phone's main loop - `__main__` with pygame's
+* **Starting.**  `MainActivity` unpacks the game's data - `game/`, the language files and `VERSION` - into the
+  app's own files folder, then calls `android_main.run`, the phone's main loop - `__main__` with pygame's
   events replaced by the touches the Java side collects (`TouchView`, `Bridge`).
+  * Only what changed is unpacked (user request, 2026-10-03).  Until then every install or update unpacked all
+    2,366 files and 123 MB again, behind a marker named for the install time, though most updates change only
+    the Python, which Chaquopy brings in by itself.  Now the build lists every file it puts in, with its size
+    and its CRC-32 - the checksum the APK's zip keeps for it too - in `data-manifest.txt` at the root of the
+    assets: `writeDataManifest` in `build.gradle`, written under `build/`, never committed, and run only when
+    a file of the data has changed (2.4 s then; skipped otherwise).  After a build the log's DATA MANIFEST
+    CHECK says whether the APK holds every listed file at the listed size and CRC.
+  * `DataSync`, plain Java with nothing of Android's in it so that it can be checked on a computer, compares
+    that list with the one saved beside the data last time (`.data-<DATA_VERSION>.manifest`).  A file that is
+    new, has changed, or is missing or the wrong size on the phone is copied; a file the game no longer has is
+    deleted, under `game/` only; the new list is saved once every copy has gone through.  Until then the saved
+    list leaves out whatever is being copied, so an unpack cut off half way does the rest at the next start,
+    even if the next APK has gone back to an older version of a file.  No saved list, or one that does not
+    read, empties `game/` and copies everything, as before: a first install, a phone coming from the app that
+    kept only the marker, and a raised `DATA_VERSION` all go that way, and the old markers are removed.  The
+    player's settings and saves, and a language file of their own, are in neither list and never touched.
+  * What the player hears: nothing when nothing changed, or for up to 40 files and 8 MB; above that "Unpacking
+    the update." and "The game is ready."; and percentages for a full unpack, or above 400 files or 40 MB.
+    Those thresholds are judgement, not measured on a phone.  The opening line now waits for the TalkBack
+    warning instead of cutting it off.
 * **Sound.**  There is no OpenAL Soft on the phone, so `com.audiodefence.audio.MiniAl` takes its calls - a
   small Java mixer with the game's own HRTF, the same Freeverb and the same per-ear filters - and
   `SoundDecoder` decodes the bundle's files with the phone's MediaCodec.  `s3d/android.py` and
@@ -270,8 +290,9 @@ they were.
     app's files folder, which an update leaves alone.  Not yet, a no on Android's screen, or Android closing
     the app when it is allowed to install (some versions do) all leave the download, and the next start
     offers it again without fetching it.
-  * Files gone missing are not looked for: the phone unpacks the game's data from the APK at every install,
-    and a release holds no zip for the phone to take single files from.
+  * Files gone missing are not downloaded: the phone puts back from the APK, at the next start, any file of
+    the game's data that is missing or the wrong size (`DataSync`), and a release holds no zip for the phone
+    to take single files from.
 * **Controls** (user request, 2026-10-01: "follow the original behavior of the game").  The phone is held
   sideways and the whole screen is the touch area.  The touches are the original's own as it was played
   with VoiceOver running, which is the path the port always takes (`screen_reader_running`): the menus take

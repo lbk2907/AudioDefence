@@ -49,6 +49,21 @@ def buildPythonExe = { ->
     return places.find { new File(it).isFile() }
 }()
 
+// Android leaves out of the APK, without a word, every folder whose name starts with an underscore (and a few
+// others).  The game's data has such folders - game/sounds/_weapons among them - so this is Android's usual list
+// minus those two rules: everything in game/ goes in, apart from junk like .git.  The list of the data the phone
+// unpacks (writeDataManifest) leaves out the same names, so it never lists a file the APK does not have.
+def assetIgnore = '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+def ignoredAsset = { String name ->
+    assetIgnore.split(':').any { p ->
+        def glob = p.replaceFirst(/^!/, '').replaceFirst(/^<(dir|file)>/, '')
+        name ==~ ('(?i)' + glob.split(/\*/, -1).collect { java.util.regex.Pattern.quote(it) }.join('.*'))
+    }
+}
+
+// Where writeDataManifest puts the list, under build/: one more folder of assets for the APK.
+def dataManifestDir = layout.buildDirectory.dir('generated/dataManifest').get().asFile
+
 android {
     namespace = 'com.audiodefence'
     // The Android platform the app compiles against and the build tools it is made with.  compiler.py reads
@@ -82,10 +97,13 @@ android {
     // the game's sounds are read by file path after unpacking; keeping them uncompressed makes the APK unpack faster
     androidResources {
         noCompress "m4a", "mp3", "mhr", "plist", "json"
-        // Android leaves out of the APK, without a word, every folder whose name starts with an underscore
-        // (and a few others). The game's data has such folders - game/sounds/_weapons among them - so this
-        // is Android's usual list minus those two rules: everything in game/ goes in, apart from junk like .git.
-        ignoreAssetsPattern = "!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
+        ignoreAssetsPattern = assetIgnore                // above: what Android leaves out of the APK
+    }
+
+    sourceSets {
+        main {
+            assets.srcDir dataManifestDir                // data-manifest.txt (writeDataManifest)
+        }
     }
 
     // The release is signed with the project's own permanent key: AD_KEYSTORE names the key file (a .p12)
@@ -155,15 +173,58 @@ tasks.register('copyGameAssets', Sync) {
     into 'src/main/assets'
 }
 
-// Everything else in the build comes after the copies: whatever reads the Python or the assets (Chaquopy's
-// tasks, the asset merge, lint) then sees them, and Gradle has no task reading a folder another one writes.
-tasks.configureEach { t ->
-    if (!(t.name in ['copyGamePython', 'copyGameAssets', 'clean'])) {
-        t.dependsOn 'copyGamePython', 'copyGameAssets'
+// The list of what the phone unpacks - every file under game/, the language files and VERSION - with each
+// file's CRC-32 (the same checksum the APK's zip keeps for it) and size, as data-manifest.txt at the root of the
+// APK's assets.  After an install the phone compares it with the list of what it unpacked last time and unpacks
+// only the files that changed (DataSync.java).  It is made from the copies in src/main/assets, so it lists what
+// goes into the APK, less the names Android leaves out (assetIgnore).  It is written under build/ and never
+// committed, and Gradle runs the task only when one of those files has changed: with the data as it was, the
+// task is up to date and nothing is read again.
+tasks.register('writeDataManifest') {
+    dependsOn 'copyGameAssets'
+    def listed = fileTree(file('src/main/assets')) { include 'game/**', 'localization/**', 'VERSION' }
+    def out = new File(dataManifestDir, 'data-manifest.txt')
+    inputs.files(listed).withPropertyName('data').withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.property('ignored', assetIgnore)
+    outputs.dir(dataManifestDir)
+    doLast {
+        def rows = []
+        def buf = new byte[1 << 16]
+        listed.visit { d ->
+            if (d.isDirectory() || d.relativePath.segments.any { ignoredAsset(it) }) {
+                return
+            }
+            def crc = new java.util.zip.CRC32()
+            long size = 0
+            d.file.withInputStream { s ->
+                int n
+                while ((n = s.read(buf)) > 0) {
+                    crc.update(buf, 0, n)
+                    size += n
+                }
+            }
+            rows << [d.relativePath.pathString, String.format('%08x', crc.value), size]
+        }
+        rows.sort { it[0] }
+        def text = new StringBuilder('audiodefence-data-manifest 1\n')   // DataSync.MAGIC
+        rows.each { r -> text << r[1] << '\t' << r[2] << '\t' << r[0] << '\n' }
+        text << 'end\t' << rows.size() << '\n'
+        out.parentFile.mkdirs()
+        out.setText(text.toString(), 'UTF-8')
+        println "DATA MANIFEST: ${rows.size()} files, ${rows.sum(0L) { it[2] }} bytes"
     }
 }
 
-// After a build, say in the build log whether every file of the game's data made it into the APK.
+// Everything else in the build comes after the copies: whatever reads the Python or the assets (Chaquopy's
+// tasks, the asset merge, lint) then sees them, and Gradle has no task reading a folder another one writes.
+tasks.configureEach { t ->
+    if (!(t.name in ['copyGamePython', 'copyGameAssets', 'writeDataManifest', 'clean'])) {
+        t.dependsOn 'copyGamePython', 'copyGameAssets', 'writeDataManifest'
+    }
+}
+
+// After a build, say in the build log whether every file of the game's data made it into the APK, and whether
+// every file the APK's data-manifest.txt lists is in it with the size and CRC-32 listed (the zip keeps both).
 // It only reports; it never stops a build.
 afterEvaluate {
     tasks.matching { it.name == 'assembleDebug' || it.name == 'assembleRelease' }.configureEach { t ->
@@ -179,15 +240,35 @@ afterEvaluate {
                 def variant = t.name == 'assembleDebug' ? 'debug' : 'release'
                 fileTree("build/outputs/apk/${variant}").matching { include '*.apk' }.each { apk ->
                     def packed = [] as Set
+                    def listedRows = null
+                    def wrong = []
                     def z = new java.util.zip.ZipFile(apk)
                     try {
                         z.entries().each { e -> if (!e.isDirectory()) packed << e.name }
+                        def m = z.getEntry('assets/data-manifest.txt')
+                        if (m != null) {
+                            def lines = z.getInputStream(m).getText('UTF-8').split('\n')
+                            listedRows = lines.findAll { it.length() > 9 && it.charAt(8) == ('\t' as char) }
+                            listedRows.each { line ->
+                                def f = line.split('\t', 3)
+                                def e = z.getEntry('assets/' + f[2])
+                                if (e == null || e.size != (f[1] as long) || String.format('%08x', e.crc) != f[0]) {
+                                    wrong << f[2]
+                                }
+                            }
+                        }
                     } finally {
                         z.close()
                     }
                     def missing = wanted.findAll { !packed.contains(it) }.sort()
                     println "GAME DATA CHECK: ${wanted.size()} game files, ${missing.size()} missing from ${apk.name}"
                     missing.take(100).each { println "  missing: ${it}" }
+                    if (listedRows == null) {
+                        println "DATA MANIFEST CHECK: ${apk.name} has no data-manifest.txt"
+                    } else {
+                        println "DATA MANIFEST CHECK: ${listedRows.size()} files listed, ${wrong.size()} missing from ${apk.name} or not as listed"
+                        wrong.take(100).each { println "  not as listed: ${it}" }
+                    }
                 }
             } catch (Throwable e) {
                 println "GAME DATA CHECK could not run: ${e}"

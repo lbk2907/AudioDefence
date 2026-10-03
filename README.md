@@ -576,7 +576,10 @@ From then on the game updates itself, as it does on a computer — see
 **Turn TalkBack off before you open the game.** The game speaks for itself, and
 TalkBack would take the touches for its own; if it is on, the game says so.
 The first start unpacks the game's data, saying how far it has got; that takes
-a minute or two, and later starts are quick.
+a minute or two, and later starts are quick. After an update, only the files
+the update changed are unpacked: usually there are none or a few, and the game
+starts straight away. When there are more, the game says it is unpacking the
+update, and says how far it has got when there are a lot.
 
 The game speaks with the text-to-speech engine set in the phone's settings. To
 use another engine installed on the phone, choose it in the Android speech
