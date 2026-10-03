@@ -216,7 +216,8 @@ def first_build(ready: list, left: list) -> None:
     env.pop('AD_KEYSTORE', None)                        # this release is unsigned: only what it fetches counts
     try:
         status = subprocess.run(compiler.gradle_command('assembleDebug', 'assembleRelease'),
-                                cwd=compiler.ANDROID, env=env, stdin=subprocess.DEVNULL).returncode
+                                cwd=compiler.ANDROID, env=compiler.gradle_env(env),
+                                stdin=subprocess.DEVNULL).returncode
     except OSError as error:
         say('  Gradle would not start: %s' % error)
         status = 1

@@ -704,6 +704,25 @@ def gradle_command(*tasks: str, offline: bool = False) -> list:
             + (['-PbuildPython=' + python] if python else []))
 
 
+def gradle_env(env: dict) -> dict:
+    """`env` for running Gradle, with Gradle's own Java started as android/gradle.properties asks the build's to
+    be (`org.gradle.jvmargs`).  With the daemon off (`org.gradle.daemon=false`), a Gradle whose Java differs
+    from those settings starts a second, single-use one for the build, and says so ("To honour the JVM
+    settings for this build a single-use Daemon process will be forked"); started with them, it builds in its
+    own process and says nothing.  A GRADLE_OPTS of the player's own is left as it is."""
+    env = dict(env)
+    if env.get('GRADLE_OPTS'):
+        return env
+    try:
+        with open(os.path.join(ANDROID, 'gradle.properties'), encoding='utf-8') as fh:
+            found = re.search(r'^\s*org\.gradle\.jvmargs\s*=\s*(.+?)\s*$', fh.read(), re.M)
+    except OSError:
+        found = None
+    if found:
+        env['GRADLE_OPTS'] = found.group(1)
+    return env
+
+
 def android_fetched() -> bool:
     """Whether a build has fetched what the first one fetches - Gradle's plugins, Chaquopy, Python for
     Android, numpy - into Gradle's cache, so that the next build takes minutes rather than twenty, and can be
@@ -872,7 +891,7 @@ def build_android(release: bool, given: str = '') -> tuple[int, str]:
     started = time.perf_counter()
     missing = False
     try:
-        with subprocess.Popen(gradle_command(task, offline=offline), cwd=ANDROID, env=env, text=True,
+        with subprocess.Popen(gradle_command(task, offline=offline), cwd=ANDROID, env=gradle_env(env), text=True,
                               errors='replace', stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as gradle:
             for line in gradle.stdout:                  # shown as it comes, and read for a missing part
                 sys.stdout.write(line)
