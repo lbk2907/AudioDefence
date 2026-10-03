@@ -3,8 +3,8 @@
 The iOS game was updated by the App Store, so there is nothing here to port; this is the Windows answer to
 the same problem, and it is written to leave a player's progress alone by construction rather than by care.
 
-**Progress cannot be lost.**  Everything the game writes - `save.json`, `settings.json`, `keys.json`,
-`alsoft.ini`, the log - lives in `%APPDATA%\\AudioDefence` (``paths.user_dir``).  The installed folder is
+**Progress cannot be lost.**  Everything the game keeps - `save.json`, `settings.json`, `keys.json`, the
+log - lives in `%APPDATA%\\AudioDefence` (``paths.user_dir``).  The installed folder is
 read-only once the game is running, so an update replaces program files and never touches a save.  The
 updater refuses to write anything outside the folder the executable is in.
 

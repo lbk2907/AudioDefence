@@ -3,11 +3,17 @@
 The game's own HRTF (``assets/hrtf/audiodefence_ircam1050.mhr``, built by tools/build_hrtf.py from the set
 embedded in the original binary) is made visible to OpenAL Soft through a private ``alsoft.ini`` named by the
 ``ALSOFT_CONF`` environment variable, so the user's own OpenAL configuration is never touched.
+
+The file is written to the system's temporary folder (user request, 2026-10-03, after Papa Sangre for
+Windows, which does the same).  It is plumbing, not a setting: rewritten from scratch at every start, with an
+absolute path to wherever this copy of the game is, and nothing a player changes in it lasts.  Next to the
+settings and the save it looked like one of them.
 """
 from __future__ import annotations
 
 import logging
 import os
+import tempfile
 
 from .. import paths
 from . import openal as oal
@@ -18,8 +24,25 @@ HRTF_NAME = 'audiodefence_ircam1050'
 SAMPLE_RATE = 44100
 
 
+def config_path() -> str:
+    """Where the private alsoft.ini goes: a folder of the game's own in the system's temporary folder, or
+    the temporary folder itself if that cannot be made."""
+    folder = os.path.join(tempfile.gettempdir(), 'AudioDefence')
+    try:
+        os.makedirs(folder, exist_ok=True)
+    except OSError:
+        folder = tempfile.gettempdir()
+    return os.path.join(folder, 'alsoft.ini')
+
+
 def write_alsoft_config() -> str:
-    path = os.path.join(paths.user_dir(), 'alsoft.ini')
+    path = config_path()
+    old = os.path.join(paths.user_dir(), 'alsoft.ini')   # where builds before 2026-10-03 wrote it: gone
+    try:                                                  # from among the player's own files
+        if os.path.isfile(old):
+            os.remove(old)
+    except OSError:
+        pass
     lines = [
         '# Written by Audio Defence at start-up; edits are overwritten.',
         '[general]',
