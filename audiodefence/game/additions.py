@@ -475,16 +475,21 @@ PLISTS['port_clockwork'] = {
 #: Setting off the ring is free and is meant to be.  What it costs is twenty seconds of hearing, and what
 #: walks in during those twenty seconds is the arena: QuietZombies, which are hard enough to place with
 #: ears that work, and a Runner that gives no time to hunt.
+#:
+#: The rings stand 3.6, 3.5 and 3.4 units out (2026-10-03, the human re-tune; they were 2.8 to 2.6).  Inside
+#: three a zombie charges the moment it has arrived, so a ring there was a few seconds to find one of eight
+#: by ear, and a person playing by ear lost the arena on it; just outside three it walks the last half unit
+#: first, and the ring still chains, two to three units between neighbours.
 PLISTS['port_survivor_1'] = _ring_with_strays(
-    ('WeakZombie', 'WeakZombieB'), 8, 2.8,
+    ('WeakZombie', 'WeakZombieB'), 8, 3.6,
     [('Zombie', 135, 9.0, 1.0), ('QuietZombie', 300, 9.5, 5.0), ('Zombie', 40, 9.0, 9.0),
      ('Runner', 210, 11.0, 12.0)])
 PLISTS['port_survivor_2'] = _ring_with_strays(
-    ('WeakZombie', 'Zombie', 'WeakZombieB'), 10, 2.7,
+    ('WeakZombie', 'Zombie', 'WeakZombieB'), 10, 3.5,
     [('QuietZombie', 250, 9.5, 1.0), ('Zombie', 20, 9.0, 4.0), ('QuietZombie', 160, 9.5, 7.0),
      ('ZombieB', 300, 9.0, 10.0), ('Runner', 85, 11.0, 13.0), ('QuietZombie', 130, 9.5, 17.0)])
 PLISTS['port_survivor_3'] = _ring_with_strays(
-    ('WeakZombie', 'Zombie', 'ZombieB', 'WeakZombieC'), 12, 2.6,
+    ('WeakZombie', 'Zombie', 'ZombieB', 'WeakZombieC'), 12, 3.4,
     [('QuietZombie', 20, 9.5, 1.0), ('Zombie', 190, 9.0, 3.5), ('QuietZombie', 110, 9.5, 6.0),
      ('ZombieB', 250, 9.0, 8.5), ('Runner', 290, 11.0, 11.0), ('QuietZombie', 60, 9.5, 14.0),
      ('ZombieC', 330, 9.0, 16.5), ('RunnerB', 225, 11.0, 19.0)])
@@ -580,11 +585,14 @@ PLISTS['port_three_bullets'] = {
 #: The rings are free and deafening - nothing tough stands in one, because a Hulk three units away that
 #: survived the chain is a death nobody could have prevented - and the crowds are where the work is: nothing
 #: in them explodes, whatever a player is carrying, so every one of them has to be killed, and the third one
-#: is nine of them with the Hulks in it, arriving one every second and a half from eight units.
+#: is nine of them with the Hulks in it, arriving one every second and a half from eight units as written
+#: (one every 3.7 seconds as played: `_TEMPO`).  The rings stand 4.5, 4.2 and 4.0 units out (2026-10-03,
+#: from 3.5, 3.2 and 3.0): close enough to chain, two to three units between neighbours, and a walk of a unit
+#: or more before a member charges, which a person playing by ear needs to find the soft one.
 RINGS = (
-    (('WeakZombie', 'WeakZombieB', 'Zombie', 'ZombieB'), 10, 3.5),
-    (('WeakZombie', 'Zombie', 'ZombieB', 'ZombieC'), 12, 3.2),
-    (('WeakZombie', 'Zombie', 'ZombieB', 'WeakZombieC', 'ZombieC'), 12, 3.0),
+    (('WeakZombie', 'WeakZombieB', 'Zombie', 'ZombieB'), 10, 4.5),
+    (('WeakZombie', 'Zombie', 'ZombieB', 'ZombieC'), 12, 4.2),
+    (('WeakZombie', 'Zombie', 'ZombieB', 'WeakZombieC', 'ZombieC'), 12, 4.0),
 )
 CROWDS = (
     (('WeakZombie', 'Zombie', 'Farty', 'ZombieB'), 5, 10.0, 2.0),
@@ -637,6 +645,10 @@ PLISTS['port_keg'] = {
 #: player decides it is not worth a round.
 #:
 #: The zombies spawn on the cars' own bearings, further out, so they walk onto them.
+#:
+#: Re-tuned for a person playing by ear (2026-10-03): three of the four Whisperers are Rejects - a Whisperer
+#: walks 25 dB under a Zombie and is not heard until it screams three units out, and with sixty rounds and a
+#: wok that was the arena lost - and the last wave has lost its Runner and a ZombieB.
 def _scrap(cars, crowd) -> dict:
     wave = _wave(crowd, no_blast=True)
     wave['PasserBy'] = {kind: {'spawn_angle': float(a), 'spawn_distance': 6.0, 'spawn_time': 0.5}
@@ -651,14 +663,14 @@ PLISTS['port_scrap_1'] = _scrap(
 PLISTS['port_scrap_2'] = _scrap(
     (('Car', 40), ('Car2', 200), ('Machine', 310)),
     [('WeakZombie', 40, 10.0, 1.0), ('Zombie', 42, 11.0, 2.6), ('ZombieB', 38, 12.0, 4.2),
-     ('WeakZombieB', 200, 10.0, 5.8), ('Zombie', 202, 11.0, 7.4), ('QuietZombie', 198, 12.0, 9.0),
+     ('WeakZombieB', 200, 10.0, 5.8), ('Zombie', 202, 11.0, 7.4), ('WeakZombieC', 198, 12.0, 9.0),
      ('ZombieC', 310, 10.0, 10.6), ('WeakZombieC', 312, 11.0, 12.2), ('Zombie', 120, 11.0, 13.8)])
 PLISTS['port_scrap_3'] = _scrap(
     (('Car', 20), ('Car2', 140), ('Car3', 260)),
     [('WeakZombie', 20, 10.0, 1.0), ('Zombie', 22, 11.0, 2.4), ('ZombieB', 18, 12.0, 3.8),
-     ('WeakZombieB', 140, 10.0, 5.2), ('Zombie', 142, 11.0, 6.6), ('QuietZombie', 138, 12.0, 8.0),
-     ('WeakZombieC', 260, 10.0, 9.4), ('ZombieC', 262, 11.0, 10.8), ('QuietZombie', 258, 12.0, 12.2),
-     ('Runner', 330, 11.0, 14.0), ('ZombieB', 60, 11.0, 15.4), ('QuietZombie', 180, 11.0, 16.8)])
+     ('WeakZombieB', 140, 10.0, 5.2), ('Zombie', 142, 11.0, 6.6), ('WeakZombie', 138, 12.0, 8.0),
+     ('WeakZombieC', 260, 10.0, 9.4), ('ZombieC', 262, 11.0, 10.8), ('WeakZombieB', 258, 12.0, 12.2),
+     ('QuietZombie', 180, 11.0, 16.8)])
 PLISTS['port_scrap'] = {
     'challenge_id': 'port_scrap',
     'title': 'Scrapyard',
@@ -765,6 +777,10 @@ PLISTS['port_nowake'] = {
 #: brood as standing there from the first second - so it called the arena nine seconds short when it had
 #: three to spare.  Measured as it plays, it was a chapter 1 arena.  So what grows back now grows back
 #: closer, two seconds after the cut, and some of what grows back has heads of its own.
+#:
+#: And then too much of it for a person playing by ear (2026-10-03): the second and third waves grow back at
+#: nine units again (eight and a half for the last of a branch), the third wave has three heads rather than
+#: four and no Runners in it, and its Whisperer is a Reject.
 def _heads(tree, after: float = 2.0) -> dict:
     """A hydra, as a tree of `(kind, angle, distance, [what grows back when it dies])`.
 
@@ -797,16 +813,15 @@ PLISTS['port_hydra_1'] = _heads([
     ('Zombie', 45, 9.0, [('WeakZombie', 20, 8.0), ('WeakZombieB', 70, 8.0)]),
     ('Zombie', 225, 9.0, [('WeakZombieC', 200, 8.0), ('WeakZombieD', 250, 8.0)])])
 PLISTS['port_hydra_2'] = _heads([
-    ('Zombie', 30, 9.0, [('Zombie', 10, 7.5, [('WeakZombie', 350, 7.0)]), ('WeakZombieB', 50, 7.5)]),
-    ('Zombie', 150, 9.0, [('ZombieB', 130, 7.5, [('WeakZombieC', 110, 7.0)]), ('WeakZombieD', 170, 7.5)]),
-    ('Zombie', 270, 9.0, [('Zombie', 250, 7.5), ('Runner', 290, 9.0)])])
+    ('Zombie', 30, 9.0, [('Zombie', 10, 9.0, [('WeakZombie', 350, 8.5)]), ('WeakZombieB', 50, 9.0)]),
+    ('Zombie', 150, 9.0, [('ZombieB', 130, 9.0, [('WeakZombieC', 110, 8.5)]), ('WeakZombieD', 170, 9.0)]),
+    ('Zombie', 270, 9.0, [('Zombie', 250, 9.0), ('Runner', 290, 10.0)])])
 PLISTS['port_hydra_3'] = _heads([
-    ('Zombie', 20, 8.5, [('ZombieB', 0, 7.0, [('Runner', 340, 9.0)]),
-                         ('Zombie', 40, 7.0, [('WeakZombieB', 60, 6.5)])]),
-    ('Zombie', 110, 8.5, [('ZombieC', 90, 7.0, [('RunnerB', 70, 9.0)]),
-                          ('Zombie', 130, 7.0, [('WeakZombieC', 150, 6.5)])]),
-    ('Zombie', 200, 8.5, [('ZombieB', 180, 7.0, [('Runner', 160, 9.0)]), ('QuietZombie', 220, 7.0)]),
-    ('Zombie', 290, 8.5, [('Zombie', 270, 7.0, [('WeakZombie', 250, 6.5)]), ('ZombieC', 310, 7.0)])])
+    ('Zombie', 20, 8.5, [('ZombieB', 0, 9.0, [('Zombie', 340, 9.0)]),
+                         ('Zombie', 40, 9.0, [('WeakZombieB', 60, 8.5)])]),
+    ('Zombie', 110, 8.5, [('ZombieC', 90, 9.0, [('ZombieB', 70, 9.0)]),
+                          ('Zombie', 130, 9.0, [('WeakZombieC', 150, 8.5)])]),
+    ('Zombie', 230, 8.5, [('ZombieB', 210, 9.0, [('ZombieC', 190, 9.0)]), ('WeakZombieD', 250, 9.0)])])
 PLISTS['port_hydra'] = {
     'challenge_id': 'port_hydra',
     'title': 'Hydra',
@@ -904,15 +919,20 @@ PLISTS['port_biggame'] = {
 #: scare sounds while it runs - and everything in here has to be found through it.
 #:
 #: So nothing in it is hard to kill.  Weak and ordinary Zombies, and the QuietZombie that is difficult to
-#: place on a still night, and the noise of a jukebox and a machine on top of the weather.
+#: place on a still night, and the noise of a jukebox and a machine on top of the weather.  One Whisperer in
+#: the second wave and two in the third (2026-10-03, from three and four): through the storm one is not heard
+#: until it screams three units out, and then there are three and a half seconds, which two at once do not
+#: leave a person playing by ear.
 PLISTS['port_thunder_1'] = _crowd(('WeakZombie', 'QuietZombie', 'Zombie'), 8, 10.0, 2.4)
 PLISTS['port_thunder_1']['PasserBy'] = {
     'Jukebox': {'spawn_angle': 200.0, 'spawn_distance': 9.0, 'spawn_time': 2.0}}
-PLISTS['port_thunder_2'] = _crowd(('QuietZombie', 'WeakZombie', 'ZombieB', 'QuietZombie'), 12, 10.0, 2.0)
+PLISTS['port_thunder_2'] = _crowd(('WeakZombie', 'ZombieB', 'WeakZombieB', 'ZombieC', 'QuietZombie', 'WeakZombieC',
+                                   'Zombie', 'ZombieB'), 12, 10.0, 2.0)
 PLISTS['port_thunder_2']['PasserBy'] = {
     'Jukebox': {'spawn_angle': 60.0, 'spawn_distance': 9.0, 'spawn_time': 2.0},
     'Machine': {'spawn_angle': 280.0, 'spawn_distance': 8.0, 'spawn_time': 5.0}}
-PLISTS['port_thunder_3'] = _crowd(('QuietZombie', 'ZombieB', 'QuietZombie', 'WeakZombieB', 'ZombieC'),
+PLISTS['port_thunder_3'] = _crowd(('QuietZombie', 'ZombieB', 'WeakZombie', 'WeakZombieB', 'ZombieC', 'Zombie',
+                                   'WeakZombieC', 'ZombieB', 'Zombie'),
                                   18, 10.0, 1.5)
 PLISTS['port_thunder_3']['PasserBy'] = {
     'Jukebox': {'spawn_angle': 140.0, 'spawn_distance': 9.0, 'spawn_time': 2.0},
@@ -3723,6 +3743,49 @@ def _derive_order() -> None:
 
 
 _derive_order()
+
+
+#: PORT ADDITION (user request, 2026-10-03): how much more slowly each arena's waves come than they are
+#: written - the human re-tune.  Every time a wave of the arena writes - its enemies' `spawn_time`, the
+#: seconds a `spawn_after` waits after the kill, a crate's `force_spawn_time`, a passer-by's - is multiplied
+#: by the arena's factor, or by its wave's where a tuple gives one a wave, before `_bring_into_reach` adds
+#: the walk in from beyond ten.  So the arena keeps everything it is made of, its shapes and its order and
+#: what comes with what, and only the gaps between them change: over 1 they open, under 1 they close.
+_TEMPO: dict = {
+    # Chapter 1
+    'port_clockwork': 1.15, 'port_nowake': 1.65, 'port_busker': 1.16, 'port_survivor': 1.8,
+    # Chapter 2
+    'port_stampede': 1.11, 'port_sidestep': 0.96, 'port_fore': 1.02, 'port_keg': (1.0, 1.6, 1.0, 2.0, 1.0, 2.3),
+    'port_hydra': 1.3, 'port_biggame': 0.68,
+    # Chapter 3
+    'port_ironsights': 1.41, 'port_cattlecall': 1.98, 'port_thunder': 2.0, 'port_rust': 1.3, 'port_frontline': 1.05,
+    'port_drop': 1.45, 'port_carousel': 1.45, 'port_last': 0.64,
+}
+
+
+def _pace() -> None:
+    for name, k in _TEMPO.items():
+        bricks = PLISTS[name]['bricks']
+        for i, brick in enumerate(bricks):
+            f = k[i] if isinstance(k, tuple) else k
+            if f == 1.0:
+                continue
+            wave = PLISTS[brick]
+            for group in ('Enemies', 'PasserBy'):
+                for one in (wave.get(group) or {}).values():
+                    if one.get('spawn_time') is not None:
+                        one['spawn_time'] = round(float(one['spawn_time']) * f, 2)
+                    after = one.get('spawn_after')
+                    if isinstance(after, dict) and after.get('time') is not None:
+                        one['spawn_after'] = dict(after, time=round(float(after['time']) * f, 2))
+            crate = wave.get('PowerUp')
+            if isinstance(crate, dict):
+                for key in ('force_spawn_time', 'spawn_time'):
+                    if crate.get(key) is not None:
+                        crate[key] = round(float(crate[key]) * f, 2)
+
+
+_pace()
 
 
 #: How fast each kind closes on the player, in units a second, for `_bring_into_reach`: `speed` in

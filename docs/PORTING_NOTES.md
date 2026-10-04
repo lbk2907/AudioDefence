@@ -1895,7 +1895,7 @@ they were.
   a Runner: 1.3 speed from three units is not a puzzle.  The crowds are the opposite, everything in them
   having to be killed, so that is where the Runners go, and they walk in one at a time.  Ten at 3.5
   units, twelve at 3.2, twelve at 3.0, which is as near as a ring can stand and still leave a moment to
-  choose; crowds of five, seven and nine at ten, nine and eight.  The guns are a pistol that never runs
+  choose (4.5, 4.2 and 4.0 since the human re-tune of 2026-10-03, below); crowds of five, seven and nine at ten, nine and eight.  The guns are a pistol that never runs
   dry, a Micro SMG with 200 rounds and a wok - the pistol is what makes it finishable however badly it
   goes, and there is no shotgun because a ring is a target a shotgun cannot miss.
 
@@ -2627,6 +2627,64 @@ they were.
   (The Wall at level 1, 108 to 91) - and the accuracy stars can only have become easier for a person, since a
   shot fired the moment something is heard can no longer miss for being out of range.  (The scripted player
   never fires a shot its target cannot take, so its own accuracy did not move.)
+* PORT ADDITION: the Extra arenas re-tuned for a person playing by ear (user request, 2026-10-03).  The user
+  played them and found them too hard in places and the climb uneven: "I cannot beat the Titans because is
+  too crowded ... so many enemy come at me from the different direction and how can I turn really fast and
+  kill those?", while Blowback, before it, could be beaten; and a chapter they had worked hard to finish was
+  harder than the one after it.  "Measure all the chapters and challenges there so that is really playable
+  and can be beat by real player", and carefully.
+
+  The measure until then was the referee's scripted player, which is a machine with a reaction time: it
+  turns at 180 degrees a second straight onto its target, knows from the first sound where every enemy is
+  and when it will arrive, plans five kills ahead, hears everything however many are making a noise, aims to
+  four degrees and fires only when the game's own hit test says the shot will land.  It ranked Titans easier
+  than Blowback.  So the referee has a person now (scratch, as the referee is): turning at the keys' 115
+  degrees a second with a little overshoot and a moment's listening after each turn; a sound heard only if
+  nothing within thirty degrees is 15 dB louder (each kind's recordings measured), what is hidden forgotten
+  after three seconds; a pack heard as one sound and only three such followed at once; plans two kills ahead
+  on deadlines judged from a distance heard with an error; a sense of how many more are coming, each reckoned
+  to cost a reaction; 0.2 s more to find each new target for every group heard beyond two; aim off by ten
+  degrees (fifteen at the sides until turned to it), now and then a sound behind heard in front, firing on
+  what it believes rather than on what the hit test knows, hearing its misses; damage judged, not known; a
+  gun fired on for a moment after its target has died; a melee swing now and then too soon.  And a second
+  person on a touchscreen with Swipe aiming: 90 degrees a second, a stroke at most a half turn, lifting the
+  finger and tapping after it.
+
+  It was checked against what the user has said about the versions they played (all at level 4, which is
+  how the earlier validation was done and what The Drop's "passable at level 4" says).  Every version they
+  called impossible or far too crowded - Fuse, Collateral, Crossfire and The Armory before they were thinned,
+  One Swing before its Runners were moved - wins half its runs only at a reaction quicker than 0.4 s; every
+  version they called fine or liked needs 0.8 s or slower; Blowback, beatable and demanding, 1.0 s; Titans,
+  too hard, under 0.4 s; Stampede, which they pass with focus, 2.1 s on the keys and under 0.7 s on the
+  touchscreen.  The user plays at about half a second, then, by this measure.
+
+  The bar: every arena is won in half its runs by the person on the keys at a reaction of 1.3 s with level-4
+  weapons - well over twice the user's, so a slower or less practised player can finish everything, and the
+  hardest arena, the Finale, is about as demanding as the ones the user called fine (Fuse 1.4 s, Crossfire
+  1.1 s) rather than as Blowback was.  The climb is measured at the same level: chapter 1 from 2.6 s down to
+  2.1, chapter 2 from 2.35 to 1.9, chapter 3 from 2.15 to 1.75, chapter 4 from 1.95 to 1.6, chapter 5 from
+  1.8 to 1.5, chapter 6 from 1.65 to 1.4 and the Finale 1.35, each chapter's hardest no harder than the next
+  one's middle, and an opener allowed to be easier.  With guns just bought (level 1 for a gun first needed in
+  the arena's chapter, 3 - the most coins buy - for one from before) each is measured too.
+
+  Most of the work is spacing, and it is one number an arena: `additions._TEMPO`, by which every time a
+  wave writes is multiplied before the walk in from beyond ten is added, so an arena keeps its shapes, its
+  order and what comes with what, and only the gaps change.  Where spacing did not move an arena, it was
+  something else, and that was changed instead.  Chapters 1 to 3:
+  - The Survivor's rings stand 3.6, 3.5 and 3.4 units out (from 2.8 to 2.6): inside three a ring charges as
+    it arrives, and a person did not find one of eight in time.  Powder Keg's stand 4.5, 4.2 and 4.0 (from
+    3.5, 3.2 and 3.0), and its crowds come 1.6 to 2.3 times as slowly.
+  - Scrapyard: three of its four Whisperers are Rejects, and its last wave has lost its Runner and a ZombieB.
+    A Whisperer walks 25 dB under a Zombie and is first heard when it screams three units out; with sixty
+    rounds and a wok, that was the arena lost.  Spacing it made it harder, since its zombies walk onto the
+    cars in groups and a spread-out group is a car's blast wasted.
+  - Thunder keeps one Whisperer in its second wave and two in its third (from three and four), and comes
+    twice as slowly: through the storm, two Whisperers screaming together leave a person no time.
+  - Hydra grows back at nine units again, not seven; its third wave has three heads, no Runners, and a Reject
+    for its Whisperer.
+  - Big Game and The Last Word come closer together (0.68 and 0.64): at level 4 the rifle made them the
+    easiest of their chapters.  Everything else in the three chapters is spacing alone.
+
 * PORT ADDITION: an arena of the Extra mode offers a revive (user request, 2026-10-01).  A death there
   offers what Endless offers - the revive for diamonds, twice the price each time (`show_revive_view`
   0x10005ba78), or the failed screen, which is starting over - where `-[ADEnemy afterAttackSound]`
