@@ -2702,6 +2702,17 @@ they were.
     spacing made it harder; it is the one arena of chapter 4 easier than the opener (see the measurements).
   - Chapter 6 and Reprise are spacing alone, 1.05 to 1.55 for the chapter and 1.15 for Reprise.
 
+  What the bar does not reach, measured as committed (six runs a rung): the re-tune is for the keys at level
+  4, and 49 of 49 arenas meet it where 26 did.  On a touchscreen the person wins half its runs at 0.7 s or
+  slower in 26 arenas (16 before), and in most of chapters 4 to 6 and the Finale not even at 0.4 s; Stampede,
+  which a phone player called very hard, is under 0.4 s, before and after.  With every weapon at level 1, 24
+  arenas are won at 0.7 s or slower (13 before); with the plausible levels (a gun bought for this chapter at
+  1, an older one at 3), 33 - and the 16 that are not are mostly in chapters 5 and 6, which the user decided
+  on 2026-09-30 may ask for guns upgraded with diamonds, but also Do Not Wake It, Big Game, The Last Word,
+  Point Blank and Crossfire, where the gun the arena is about is the one just bought.  Easing those far
+  enough for a touchscreen or for level 1 would leave the keys at level 4 almost no climb, so it is left for
+  the user to decide.
+
   The stars were set again from the same person's runs.  What the challenge clock counts
   (`InGameStats.challenge_time_elapsed`, a quarter of a second each time the stats timer fires,
   `updateStats` 0x1000596d0 and 0x1000daa68): it stands still while the game is paused, while a wave is
