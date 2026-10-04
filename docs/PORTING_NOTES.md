@@ -2712,10 +2712,10 @@ they were.
   skip gives up the time star.  So the time star is judged on a run without a death, and that is how it is
   set: 1.15 times the 75th percentile of the clock over the winning runs at reactions of 0.7 to 1.3 s, the
   slower of level 4 and the plausible levels, rounded up to five seconds.  The 90th percentile is under it
-  everywhere, by 8 s at the least (Busker) and 34 s in Blowback, whose 140 the user missed by three seconds
+  everywhere, by 12 s at the least (Hydra) and 34 s in Blowback, whose 140 the user missed by three seconds
   and which is 240 now, being half as long again.  Arenas that grew slower are given longer (Encore 140 to
   255, Belt Fed 300 to 415); the ones written far too loosely are closer to what they take (Barnyard 150 to
-  85, The Armory 280 to 140).  The person hits with 90 to 100 per cent of their shots in most arenas - the
+  85, The Armory 280 to 160).  The person hits with 90 to 100 per cent of their shots in most arenas - the
   cones are wide and a shell counts once for every enemy it hits - where the user reached 62 in Fuse's
   earlier version, so an accuracy star is left where the person's lower quartile is ten points or more
   above it, lowered to that otherwise, and never above 75: Three Bullets, Crowd Control and Scarecrows 75,

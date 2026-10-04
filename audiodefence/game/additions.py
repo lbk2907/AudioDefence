@@ -1477,7 +1477,7 @@ PLISTS['port_armory'] = {
     'weapons': [{'name': 'grenade', 'ammo': '25'}, {'name': 'sawnoff', 'ammo': '70'}, {'name': 'claymore'}],
     'bricks': ['port_armory_1', 'port_armory_2', 'port_armory_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 500, 'objective': 140},
+    'time_limit_star': {'reward': 500, 'objective': 160},
     'accuracy_star': {'reward': 500, 'objective': 70},
 }
 
@@ -3671,6 +3671,13 @@ for _name, _text in EPILOGUES.items():
 #: Cannon's, the hardest; Closing Time, the finale, is last.  Reprise is measured act by act, each a little
 #: easier than its chapter, since it is long and one death ends it.
 #:
+#: Since 2026-10-03 the order stands and the arenas are spaced to it (user request; `_TEMPO`), by a person
+#: playing by ear rather than the scripted player above: the referee's human player on the keys, level-4
+#: weapons, every arena won in half the runs at a reaction of 1.3 s or slower, chapter 1 from 2.8 s and more
+#: down to about 2.2, each chapter ending no harder than the next one's middle, and the Finale the hardest,
+#: at 1.4.  The figures under each chapter below are that measure's, sixteen runs at each of eight reactions.
+#: `tools/arena_pressure.py` still gives each wave's slack; the order is no longer its.
+#:
 #: The chapters are the port's own structure and not worlds in `challenges_index`, which they could have
 #: been: `apply_to` reaches that file and the world list would have given locks, star counts and a
 #: "you need N stars" row for nothing.  It would also have changed Somethin' Else's game.
@@ -3684,28 +3691,32 @@ for _name, _text in EPILOGUES.items():
 LONG_WAY_HOME = (
     #: The guns a player already owns, and the Banjo, which at 1500 coins is the first most will buy: in the
     #: order the tool measures, 15.7 seconds of slack down to 2.2, with the second round's placed round it.
+    #: A person wins them in half the runs at 2.8 s and slower at first, down to 2.1 to 2.4 at the end.
     ('Chapter 1', ('port_barnyard', 'port_wall', 'port_clockwork', 'port_three_bullets', 'port_scrap',
                    'port_nowake', 'port_busker', 'port_survivor')),
-    #: Where the slack runs out: 1.4 seconds short down to 12.3.
+    #: Where the slack runs out: 1.4 seconds short down to 12.3.  A person: 2.25 s down to 2.0.
     ('Chapter 2', ('port_longwalk', 'port_stampede', 'port_sidestep', 'port_fore', 'port_company',
                    'port_keg', 'port_hydra', 'port_biggame')),
-    #: Harder again (user request): 13.6 seconds short down to 25.6.
+    #: Harder again (user request): 13.6 seconds short down to 25.6.  A person: 2.4 s down to 1.8 to 1.9.
     ('Chapter 3', ('port_ironsights', 'port_cattlecall', 'port_thunder', 'port_rust', 'port_frontline',
                    'port_drop', 'port_carousel', 'port_last')),
     #: The armory (user request): 27.7 seconds short down to 39.8, by the tool's crowd-weapon reckoning
-    #: (`area_pressure`).
+    #: (`area_pressure`).  A person: 2.2 s down to 1.6, Bonfire Night easier than all of them at level 4.
     ('Chapter 4', ('port_pointblank', 'port_bonfire', 'port_oneswing', 'port_fuse', 'port_shortgame',
                    'port_collateral', 'port_crossfire', 'port_armory')),
     #: The Police Shotgun and the Bazooka, each bought for an arena of its own before they are mixed, and
     #: measured at level 4: the chapters from here on may ask for guns upgraded with diamonds (user
-    #: decision, 2026-09-30), so a player may have to play Endless before going on.
+    #: decision, 2026-09-30), so a player may have to play Endless before going on.  A person: 2.15 s down
+    #: to 1.5, Titans 1.7 where it had been under 0.4.
     ('Chapter 5', ('port_riot', 'port_chain', 'port_encore', 'port_artillery', 'port_blowback',
                    'port_titans', 'port_scarecrows', 'port_riotact')),
     #: The Machine Gun, the Tesla and the Sonic Cannon, and a finale asking for what every chapter taught.
+    #: A person: 1.75 s down to 1.45 to 1.55.
     ('Chapter 6', ('port_beltfed', 'port_coldsteel', 'port_juggernaut', 'port_racket', 'port_heavyweights',
                    'port_lightningrod', 'port_tempo', 'port_closingtime')),
     #: Reprise, every chapter again in one long arena with the weapons changing hands between acts (user
     #: request), on its own after the last chapter rather than a ninth in it, so the chapters stay at eight.
+    #: A person: 1.4 s, the hardest of all, as the bar allows.
     ('Finale', ('port_remix',)),
 )
 
@@ -3777,7 +3788,7 @@ _TEMPO: dict = {
     'port_drop': 1.45, 'port_carousel': 1.45, 'port_last': 0.67,
     # Chapter 4 (Bonfire Night as written)
     'port_pointblank': 2.6, 'port_oneswing': 1.64, 'port_fuse': 1.55, 'port_shortgame': 1.3, 'port_collateral': 2.15,
-    'port_crossfire': 1.9, 'port_armory': 0.74,
+    'port_crossfire': 1.9, 'port_armory': 0.78,
     # Chapter 5
     'port_chain': 0.85, 'port_encore': 2.2, 'port_artillery': 0.97, 'port_blowback': 1.9,
     'port_titans': 1.45, 'port_scarecrows': 0.65, 'port_riotact': (1.6, 2.2, 2.4),

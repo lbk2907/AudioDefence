@@ -15,6 +15,12 @@ The model is deliberately generous - it assumes every shot hits the thing with t
 `--overhead` is the only allowance for finding and facing a target by ear.  A wave with a comfortable
 margin here is easy in practice; a wave near zero is at the edge of possible.  It is for ordering arenas
 against each other, not for promising one can be won.
+
+Since 2026-10-03 the Extra chapters are spaced by a person's measure rather than ordered by this one: the
+scratch referee's human player, which turns at the keys' speed, misses, cannot hear everything at once and
+plans two kills ahead (`additions._TEMPO`, and docs/PORTING_NOTES.md).  This still prints each wave's slack
+as the arena is played - the tempo applied, as written otherwise - and is still the quick check of a wave
+after a change; the order of the chapters is the person's, which the slack here does not follow.
 """
 from __future__ import annotations
 
