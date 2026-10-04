@@ -148,7 +148,9 @@ game has no player health - one enemy reaching you ends the run - so a wave's di
 it but whether each enemy can be killed before its own clock runs out, and a crowd arriving more slowly than
 it can be shot never gets harder however large it is.  Sized by eye on 2026-09-28, one arena could not be
 lost and another could not be won, and neither was visible until it was measured.  Run it after changing any
-wave, and keep the chapter ordered by what it prints.
+wave.  It is the quick check, not the order: since 2026-10-04 the chapters are spaced and ordered by a
+person's measure - a player who turns at the keys' speed, misses and cannot hear everything at once - through
+`additions._TEMPO`, and docs/PORTING_NOTES.md says how that was measured and what bar every arena meets.
 
 Some of its numbers are judgement rather than disassembly and say so where they are defined: `DEAF_COST`,
 what a ring in the ears is worth given the game gives tinnitus no mechanical effect at all, `MELEE_COST`,
