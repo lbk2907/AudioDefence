@@ -910,6 +910,19 @@ they were.
   file that is quiet for more than a quarter of a second is left alone in case the quiet is the sound
   itself.
 
+* Fire settles for a tenth of a second after it is let go (user report and request, 2026-10-05).  The
+  original's fire is a touch: `-[ADButtonWithSwipe setButtonIsDown:]` 0x100024cf4 and `-[ADAccessibleGameView
+  setButtonIsDown:]` 0x10008ac54 fire a single shot when a press shorter than 0.28 s / 0.2 s ends, and a
+  finger lifted from glass does not come back by itself.  A controller's trigger can: one that springs back
+  past half way as it is let go - a worn spring, or a trigger lock that makes a short pull a whole one - was
+  read as a second press of a few hundredths of a second, which is a tap, and fired one shot 60 ms after a
+  burst of the Machine Gun had ended (measured through the game's own events; a clean release, a slow one
+  and Space all ended the burst as they should).  A fire press within `FIRE_SETTLE` of fire being let go now
+  waits until then and is pressed only if it is still held (`GameplayScreen._wait_for_fire_to_settle`), for
+  every key and button bound to fire - the keys too, at the user's asking.  No gun fires faster than every
+  0.2 s (`fireRate` in Weapons.plist), so a tap that ends inside the wait could not have fired anyway, and a
+  quick pull that is held starts its burst at most a tenth of a second late.
+
 * Escape does nothing on the Endless screen while the cards are being dealt (user request).  The Back
   button is dimmed for those two seconds (`deactivate_buttons`), and so is Play in this port, but
   `-[ADViewController accessibilityPerformEscape]` 0x1000728e4 goes straight to `backButtonPressed` without
