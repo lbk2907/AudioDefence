@@ -2570,18 +2570,20 @@ they were.
   choice.  The passers-by are treated the same way: a cow can be shot, and in Cattle Call and Lightning Rod
   is meant to be, so the cows written from eleven come in at ten two seconds later and leave when they
   always did.  The arenas keep the distances they were written with, and the comment at `REACH` says what
-  those mean now.  Checked: of 3,096 spawns and passers-by in the 49 arenas, none is beyond ten but the
-  Bazooka's, below.
+  those mean now.  Checked: of 3,096 spawns and passers-by in the 49 arenas, none is beyond ten (the
+  Bazooka's arenas since the second step, below).
 
-  The Bazooka's arenas keep what was put beyond eleven for it.  Artillery's objective says the crowds stand
-  "out of reach of every gun you own but this one", Riot Act's tip is to choose the weapon by the distance,
-  and Titans and Scarecrows are built round a rocket reaching what nothing else does - the Colossi, and the
-  crowds behind the dummies.  The Bazooka reaches fifteen, so all of that can be hit the moment it is heard,
-  with the gun those arenas are about, and 265 spawns from 11.5 to 14.7 units stay where they were
-  (`_ROCKET_ARENAS`, and Reprise's fifth act, `_ROCKET_WAVES`).  What stands between ten and eleven in them
-  was not put there for the rocket and comes in to ten like everything else.  Heavyweights carries the
-  Bazooka too, but for what a bullet would upset, not for range: its Hulks, written from thirteen to be met
-  early by a rocket, come in at ten now, where the rifle reaches them as well.
+  The Bazooka's arenas kept what was put beyond eleven for it at first: Artillery, Titans, Scarecrows, Riot
+  Act and Reprise's fifth act, built round a rocket reaching fifteen units where nothing else reaches past
+  eleven - 265 spawns from 11.5 to 14.7 units.  Then one rule everywhere (user request, 2026-10-03): those
+  come in to ten as well, as late as their walk would have taken, and nothing in the mode is heard further
+  out than ten.  The arenas still use the rocket for what they used it for - Titans' Colossi and the crowds
+  beside them, the dummies standing in front of Scarecrows' crowds, the slow rocket and its ringing in
+  Artillery and Blowback - only nearer.  Artillery's objective said its crowds stood "out of reach of every
+  gun you own but this one", which they no longer do, and says "the launcher is all the ridge has left you"
+  instead (the story's "an abandoned battery and a single launcher").  They were measured with the rest in
+  the human re-tune below.  Heavyweights carries the Bazooka too, but for what a bullet would upset, not for
+  range: its Hulks, written from thirteen to be met early by a rocket, came in at ten from the first step.
 
   Two designs leaned on the distance and change with it.  Shell Shock's files stood all at once, 2.2 units
   apart on one bearing with the back of each beyond the shotgun's eleven, for one death to run down the

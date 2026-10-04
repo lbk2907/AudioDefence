@@ -323,11 +323,8 @@ def _wave(spec, rigged: bool = False, no_blast: bool = False, passers=None) -> d
 #: would have taken (`_bring_into_reach`, after `CHAPTERS`).  It reaches the player exactly when the arena was
 #: built for it to, and every gun reaches it from the moment it is heard.  What that costs a player is warning:
 #: it is heard for as long less as it used to spend walking in out of reach, which every arena was measured
-#: for again.
+#: for again.  The Bazooka's arenas too, since 2026-10-03: see `_bring_into_reach`.
 REACH = 10.0
-#: How far every gun but the Bazooka reaches, and how far the Bazooka does.
-GUN_REACH = 11.0
-ROCKET_REACH = 15.0
 
 
 #: Bearings a crowd walks in from, well apart so a player has to turn to each in turn rather than sweep.
@@ -2154,12 +2151,13 @@ _P4 = (('Zombie', 'ZombieB', 'ZombieC', 'Zombie'), ('WeakZombie', 'Zombie', 'Wea
 
 #: The Bazooka: 45 flat into everything within five units of where the rocket lands (60 at level four) and 60
 #: at the centre (80), which is any pack in one rocket and a Hulk in two - and fifteen units of range, four
-#: more than any other gun.  So everything here stands up at twelve to fourteen units, where nothing else in
-#: the shop reaches, and walks in from there.
+#: more than any other gun.  Everything here was written to stand up at twelve to fourteen units, where
+#: nothing else in the shop reaches; since 2026-10-03 it comes in at ten like everything in the mode
+#: (`REACH`), as much later as that walk would have taken, so it arrives when it was written to.
 #:
 #: What makes it an arena is that the rocket is slow.  It flies at four units a second along the way the
-#: player faces and goes off where the target will be (`create_projectile_for_current_weapon`): 2.7 seconds
-#: to a pack at twelve units, time in which a Runner covers three and a half.  A rocket at anything inside
+#: player faces and goes off where the target will be (`create_projectile_for_current_weapon`): 2.5 seconds
+#: to a pack at ten units, time in which a Runner covers three.  A rocket at anything inside
 #: five units rings the ears for up to thirteen seconds (`start_tinitus_with_intensity`, intensity 1 - d^2/25),
 #: and it goes to the nearest thing within thirty degrees (`target_enemi_for_explosive_weapon`), so a pack
 #: let in close is both loud and in the way of the one behind it.  Fired early, every rocket lands out beyond
@@ -2170,7 +2168,7 @@ _P4 = (('Zombie', 'ZombieB', 'ZombieC', 'Zombie'), ('WeakZombie', 'Zombie', 'Wea
 #: alone and in pairs (a pair is three rockets at level one, two at four), a Riot Gear Zombie escorted by
 #: Rejects (a blast goes through its shield; the first rocket takes the escort, two more the Shield), Zombie
 #: Dogs alone or together (a blast does not make them sidestep), a Chainsaw whose circling puts the rocket a
-#: unit or two off.  Runner packs start at fourteen units, each on its own.  Nothing that must be rocketed
+#: unit or two off.  Runner packs are written from fourteen units, each on its own.  Nothing that must be rocketed
 #: stands within twenty-five degrees of bearing 270, where `target_enemi_for_explosive_weapon` cannot see
 #: across the seam (handbook 1.1).
 PLISTS['port_artillery_1'] = _wave(
@@ -2203,7 +2201,7 @@ PLISTS['port_artillery_3'] = _wave(
 PLISTS['port_artillery'] = {
     'challenge_id': 'port_artillery',
     'title': 'Artillery',
-    'objective': 'They stand up at the edge of hearing, out of reach of every gun you own but this one.',
+    'objective': 'They stand up at the edge of hearing, and the launcher is all the ridge has left you.',
     'tip': 'A rocket takes its time getting there, and it is loud when it does. The further off it lands, '
            'the less of it you hear.',
     'icon': 'Challenge_icon_02', 'icon_title': 'AT',
@@ -2320,9 +2318,8 @@ PLISTS['port_blowback'] = {
 #: rocket does 45 flat to everything within five units at level one and 60 near the centre, 60 and 80 at
 #: level four (`hit_by_explosion` 0x100061284, whose falloff cancels the radius), so a Colossus walking
 #: straight in takes nine rockets on target at level one and seven at level four - two clips and a reload,
-#: ten seconds of nothing else, twice a wave.  Nothing but the Bazooka reaches it where it starts (range
-#: 15, every other gun 11), and it walks in from eleven and a half units in 45 seconds, so the clock is its
-#: own and slow; what makes the arena is everything that does not wait for it.
+#: ten seconds of nothing else, twice a wave.  Heard ten units out, it takes some forty seconds to arrive,
+#: so the clock is its own and slow; what makes the arena is everything that does not wait for it.
 #:
 #: The trick is the blast's five units.  `target_enemi_for_explosive_weapon` 0x1000c57b8 sends a rocket to
 #: the nearest thing within thirty degrees, and crowds walk in on a Colossus's own bearing a little behind
@@ -2497,8 +2494,8 @@ PLISTS['port_scarecrows'] = {
 
 #: Everything the chapter sent, and the three weapons it was fought with, all at once and each for its own
 #: distance.  Crescents of Zombies at nine or ten units are the Police Shotgun's (every one of them inside its
-#: fifty degrees, half damage kept at range).  Hulk pairs and Riot Gear escorts at twelve or thirteen units
-#: are the Bazooka's, since nothing else reaches past eleven.  A rocket goes through a raised shield and
+#: fifty degrees, half damage kept at range).  Hulk pairs and Riot Gear escorts, written from twelve or
+#: thirteen units and heard from ten, are the Bazooka's: a rocket blasts a pair and goes through a shield.  A rocket goes through a raised shield and
 #: never sends a Dodge sideways, so the Dodges are the Bazooka's too.  The Runners that reach arm's length
 #: are the golf club's: 50 a swing at level four, anything light in one, a quarter of a second between.
 #: Switching between the two guns takes a second (`Weapon.deploy`), the club needs no switch but waits a
@@ -2529,7 +2526,7 @@ _FARTY = ('ZombieB', 'Zombie', 'Farty', 'ZombieC', 'Zombie')
 
 
 def _far(kinds, bearing, at, distance=12.0):
-    """Heavies twelve units out: beyond every gun but the Bazooka."""
+    """Heavies written twelve units out (heard from ten, `REACH`)."""
     return _pack(kinds, bearing, distance, at, spread=6.0)
 
 
@@ -3341,7 +3338,7 @@ PLISTS['port_remix_8'] = _wave(_remix_slots((
     + _remix_slots(((_R2, 70),), 51.5, 1.0), no_blast=True)
 
 # ---- Act five: chapter 5 - Crowd Control, Artillery and Riot Act; Titans and Scarecrows
-#: Artillery's packs standing up thirteen units out, where only the rocket reaches, and Crowd Control's lines
+#: Artillery's packs, written thirteen units out and heard from ten, and Crowd Control's lines
 #: at nine, shoulder to shoulder, one shell's cone wide, about five seconds apart at five units; a pack of
 #: Runners on its own, a Riot Gear Zombie in its crowd far out, two Hulks and a Dodge alone.
 _REMIX_L5 = (('WeakZombie', 'Zombie', 'WeakZombieC', 'ZombieB', 'WeakZombie'),
@@ -3734,15 +3731,11 @@ _derive_order()
 _PACE = {'Runner': 1.3, 'RunnerB': 1.3, 'RunnerC': 1.3, 'Hulk': 0.75, 'HulkB': 0.75, 'Dodge': 0.9,
          'DodgeB': 0.9, 'Colossus': 0.25, 'Chainsaw': 0.725, 'Clown': 0.2}
 
-#: The arenas built on the Bazooka's reach, where what stands beyond eleven units stands there for it, out of
-#: reach of every other gun: Artillery's objective says so, Riot Act's tip turns on it (choose the weapon by
-#: the distance), and Titans and Scarecrows are built round it - their Colossi and the crowds behind the
-#: dummies are the rocket's.  The Bazooka reaches fifteen, so all of it can be hit the moment it is heard,
-#: with the gun those arenas are about, and it stays where it was written.  What stands between ten and
-#: eleven in them was not put there for the rocket, and comes in to ten like everything else.  Reprise's
-#: fifth act is those arenas again.
-_ROCKET_ARENAS = ('port_artillery', 'port_titans', 'port_scarecrows', 'port_riotact')
-_ROCKET_WAVES = ('port_remix_9', 'port_remix_10')
+#: The Bazooka reaches fifteen units and every other gun eleven, and the arenas built round the rocket -
+#: Artillery, Titans, Scarecrows, Riot Act and Reprise's fifth act - had kept what stood beyond eleven for it,
+#: 265 spawns from 11.5 to 14.7 units.  They come in to ten like everything else now (user request,
+#: 2026-10-03): one rule for the whole mode, so that nothing is heard further out than the guns a player knows
+#: reach, and those arenas are measured as they now play.
 
 #: id of a moved entry -> the entry as it was written, for `written`.
 _WRITTEN: dict = {}
@@ -3769,11 +3762,10 @@ def _bring_into_reach() -> None:
             quicker = max(0.1, 1.0 + 0.2 * flags.count('fasterEnemies') - 0.1 * flags.count('slowerEnemies'))
             for brick in arena['bricks']:
                 wave = PLISTS[brick]
-                rockets = name in _ROCKET_ARENAS or brick in _ROCKET_WAVES
                 for group in ('Enemies', 'PasserBy'):
                     for key, one in (wave.get(group) or {}).items():
                         d = float(one['spawn_distance'])
-                        if d <= REACH or id(one) in seen or (rockets and GUN_REACH < d <= ROCKET_REACH):
+                        if d <= REACH or id(one) in seen:
                             continue
                         seen.add(id(one))
                         _WRITTEN[id(one)] = dict(one)
