@@ -419,7 +419,7 @@ PLISTS['port_barnyard'] = {
     'weapons': [{'name': 'pistol', 'ammo': '42'}, {'name': 'wok'}],
     'bricks': ['port_barnyard_1', 'port_barnyard_2', 'port_barnyard_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 150, 'objective': 150},
+    'time_limit_star': {'reward': 150, 'objective': 85},
     'accuracy_star': {'reward': 150, 'objective': 60},
 }
 
@@ -444,7 +444,7 @@ PLISTS['port_wall'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_wall_1', 'port_wall_2', 'port_wall_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 150, 'objective': 170},
+    'time_limit_star': {'reward': 150, 'objective': 115},
     'accuracy_star': {'reward': 200, 'objective': 55},
 }
 
@@ -467,7 +467,7 @@ PLISTS['port_clockwork'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '300'}, {'name': 'wok'}],
     'bricks': ['port_clockwork_1', 'port_clockwork_2', 'port_clockwork_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 150, 'objective': 150},
+    'time_limit_star': {'reward': 150, 'objective': 125},
     'accuracy_star': {'reward': 150, 'objective': 45},
 }
 
@@ -503,7 +503,7 @@ PLISTS['port_survivor'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '150'}, {'name': 'wok'}],
     'bricks': ['port_survivor_1', 'port_survivor_2', 'port_survivor_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 200, 'objective': 140},
+    'time_limit_star': {'reward': 200, 'objective': 125},
     'accuracy_star': {'reward': 150, 'objective': 40},
 }
 
@@ -527,7 +527,7 @@ PLISTS['port_stampede'] = {
     #: PORT ADDITION (user request): the modifiers this arena is played with, whatever the deck last did.
     #: A flag written twice is applied twice, and `times()` counts the stack; this one is written once, +20%.
     'Modifiers': ['fasterEnemies'],
-    'time_limit_star': {'reward': 200, 'objective': 120},
+    'time_limit_star': {'reward': 200, 'objective': 100},
     'accuracy_star': {'reward': 200, 'objective': 35},
 }
 
@@ -574,8 +574,8 @@ PLISTS['port_three_bullets'] = {
     'weapons': [{'name': 'pistol', 'ammo': '3'}, {'name': 'wok'}],
     'bricks': ['port_three_bullets_1', 'port_three_bullets_2', 'port_three_bullets_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 200, 'objective': 150},
-    'accuracy_star': {'reward': 200, 'objective': 80},
+    'time_limit_star': {'reward': 200, 'objective': 95},
+    'accuracy_star': {'reward': 200, 'objective': 75},
 }
 
 # --------------------------------------------------------------------------------------- Powder Keg
@@ -618,7 +618,7 @@ PLISTS['port_keg'] = {
                'port_keg_ring_2', 'port_keg_crowd_2',
                'port_keg_ring_3', 'port_keg_crowd_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 200, 'objective': 180},
+    'time_limit_star': {'reward': 200, 'objective': 110},
     'accuracy_star': {'reward': 200, 'objective': 40},
 }
 
@@ -681,7 +681,7 @@ PLISTS['port_scrap'] = {
     'weapons': [{'name': 'pistol', 'ammo': '60'}, {'name': 'wok'}],
     'bricks': ['port_scrap_1', 'port_scrap_2', 'port_scrap_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 250, 'objective': 190},
+    'time_limit_star': {'reward': 250, 'objective': 120},
     'accuracy_star': {'reward': 250, 'objective': 55},
 }
 
@@ -717,7 +717,7 @@ PLISTS['port_sidestep'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '250'}, {'name': 'wok'}],
     'bricks': ['port_sidestep_1', 'port_sidestep_2', 'port_sidestep_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 250, 'objective': 180},
+    'time_limit_star': {'reward': 250, 'objective': 110},
     'accuracy_star': {'reward': 250, 'objective': 45},
 }
 
@@ -759,7 +759,7 @@ PLISTS['port_nowake'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_nowake_1', 'port_nowake_2', 'port_nowake_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 250, 'objective': 200},
+    'time_limit_star': {'reward': 250, 'objective': 130},
     'accuracy_star': {'reward': 300, 'objective': 70},
 }
 
@@ -832,7 +832,7 @@ PLISTS['port_hydra'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '200'}, {'name': 'wok'}],
     'bricks': ['port_hydra_1', 'port_hydra_2', 'port_hydra_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 300, 'objective': 150},
+    'time_limit_star': {'reward': 300, 'objective': 90},
     'accuracy_star': {'reward': 250, 'objective': 50},
 }
 
@@ -862,7 +862,7 @@ PLISTS['port_longwalk'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '400'}, {'name': 'wok'}],
     'bricks': ['port_longwalk_1', 'port_longwalk_2', 'port_longwalk_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 300, 'objective': 220},
+    'time_limit_star': {'reward': 300, 'objective': 150},
     'accuracy_star': {'reward': 300, 'objective': 45},
 }
 
@@ -895,7 +895,7 @@ PLISTS['port_biggame'] = {
     'weapons': [{'name': 'hunting', 'ammo': '120'}, {'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_biggame_1', 'port_biggame_2', 'port_biggame_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 300, 'objective': 240},
+    'time_limit_star': {'reward': 300, 'objective': 130},
     'accuracy_star': {'reward': 300, 'objective': 60},
 }
 
@@ -947,7 +947,7 @@ PLISTS['port_thunder'] = {
     'weapons': [{'name': 'pistol', 'ammo': '999'}, {'name': 'microsmg', 'ammo': '250'}, {'name': 'wok'}],
     'bricks': ['port_thunder_1', 'port_thunder_2', 'port_thunder_3'],
     'ambient': {'ambientPlaylist': 'ambient_storm', 'gain': 0.5},
-    'time_limit_star': {'reward': 300, 'objective': 200},
+    'time_limit_star': {'reward': 300, 'objective': 165},
     'accuracy_star': {'reward': 350, 'objective': 60},
 }
 
@@ -985,7 +985,7 @@ PLISTS['port_ironsights'] = {
     'bricks': ['port_ironsights_1', 'port_ironsights_2', 'port_ironsights_3'],
     'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
     'Modifiers': ['narrowedSpread', 'narrowedSpread', 'noCritical'],
-    'time_limit_star': {'reward': 300, 'objective': 200},
+    'time_limit_star': {'reward': 300, 'objective': 125},
     'accuracy_star': {'reward': 350, 'objective': 65},
 }
 
@@ -1011,7 +1011,7 @@ PLISTS['port_rust'] = {
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
     'Modifiers': ['rustyWeapons', 'lessBullets', 'lessBullets',
                   'slowerReloadTime', 'slowerReloadTime'],
-    'time_limit_star': {'reward': 300, 'objective': 210},
+    'time_limit_star': {'reward': 300, 'objective': 140},
     'accuracy_star': {'reward': 350, 'objective': 55},
 }
 
@@ -1035,7 +1035,7 @@ PLISTS['port_carousel'] = {
     'bricks': ['port_carousel_1', 'port_carousel_2', 'port_carousel_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
     'Modifiers': ['fasterEnemies', 'fasterEnemies'],
-    'time_limit_star': {'reward': 350, 'objective': 220},
+    'time_limit_star': {'reward': 350, 'objective': 155},
     'accuracy_star': {'reward': 350, 'objective': 40},
 }
 
@@ -1068,7 +1068,7 @@ PLISTS['port_drop'] = {
     'weapons': [{'name': 'pistol', 'ammo': '90'}, {'name': 'wok'}],
     'bricks': ['port_drop_1', 'port_drop_2', 'port_drop_3'],
     'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
-    'time_limit_star': {'reward': 350, 'objective': 230},
+    'time_limit_star': {'reward': 350, 'objective': 155},
     'accuracy_star': {'reward': 400, 'objective': 60},
 }
 
@@ -1106,7 +1106,7 @@ PLISTS['port_last'] = {
     'bricks': ['port_last_1', 'port_last_2', 'port_last_3'],
     'ambient': {'ambientPlaylist': 'ambient_storm', 'gain': 0.5},
     'Modifiers': ['strongerEnemies'],
-    'time_limit_star': {'reward': 400, 'objective': 300},
+    'time_limit_star': {'reward': 400, 'objective': 215},
     'accuracy_star': {'reward': 400, 'objective': 65},
 }
 
@@ -1208,7 +1208,7 @@ PLISTS['port_pointblank'] = {
     'weapons': [{'name': 'sawnoff', 'ammo': '60'}, {'name': 'wok'}],
     'bricks': ['port_pointblank_1', 'port_pointblank_2', 'port_pointblank_3'],
     'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
-    'time_limit_star': {'reward': 400, 'objective': 190},
+    'time_limit_star': {'reward': 400, 'objective': 195},
     'accuracy_star': {'reward': 400, 'objective': 70},
 }
 
@@ -1243,7 +1243,7 @@ PLISTS['port_oneswing'] = {
     'weapons': [{'name': 'pistol', 'ammo': '6'}, {'name': 'claymore'}],
     'bricks': ['port_oneswing_1', 'port_oneswing_2', 'port_oneswing_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 400, 'objective': 240},
+    'time_limit_star': {'reward': 400, 'objective': 235},
     'accuracy_star': {'reward': 450, 'objective': 50},
 }
 
@@ -1298,7 +1298,7 @@ PLISTS['port_fuse'] = {
     'weapons': [{'name': 'grenade', 'ammo': '45'}, {'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_fuse_1', 'port_fuse_2', 'port_fuse_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
-    'time_limit_star': {'reward': 400, 'objective': 200},
+    'time_limit_star': {'reward': 400, 'objective': 130},
     # 70, not 80 (user request, 2026-09-29): played well, the player reached 62, so this is a reach and not
     # a wall.  A wok swing and a grenade count as shots as a revolver's does (`update_melee_weapons`, and
     # the explosion's UPDATE_WEAPON_DATA), and they seldom miss, so it is won by taking the near ones with
@@ -1368,7 +1368,7 @@ PLISTS['port_collateral'] = {
     'weapons': [{'name': 'grenade', 'ammo': '50'}, {'name': 'pistol', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_collateral_1', 'port_collateral_2', 'port_collateral_3'],
     'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
-    'time_limit_star': {'reward': 450, 'objective': 210},
+    'time_limit_star': {'reward': 450, 'objective': 180},
     'accuracy_star': {'reward': 450, 'objective': 75},
 }
 
@@ -1414,7 +1414,7 @@ PLISTS['port_crossfire'] = {
     'weapons': [{'name': 'sawnoff', 'ammo': '70'}, {'name': 'hunting', 'ammo': '40'}, {'name': 'wok'}],
     'bricks': ['port_crossfire_1', 'port_crossfire_2', 'port_crossfire_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
-    'time_limit_star': {'reward': 450, 'objective': 220},
+    'time_limit_star': {'reward': 450, 'objective': 145},
     'accuracy_star': {'reward': 450, 'objective': 70},
 }
 
@@ -1477,7 +1477,7 @@ PLISTS['port_armory'] = {
     'weapons': [{'name': 'grenade', 'ammo': '25'}, {'name': 'sawnoff', 'ammo': '70'}, {'name': 'claymore'}],
     'bricks': ['port_armory_1', 'port_armory_2', 'port_armory_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 500, 'objective': 280},
+    'time_limit_star': {'reward': 500, 'objective': 140},
     'accuracy_star': {'reward': 500, 'objective': 70},
 }
 
@@ -1534,7 +1534,7 @@ PLISTS['port_busker'] = {
     'weapons': [{'name': 'pistol', 'ammo': '12'}, {'name': 'banjo'}],
     'bricks': ['port_busker_1', 'port_busker_2', 'port_busker_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
-    'time_limit_star': {'reward': 200, 'objective': 150},
+    'time_limit_star': {'reward': 200, 'objective': 140},
     'accuracy_star': {'reward': 200, 'objective': 70},
 }
 
@@ -1580,7 +1580,7 @@ PLISTS['port_fore'] = {
     'weapons': [{'name': 'pistol', 'ammo': '18'}, {'name': 'golf'}],
     'bricks': ['port_fore_1', 'port_fore_2', 'port_fore_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 250, 'objective': 170},
+    'time_limit_star': {'reward': 250, 'objective': 145},
     'accuracy_star': {'reward': 250, 'objective': 70},
 }
 
@@ -1649,7 +1649,7 @@ PLISTS['port_company'] = {
     'weapons': [{'name': 'microsmg', 'ammo': '160'}, {'name': 'wok'}],
     'bricks': ['port_company_1', 'port_company_2', 'port_company_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 300, 'objective': 160},
+    'time_limit_star': {'reward': 300, 'objective': 115},
     'accuracy_star': {'reward': 300, 'objective': 60},
 }
 
@@ -1729,7 +1729,7 @@ PLISTS['port_cattlecall'] = {
     'weapons': [{'name': 'pistol', 'ammo': '18'}, {'name': 'prod'}],
     'bricks': ['port_cattlecall_1', 'port_cattlecall_2', 'port_cattlecall_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
-    'time_limit_star': {'reward': 350, 'objective': 190},
+    'time_limit_star': {'reward': 350, 'objective': 295},
     'accuracy_star': {'reward': 350, 'objective': 70},
 }
 
@@ -1790,7 +1790,7 @@ PLISTS['port_frontline'] = {
     'weapons': [{'name': 'tactical', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_frontline_1', 'port_frontline_2', 'port_frontline_3'],
     'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
-    'time_limit_star': {'reward': 350, 'objective': 180},
+    'time_limit_star': {'reward': 350, 'objective': 140},
     'accuracy_star': {'reward': 350, 'objective': 60},
 }
 
@@ -1859,7 +1859,7 @@ PLISTS['port_shortgame'] = {
     'weapons': [{'name': 'grenade', 'ammo': '30'}, {'name': 'golf'}],
     'bricks': ['port_shortgame_1', 'port_shortgame_2', 'port_shortgame_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 450, 'objective': 220},
+    'time_limit_star': {'reward': 450, 'objective': 215},
     'accuracy_star': {'reward': 450, 'objective': 70},
 }
 
@@ -1926,7 +1926,7 @@ PLISTS['port_bonfire'] = {
     'weapons': [{'name': 'sawnoff', 'ammo': '40'}, {'name': 'wok'}],
     'bricks': ['port_bonfire_1', 'port_bonfire_2', 'port_bonfire_3'],
     'ambient': {'ambientPlaylist': 'ambient_foundry', 'gain': 0.5},
-    'time_limit_star': {'reward': 450, 'objective': 210},
+    'time_limit_star': {'reward': 450, 'objective': 170},
     'accuracy_star': {'reward': 450, 'objective': 70},
 }
 
@@ -1987,8 +1987,8 @@ PLISTS['port_riot'] = {
     'weapons': [{'name': 'policeshotgun', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_riot_1', 'port_riot_2', 'port_riot_3'],
     'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
-    'time_limit_star': {'reward': 500, 'objective': 170},
-    'accuracy_star': {'reward': 500, 'objective': 85},
+    'time_limit_star': {'reward': 500, 'objective': 155},
+    'accuracy_star': {'reward': 500, 'objective': 75},
 }
 
 #: Where each of a huddle stands, in units across and back from its middle: none of them more than 2.5 from
@@ -2085,8 +2085,8 @@ PLISTS['port_chain'] = {
     'bricks': ['port_chain_1', 'port_chain_2', 'port_chain_3'],
     'ambient': {'ambientPlaylist': 'ambient_foundry', 'gain': 0.5},
     'Modifiers': ['everythingExplodes'],
-    'time_limit_star': {'reward': 600, 'objective': 190},
-    'accuracy_star': {'reward': 600, 'objective': 65},
+    'time_limit_star': {'reward': 600, 'objective': 155},
+    'accuracy_star': {'reward': 600, 'objective': 60},
 }
 
 #: The Police Shotgun and the cheapest club in the armory.  The shotgun hits everything fifty degrees either
@@ -2173,7 +2173,7 @@ PLISTS['port_encore'] = {
     'weapons': [{'name': 'policeshotgun', 'ammo': '999'}, {'name': 'banjo'}],
     'bricks': ['port_encore_1', 'port_encore_2', 'port_encore_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
-    'time_limit_star': {'reward': 550, 'objective': 140},
+    'time_limit_star': {'reward': 550, 'objective': 255},
     'accuracy_star': {'reward': 550, 'objective': 75},
 }
 
@@ -2239,8 +2239,8 @@ PLISTS['port_artillery'] = {
     'weapons': [{'name': 'bazooka', 'ammo': '75'}, {'name': 'wok'}],
     'bricks': ['port_artillery_1', 'port_artillery_2', 'port_artillery_3'],
     'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
-    'time_limit_star': {'reward': 500, 'objective': 230},
-    'accuracy_star': {'reward': 500, 'objective': 85},
+    'time_limit_star': {'reward': 500, 'objective': 180},
+    'accuracy_star': {'reward': 500, 'objective': 70},
 }
 
 #: The Bazooka's one cost, as an arena.  A rocket kills anything light in one and leads a walker exactly
@@ -2343,7 +2343,7 @@ PLISTS['port_blowback'] = {
     'weapons': [{'name': 'bazooka', 'ammo': '999'}, {'name': 'pistol', 'ammo': '6'}, {'name': 'claymore'}],
     'bricks': ['port_blowback_1', 'port_blowback_2', 'port_blowback_3'],
     'ambient': {'ambientPlaylist': 'ambient_foundry', 'gain': 0.5},
-    'time_limit_star': {'reward': 500, 'objective': 140},
+    'time_limit_star': {'reward': 500, 'objective': 240},
     'accuracy_star': {'reward': 500, 'objective': 70},
 }
 
@@ -2435,7 +2435,7 @@ PLISTS['port_titans'] = {
     'weapons': [{'name': 'bazooka', 'ammo': '999'}, {'name': 'policeshotgun', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_titans_1', 'port_titans_2', 'port_titans_3'],
     'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
-    'time_limit_star': {'reward': 500, 'objective': 160},
+    'time_limit_star': {'reward': 500, 'objective': 210},
     'accuracy_star': {'reward': 500, 'objective': 70},
 }
 
@@ -2523,8 +2523,8 @@ PLISTS['port_scarecrows'] = {
     'weapons': [{'name': 'bazooka', 'ammo': '32'}, {'name': 'pistol', 'ammo': '36'}, {'name': 'claymore'}],
     'bricks': ['port_scarecrows_1', 'port_scarecrows_2', 'port_scarecrows_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
-    'time_limit_star': {'reward': 550, 'objective': 190},
-    'accuracy_star': {'reward': 550, 'objective': 80},
+    'time_limit_star': {'reward': 550, 'objective': 135},
+    'accuracy_star': {'reward': 550, 'objective': 75},
 }
 
 #: Everything the chapter sent, and the three weapons it was fought with, all at once and each for its own
@@ -2622,7 +2622,7 @@ PLISTS['port_riotact'] = {
     'weapons': [{'name': 'policeshotgun', 'ammo': '999'}, {'name': 'bazooka', 'ammo': '999'}, {'name': 'golf'}],
     'bricks': ['port_riotact_1', 'port_riotact_2', 'port_riotact_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 600, 'objective': 170},
+    'time_limit_star': {'reward': 600, 'objective': 225},
     'accuracy_star': {'reward': 600, 'objective': 70},
 }
 
@@ -2706,7 +2706,7 @@ PLISTS['port_beltfed'] = {
     'weapons': [{'name': 'machinegun', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_beltfed_1', 'port_beltfed_2', 'port_beltfed_3'],
     'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
-    'time_limit_star': {'reward': 600, 'objective': 300},
+    'time_limit_star': {'reward': 600, 'objective': 415},
     'accuracy_star': {'reward': 600, 'objective': 55},
 }
 
@@ -2773,7 +2773,7 @@ PLISTS['port_coldsteel'] = {
     'weapons': [{'name': 'machinegun', 'ammo': '999'}, {'name': 'claymore'}],
     'bricks': ['port_coldsteel_1', 'port_coldsteel_2', 'port_coldsteel_3'],
     'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
-    'time_limit_star': {'reward': 600, 'objective': 200},
+    'time_limit_star': {'reward': 600, 'objective': 215},
     'accuracy_star': {'reward': 600, 'objective': 55},
 }
 
@@ -2815,7 +2815,7 @@ PLISTS['port_juggernaut'] = {
     'weapons': [{'name': 'machinegun', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_juggernaut_1', 'port_juggernaut_2', 'port_juggernaut_3'],
     'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
-    'time_limit_star': {'reward': 650, 'objective': 240},
+    'time_limit_star': {'reward': 650, 'objective': 330},
     'accuracy_star': {'reward': 650, 'objective': 55},
 }
 
@@ -2942,7 +2942,7 @@ PLISTS['port_heavyweights'] = {
     'weapons': [{'name': 'tactical', 'ammo': '999'}, {'name': 'bazooka', 'ammo': '25'}, {'name': 'wok'}],
     'bricks': ['port_heavyweights_1', 'port_heavyweights_2', 'port_heavyweights_3'],
     'ambient': {'ambientPlaylist': 'ambient_ruins', 'gain': 0.5},
-    'time_limit_star': {'reward': 650, 'objective': 200},
+    'time_limit_star': {'reward': 650, 'objective': 225},
     'accuracy_star': {'reward': 650, 'objective': 60},
 }
 
@@ -3008,7 +3008,7 @@ PLISTS['port_lightningrod'] = {
     'weapons': [{'name': 'tactical', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_lightningrod_1', 'port_lightningrod_2', 'port_lightningrod_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
-    'time_limit_star': {'reward': 650, 'objective': 220},
+    'time_limit_star': {'reward': 650, 'objective': 225},
     'accuracy_star': {'reward': 650, 'objective': 55},
 }
 
@@ -3078,7 +3078,7 @@ PLISTS['port_tempo'] = {
     'weapons': [{'name': 'sonic', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_tempo_1', 'port_tempo_2', 'port_tempo_3'],
     'ambient': {'ambientPlaylist': 'ambient_roman', 'gain': 0.5},
-    'time_limit_star': {'reward': 650, 'objective': 180},
+    'time_limit_star': {'reward': 650, 'objective': 205},
     'accuracy_star': {'reward': 650, 'objective': 65},
 }
 
@@ -3154,7 +3154,7 @@ PLISTS['port_closingtime'] = {
                 {'name': 'machinegun', 'ammo': '100'}, {'name': 'golf'}],
     'bricks': ['port_closingtime_1', 'port_closingtime_2', 'port_closingtime_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
-    'time_limit_star': {'reward': 700, 'objective': 190},
+    'time_limit_star': {'reward': 700, 'objective': 205},
     'accuracy_star': {'reward': 700, 'objective': 60},
 }
 

@@ -2702,6 +2702,25 @@ they were.
     spacing made it harder; it is the one arena of chapter 4 easier than the opener (see the measurements).
   - Chapter 6 and Reprise are spacing alone, 1.05 to 1.55 for the chapter and 1.15 for Reprise.
 
+  The stars were set again from the same person's runs.  What the challenge clock counts
+  (`InGameStats.challenge_time_elapsed`, a quarter of a second each time the stats timer fires,
+  `updateStats` 0x1000596d0 and 0x1000daa68): it stands still while the game is paused, while a wave is
+  held for its story to be read or for a hand-over of weapons (`holds_the_wave`), while a wave waits for its
+  cows to leave (`waits_for_passers_by`), and while one of the original's skippable recordings plays; it went
+  on through a death, the revive screen and the wave played again (a death scene alone is about 4.8 s, timed
+  headless) until 5661f25, and since then a revive takes it back to where it stood as the wave began and a
+  skip gives up the time star.  So the time star is judged on a run without a death, and that is how it is
+  set: 1.15 times the 75th percentile of the clock over the winning runs at reactions of 0.7 to 1.3 s, the
+  slower of level 4 and the plausible levels, rounded up to five seconds.  The 90th percentile is under it
+  everywhere, by 8 s at the least (Busker) and 34 s in Blowback, whose 140 the user missed by three seconds
+  and which is 240 now, being half as long again.  Arenas that grew slower are given longer (Encore 140 to
+  255, Belt Fed 300 to 415); the ones written far too loosely are closer to what they take (Barnyard 150 to
+  85, The Armory 280 to 140).  The person hits with 90 to 100 per cent of their shots in most arenas - the
+  cones are wide and a shell counts once for every enemy it hits - where the user reached 62 in Fuse's
+  earlier version, so an accuracy star is left where the person's lower quartile is ten points or more
+  above it, lowered to that otherwise, and never above 75: Three Bullets, Crowd Control and Scarecrows 75,
+  Shell Shock 60 and Artillery 70.
+
 * PORT ADDITION: an arena of the Extra mode offers a revive (user request, 2026-10-01).  A death there
   offers what Endless offers - the revive for diamonds, twice the price each time (`show_revive_view`
   0x10005ba78), or the failed screen, which is starting over - where `-[ADEnemy afterAttackSound]`
