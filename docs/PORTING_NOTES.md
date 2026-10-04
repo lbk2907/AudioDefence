@@ -2685,6 +2685,23 @@ they were.
   - Big Game and The Last Word come closer together (0.68 and 0.64): at level 4 the rifle made them the
     easiest of their chapters.  Everything else in the three chapters is spacing alone.
 
+  Chapters 4 to 6 and the Finale:
+  - Titans, which the user could not beat, has fewer directions at once: in its second and third waves
+    everything comes from the two Colossi's sides, within about forty-five degrees of one or the other, the
+    Dodges and a Chainsaw a wave are gone, and it comes 1.45 times as slowly.  It had been the hardest arena of
+    the mode, won in half the runs only quicker than 0.4 s; it sits where its place in chapter 5 asks now.
+  - Blowback's crunches are a little smaller (the lone Riot Gear Zombies are pairs of Zombies, a Hulk pair a
+    wave fewer) and come 1.6 times as slowly.
+  - Riot Act has a Runner fewer in its second wave and a Runner and a Dodge fewer in its third, which come
+    2.2 and 2.4 times as slowly.
+  - Point Blank's Whisperers are Rejects, its last wave's second Runner pack comes 2.5 s behind the first,
+    not half a second, and one of four Runner packs is gone; Crossfire's walking pairs come two seconds apart
+    (`_pair`'s `gap`), their Whisperers are Rejects and its lone Hulk a Zombie; Collateral's Dodges come after
+    the Runners rather than with them; Fuse's last Runners come after the Hulk pair rather than during it.
+  - Bonfire Night is as written: at level 4 its fireworks and the wok take everything that comes near, and no
+    spacing made it harder; it is the one arena of chapter 4 easier than the opener (see the measurements).
+  - Chapter 6 and Reprise are spacing alone, 1.05 to 1.55.
+
 * PORT ADDITION: an arena of the Extra mode offers a revive (user request, 2026-10-01).  A death there
   offers what Endless offers - the revive for diamonds, twice the price each time (`show_revive_view`
   0x10005ba78), or the failed screen, which is starting over - where `-[ADEnemy afterAttackSound]`

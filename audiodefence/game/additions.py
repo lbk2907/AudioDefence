@@ -1147,11 +1147,11 @@ def _escort(kinds, special: str, bearing: float, distance: float, at: float):
     return pack[:len(pack) // 2] + [(special, bearing, distance - 0.5, at)] + pack[len(pack) // 2:]
 
 
-def _pair(near, far, bearing: float, at: float, runners: bool = False):
-    """Two packs at once, from opposite sides."""
+def _pair(near, far, bearing: float, at: float, runners: bool = False, gap: float = 0.3):
+    """Two packs at once, from opposite sides, the far one `gap` seconds behind."""
     spread, distance = (5.0, 11.0) if runners else (6.0, 10.0)
     return (_pack(near, bearing, distance, at, spread=spread)
-            + _pack(far, bearing + 180.0, distance, at + 0.3, spread=spread))
+            + _pack(far, bearing + 180.0, distance, at + gap, spread=spread))
 
 
 def _turned(k: int):
@@ -1161,6 +1161,7 @@ def _turned(k: int):
 
 _Z4 = ('Zombie', 'ZombieB', 'ZombieC', 'Zombie')
 _Z4B = ('ZombieB', 'Zombie', 'ZombieC', 'QuietZombie')
+_Z4W = ('ZombieB', 'Zombie', 'ZombieC', 'WeakZombie')
 _R3 = ('Runner', 'RunnerB', 'RunnerC')
 _R4 = ('Runner', 'RunnerB', 'RunnerC', 'Runner')
 
@@ -1171,6 +1172,11 @@ _R4 = ('Runner', 'RunnerB', 'RunnerC', 'Runner')
 #: let in to arm's length it takes the whole of it, and every one beside it in a cone that wide.  So the
 #: arena is the wait, and it is packs all the way down - with Runners, which leave very little of one, and
 #: Hulks, which need four shells at the best distance there is.
+#:
+#: Re-tuned for a person playing by ear (2026-10-03): the Whisperers in its packs are Rejects - a Whisperer
+#: inside a pack is not heard until it screams three units out - the last wave's second pack of Runners comes
+#: 2.5 seconds behind the first rather than half a second, the pair from opposite sides being two half turns
+#: inside one Runner's walk, and one of that wave's four Runner packs is gone.
 PLISTS['port_pointblank_1'] = _wave(
     _pack(('Zombie', 'WeakZombie', 'ZombieB'), 0, 10.0, 0.0)
     + _pack(('WeakZombieB', 'Zombie', 'ZombieC', 'Zombie'), 130, 10.0, 5.0)
@@ -1179,19 +1185,18 @@ PLISTS['port_pointblank_1'] = _wave(
 PLISTS['port_pointblank_2'] = _wave(
     _pack(('Zombie', 'ZombieB', 'ZombieC', 'WeakZombie'), 40, 10.0, 0.0)
     + _pack(_R3, 200, 11.0, 4.0, spread=5.0)
-    + _pack(_Z4B, 300, 10.0, 7.0)
+    + _pack(('ZombieB', 'Zombie', 'ZombieC', 'WeakZombie'), 300, 10.0, 7.0)
     + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 120, 10.0, 11.0)
     + _pack(('Runner', 'RunnerB'), 330, 11.0, 14.0, spread=5.0)
-    + _pack(('QuietZombie', 'Zombie', 'ZombieB', 'QuietZombie'), 170, 10.0, 17.0), no_blast=True)
+    + _pack(('WeakZombie', 'Zombie', 'ZombieB', 'WeakZombieB'), 170, 10.0, 17.0), no_blast=True)
 PLISTS['port_pointblank_3'] = _wave(
-    _pack(_Z4, 10, 10.0, 0.0) + _pack(_Z4B, 190, 10.0, 0.5)
-    + _pack(_R3, 100, 11.0, 4.0, spread=5.0) + _pack(_R3, 280, 11.0, 4.5, spread=5.0)
+    _pack(_Z4, 10, 10.0, 0.0) + _pack(('ZombieB', 'Zombie', 'ZombieC', 'WeakZombie'), 190, 10.0, 0.5)
+    + _pack(_R3, 100, 11.0, 4.0, spread=5.0) + _pack(_R3, 280, 11.0, 6.5, spread=5.0)
     + _pack(('Hulk', 'HulkB'), 330, 10.0, 7.0)
     + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 60, 10.0, 9.0)
-    + _pack(('Zombie', 'ZombieC', 'ZombieB', 'QuietZombie'), 240, 10.0, 9.5)
-    + _pack(_R3, 150, 11.0, 12.0, spread=5.0)
+    + _pack(('Zombie', 'ZombieC', 'ZombieB', 'WeakZombieC'), 240, 10.0, 9.5)
     + _pack(('Hulk', 'HulkB'), 30, 10.0, 14.0)
-    + _pack(_Z4B, 210, 10.0, 15.0) + _pack(_Z4, 120, 10.0, 17.0)
+    + _pack(('ZombieB', 'Zombie', 'ZombieC', 'WeakZombieB'), 210, 10.0, 15.0) + _pack(_Z4, 120, 10.0, 17.0)
     + _pack(_R3, 300, 11.0, 18.0, spread=5.0), no_blast=True)
 PLISTS['port_pointblank'] = {
     'challenge_id': 'port_pointblank',
@@ -1254,6 +1259,9 @@ PLISTS['port_oneswing'] = {
 #: whose walking recordings are 25 dB under a Zombie's (-46 against -21), a whisper beside a crowd - so the
 #: thing stealing the grenade could not be heard, and the arena could not be played by listening for it.
 #: The Quiet Zombies inside the crowds are kept: they die with the crowd.
+#:
+#: In the last wave the Runner pack comes eight seconds later and the lone Runner seven (2026-10-03): they
+#: came while the Hulk pair was still being grenaded, which a person playing by ear did not get through.
 PLISTS['port_fuse_1'] = _wave(
     _pack(('WeakZombie', 'Zombie', 'WeakZombieB', 'ZombieB'), 20, 11.0, 0.0)
     + _pack(('Zombie', 'WeakZombieC', 'ZombieC', 'WeakZombie'), 150, 11.0, 5.0)
@@ -1274,10 +1282,10 @@ PLISTS['port_fuse_2'] = _wave(
 PLISTS['port_fuse_3'] = _wave(
     [('WeakZombieB', 30, 7.0, 0.0)] + _escort(_W4, 'Zombie', 10, 11.0, 1.0)
     + _pack(('Hulk', 'HulkB'), 230, 11.0, 3.0)
-    + _pack(_R3, 120, 11.0, 5.0, spread=5.0)
+    + _pack(_R3, 120, 11.0, 11.0, spread=5.0)
     + [('WeakZombieC', 160, 7.0, 6.0)] + _escort(('WeakZombieB', 'WeakZombieC', 'WeakZombie'), 'ZombieB', 180, 11.0, 7.0)
     + _escort(('WeakZombieC', 'WeakZombie', 'WeakZombieB'), 'Zombie', 300, 11.0, 9.0)
-    + [('Runner', 330, 9.0, 10.0)]
+    + [('Runner', 330, 9.0, 17.0)]
     + [('WeakZombieB', 270, 7.0, 13.0)]
     + _escort(('WeakZombieB', 'WeakZombie', 'WeakZombieC', 'WeakZombieB'), 'ZombieC', 210, 11.0, 15.0), no_blast=True)
 PLISTS['port_fuse'] = {
@@ -1318,7 +1326,8 @@ PLISTS['port_fuse'] = {
 #:   has to be killed: left alone, it goes.
 #: * a Shield walks in the middle of its crowd, at its pace, half a unit ahead (`_escort`): the first
 #:   grenade takes the crowd and two more the Shield, whichever of them the first one lands on.
-#: * a Dodge comes on its own, or two together: grenaded, it does not step aside.
+#: * a Dodge comes on its own, or two together: grenaded, it does not step aside.  Since 2026-10-03 the
+#:   Dodges come seven and thirteen seconds later than they did, after the Runners rather than with them.
 #:
 #: The crowds are weak ones (20 of life), so one blast of thirty takes a crowd, as in Fuse.  Runners come in
 #: a small pack of their own, with nothing in it to disturb.  The last wave went from seven crowds and 38
@@ -1338,13 +1347,13 @@ PLISTS['port_collateral_1'] = _wave(
 PLISTS['port_collateral_2'] = _wave(
     _escort(('WeakZombie', 'WeakZombieB', 'WeakZombieC'), 'Shield', 60, 10.0, 0.0)
     + _resting(('WeakZombieB', 'WeakZombie', 'WeakZombieC', 'WeakZombie'), 200, 10.0, 4.0)
-    + [('Zombie', 130, 10.0, 6.0), ('Dodge', 320, 11.0, 7.0)]
+    + [('Zombie', 130, 10.0, 6.0), ('Dodge', 320, 11.0, 14.0)]
     + _pack(_R3, 100, 11.0, 11.0, spread=5.0)
     + [('ZombieB', 250, 10.0, 12.0)], no_blast=True)
 PLISTS['port_collateral_3'] = _wave(
     _escort(_WEAK4, 'Shield', 0, 10.0, 0.0)
     + _resting(('WeakZombieB', 'WeakZombieC', 'WeakZombie', 'WeakZombieB'), 120, 10.0, 2.0)
-    + [('Dodge', 235, 11.0, 5.0), ('DodgeB', 245, 11.0, 5.3), ('Zombie', 330, 10.0, 6.0)]
+    + [('Dodge', 235, 11.0, 18.0), ('DodgeB', 245, 11.0, 18.3), ('Zombie', 330, 10.0, 6.0)]
     + _escort(('WeakZombieC', 'WeakZombie', 'WeakZombieB'), 'Shield', 180, 10.0, 10.0)
     + _pack(_R3, 60, 11.0, 12.0, spread=5.0)
     + [('ZombieC', 90, 10.0, 13.0)]
@@ -1373,7 +1382,9 @@ PLISTS['port_collateral'] = {
 #: in the one place it was lost.  `_pair` sends the far pack three tenths of a second behind the near one,
 #: and for Runners that is both packs inside five units at once - two shells, a half-turn and nothing left.
 #: So in the last wave the far pack of each Runner pair comes 2.3 seconds behind the near one: a shell into
-#: the first, turn, a shell into the second.
+#: the first, turn, a shell into the second.  And since 2026-10-03 the pairs that walk come two seconds apart
+#: as well (`_pair`'s `gap`), their Whisperers are Rejects (`_Z4W`), and the lone Hulk of the last wave is a
+#: Zombie: a person playing by ear, turning between the sides, was caught by the second pack or the Hulk.
 PLISTS['port_crossfire_1'] = _wave(
     _pack(('Zombie', 'ZombieB', 'ZombieC'), 0, 10.0, 0.0) + _pack(('Zombie', 'ZombieC', 'ZombieB'), 180, 10.0, 0.5)
     + _pack(('ZombieB', 'Zombie', 'WeakZombie'), 90, 10.0, 10.0)
@@ -1381,17 +1392,17 @@ PLISTS['port_crossfire_1'] = _wave(
     + [('Zombie', 45, 11.0, 5.0), ('ZombieB', 225, 11.0, 14.0)], no_blast=True)
 PLISTS['port_crossfire_2'] = _wave(
     _pack(_Z4, 30, 10.0, 0.0) + _pack(_R3, 210, 11.0, 2.0, spread=5.0)
-    + _pack(_Z4B, 120, 10.0, 8.0) + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 300, 10.0, 8.5)
+    + _pack(_Z4W, 120, 10.0, 8.0) + _pack(('Zombie', 'ZombieC', 'ZombieB', 'Zombie'), 300, 10.0, 8.5)
     + [('Hulk', 75, 11.0, 4.0), ('Zombie', 255, 11.0, 12.0)]
     + _pack(_R3, 345, 11.0, 15.0, spread=5.0) + _pack(('Zombie', 'ZombieB', 'ZombieC'), 165, 10.0, 15.5),
     no_blast=True)
 PLISTS['port_crossfire_3'] = _wave(
-    _pair(_Z4, _Z4B, 10, 0.0)
+    _pair(_Z4, _Z4W, 10, 0.0, gap=2.0)
     + _pack(_R3, 100, 11.0, 4.0, spread=5.0) + _pack(_R3, 280, 11.0, 6.3, spread=5.0)
     + _pack(('Hulk', 'HulkB'), 55, 10.0, 7.0) + _pack(_Z4, 235, 10.0, 7.3)
-    + _pair(_Z4B, _Z4, 150, 10.0) + [('Hulk', 330, 11.0, 11.0)]
+    + _pair(_Z4W, _Z4, 150, 10.0, gap=2.0) + [('Zombie', 330, 11.0, 11.0)]
     + _pack(_R3, 20, 11.0, 14.0, spread=5.0) + _pack(_R3, 200, 11.0, 16.3, spread=5.0)
-    + _pair(_Z4, _Z4B, 70, 17.0)
+    + _pair(_Z4, _Z4W, 70, 17.0, gap=2.0)
     + _pack(_R3, 300, 11.0, 20.0, spread=5.0), no_blast=True)
 PLISTS['port_crossfire'] = {
     'challenge_id': 'port_crossfire',
@@ -2253,6 +2264,10 @@ PLISTS['port_artillery'] = {
 #: weapon switches, not a rocket landing five units away.  A crate stops any power-up still running when it
 #: appears, and there is one a wave, long after the last one's wind is gone.
 #:
+#: The crunches of waves 2 and 3 are a little smaller since 2026-10-03: the lone Riot Gear Zombies are a pair
+#: of Zombies each and one Hulk pair is gone from each, which left a person playing by ear more than two clips
+#: to fire before the wind.
+#:
 #: The melee weapon is the Claymore, on purpose and not to be used in a crowd: at level four the wok is
 #: 25 a quarter-second and would make "too close" harmless, and then the arena would have no idea left.  The
 #: Claymore is for one thing that got in.  The Runner pairs, the Dodges and the late crowds come on their own,
@@ -2297,9 +2312,8 @@ PLISTS['port_blowback_2'] = _crate(_wave(
     + _near(_P2[2], 60, 13.0, 6.5)
     + _escort(('Zombie', 'ZombieB'), 'Shield', 200, 6.5, 14.0)
     + _pack(_HH, 320, 7.0, 15.0)
-    + [('Shield', 110, 6.5, 16.0)]
+    + _near(_P2[3], 110, 16.0, 6.5)
     + _near(_P2[0], 230, 17.0, 6.5)
-    + _pack(_HH, 20, 7.0, 18.0)
     + _escort(('ZombieC', 'Zombie'), 'Shield', 160, 6.5, 19.0)
     + _pack(_R2, 290, 11.0, 30.0, spread=5.0)
     + _near(_TRIOS[3], 90, 33.0), no_blast=True), 2.5)
@@ -2310,11 +2324,10 @@ PLISTS['port_blowback_3'] = _crate(_wave(
     + _escort(('ZombieB', 'Zombie'), 'Shield', 290, 6.5, 15.0)
     + _pack(_HH, 60, 7.0, 16.0)
     + _near(_P2[2], 180, 17.0, 6.5)
-    + [('Shield', 330, 6.5, 18.0)]
+    + _near(_P2[3], 330, 18.0, 6.5)
     + _pack(_HH, 110, 7.0, 19.0)
     + _escort(('ZombieC', 'Zombie'), 'Shield', 0, 6.5, 20.0)
     + _near(_P2[1], 220, 21.0, 6.5)
-    + _pack(_HH, 140, 7.0, 22.0)
     + _pack(_R2, 210, 11.0, 31.0, spread=5.0)
     + _near(_TRIOS[3], 90, 34.0)
     + _near(_TRIOS[0], 300, 37.0)
@@ -2356,6 +2369,12 @@ PLISTS['port_blowback'] = {
 #: not arrive together.  The Police Shotgun is for whatever gets inside five units, where a rocket rings the
 #: ears.  No Berserk: a shotgun is in hand.
 #:
+#: Fewer directions at once (user request, 2026-10-03: "so many enemy come at me from the different direction
+#: and how can I turn really fast and kill those?").  In waves 2 and 3 everything comes from the two
+#: Colossi's sides, within about forty-five degrees of one or the other, so the rockets fired at them land in
+#: what walks there too, and the Dodges and one Chainsaw a wave are gone.  Measured with a person playing by
+#: ear, it had been the hardest arena of the whole mode, won in half the runs only at a reaction under 0.4 s.
+#:
 #: Measured with the referee (C1's player, which fires the Police Shotgun and the Bazooka as they are meant
 #: to be fired; 10 runs a rung, 2026-09-30): level 4 wins 100 90 80 80 90 60 % at R = 0.6 .. 1.6 s,
 #: difficulty 1.64.  Nearly every loss is a Colossus left too long - loud, slow and fair.  Level 1: see the
@@ -2379,36 +2398,32 @@ PLISTS['port_titans_1'] = _wave(
 PLISTS['port_titans_2'] = _wave(
     [('Colossus', 30, 11.0, 0.0), ('Colossus', 200, 11.0, 3.0)]
     + _beside(_TRIOS[0], 30, 3.5)
-    + _pack(_TRIOS[1], 110, 10.0, 6.0)
+    + _pack(_TRIOS[1], 70, 10.0, 6.0)
     + _beside(_TRIOS[2], 200, 7.5)
-    + [('Chainsaw', 290, 10.0, 9.5)]
-    + _pack(_HH, 120, 12.0, 13.0)
+    + [('Chainsaw', 115, 10.0, 9.5)]
+    + _pack(_HH, 165, 12.0, 13.0)
     + _beside(_TRIOS[3], 30, 14.5)
-    + _pack(_R2, 250, 11.0, 19.5, spread=5.0)
+    + _pack(_R2, 240, 11.0, 19.5, spread=5.0)
     + _beside(_TRIOS[0], 200, 19.5)
-    + [('Dodge', 340, 11.0, 21.5)]
-    + _pack(_HH, 330, 12.0, 17.0)
-    + _pack(_TRIOS[1], 160, 10.0, 24.5)
-    + _pack(_R2, 80, 11.0, 31.0, spread=5.0), no_blast=True)
+    + _pack(_HH, 350, 12.0, 17.0)
+    + _pack(_TRIOS[1], 175, 10.0, 24.5)
+    + _pack(_R2, 60, 11.0, 31.0, spread=5.0), no_blast=True)
 PLISTS['port_titans_3'] = _wave(
     [('Colossus', 20, 11.5, 0.0), ('Colossus', 150, 11.5, 4.0)]
     + _beside(_TRIOS[0], 20, 3.5)
     + _beside(('ZombieB', 'Shield', 'Zombie'), 150, 7.0)
-    + _pack(_R2, 250, 11.0, 8.0, spread=5.0)
-    + _pack(_TRIOS[2], 85, 10.0, 10.0)
-    + [('Dodge', 300, 11.0, 10.0)]
+    + _pack(_R2, 190, 11.0, 8.0, spread=5.0)
+    + _pack(_TRIOS[2], 60, 10.0, 10.0)
     + _beside(_TRIOS[3], 20, 13.5)
-    + [('Chainsaw', 110, 10.0, 13.5)]
-    + _pack(_HH, 210, 12.0, 14.5)
+    + [('Chainsaw', 90, 10.0, 13.5)]
+    + _pack(_HH, 175, 12.0, 14.5)
     + _beside(_TRIOS[0], 150, 18.5)
-    + _pack(_HH, 60, 12.0, 20.0)
-    + _pack(_R2, 330, 11.0, 24.0, spread=5.0)
+    + _pack(_HH, 50, 12.0, 20.0)
+    + _pack(_R2, 340, 11.0, 24.0, spread=5.0)
     + _beside(_TRIOS[1], 20, 24.0)
-    + [('Dodge', 190, 11.0, 25.5)]
-    + _pack(_TRIOS[2], 240, 10.0, 27.0)
-    + [('Chainsaw', 250, 10.0, 29.0)]
-    + _escort(('Zombie', 'ZombieB'), 'Shield', 120, 12.0, 33.0)
-    + _pack(_R2, 70, 11.0, 39.5, spread=5.0), no_blast=True)
+    + _pack(_TRIOS[2], 120, 10.0, 27.0)
+    + _escort(('Zombie', 'ZombieB'), 'Shield', 160, 12.0, 33.0)
+    + _pack(_R2, 40, 11.0, 39.5, spread=5.0), no_blast=True)
 PLISTS['port_titans'] = {
     'challenge_id': 'port_titans',
     'title': 'Titans',
@@ -2533,6 +2548,9 @@ PLISTS['port_scarecrows'] = {
 #: Spaced by the rules the chapter 4 test made: the Runners and the Dodges come one at a time, each within
 #: five units about five seconds after the fast one before, never in a pair from opposite sides.  The Dodges
 #: come alone, the Riot Gear Zombies inside their crowds, and there is no Berserk, because a shotgun is in hand.
+#: Since 2026-10-03 the second wave has a Runner fewer and the third a Runner and a Dodge fewer, and its
+#: second and third waves come more slowly (`_TEMPO`): a person playing by ear was caught by a Runner while
+#: the heavies and the crescents were being dealt with.
 #:
 #: Measured with the referee (C1's player; 10 runs a rung, 2026-09-30): level 4 wins 100 100 80 60 50 50 % at
 #: R = 0.6 .. 1.6 s, difficulty 1.60, the lowest middle rungs of the chapter's second half.  Its losses are
@@ -2574,8 +2592,7 @@ PLISTS['port_riotact_2'] = _wave(
     + _crescent(_S5, 140, 18.0, 9.5)
     + [('RunnerC', 60, 11.0, 18.5)]
     + _far(_HH, 200, 21.0)
-    + _crescent(_RC5[3], 90, 24.0, 9.5)
-    + [('Runner', 300, 11.0, 24.0)], no_blast=True)
+    + _crescent(_RC5[3], 90, 24.0, 9.5), no_blast=True)
 PLISTS['port_riotact_3'] = _wave(
     [('Colossus', 320, 12.0, 0.0)]
     + _crescent(_Z5[0], 0, 0.0, 9.5)
@@ -2589,8 +2606,6 @@ PLISTS['port_riotact_3'] = _wave(
     + _far(_HH, 340, 14.0)
     + [('Runner', 200, 11.0, 14.5)]
     + _crescent(_S5, 110, 17.5, 9.5)
-    + [('RunnerB', 20, 11.0, 19.0)]
-    + [('Dodge', 60, 11.0, 20.0)]
     + _crescent(_Z5[0], 200, 22.0, 9.5)
     + _escort(('ZombieB', 'Zombie'), 'Shield', 40, 12.0, 23.0)
     + _crescent(_H5, 150, 26.5, 9.5)
@@ -3760,6 +3775,17 @@ _TEMPO: dict = {
     # Chapter 3
     'port_ironsights': 1.41, 'port_cattlecall': 1.98, 'port_thunder': 2.0, 'port_rust': 1.3, 'port_frontline': 1.05,
     'port_drop': 1.45, 'port_carousel': 1.45, 'port_last': 0.64,
+    # Chapter 4 (Bonfire Night as written)
+    'port_pointblank': 2.6, 'port_oneswing': 1.64, 'port_fuse': 1.55, 'port_shortgame': 1.3, 'port_collateral': 2.15,
+    'port_crossfire': 1.9, 'port_armory': 0.76,
+    # Chapter 5
+    'port_riot': 0.9, 'port_chain': 0.85, 'port_encore': 2.2, 'port_artillery': 0.97, 'port_blowback': 1.6,
+    'port_titans': 1.45, 'port_scarecrows': 0.65, 'port_riotact': (1.6, 2.2, 2.4),
+    # Chapter 6
+    'port_beltfed': 1.55, 'port_coldsteel': 1.18, 'port_juggernaut': 1.53, 'port_racket': 1.05,
+    'port_heavyweights': 1.08, 'port_lightningrod': 1.17, 'port_tempo': 1.32, 'port_closingtime': 1.4,
+    # The Finale
+    'port_remix': 1.25,
 }
 
 
