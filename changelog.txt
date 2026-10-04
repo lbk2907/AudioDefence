@@ -37,6 +37,7 @@ In a challenge, the next wave waits for the cows to walk off or be shot, and so 
 The game no longer keeps its alsoft.ini sound file with your settings. An old one left in the AudioDefence settings folder can be deleted.
 A revive stops the ringing from an explosion, so you come back with clear ears.
 Choosing the Control Panel voice in the Speech tab after another voice now really switches back to it.
+A trigger that springs back a little as you let go of it no longer fires an extra shot. The fire key is given the same moment to settle.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.

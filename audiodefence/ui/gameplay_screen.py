@@ -34,6 +34,14 @@ log = logging.getLogger('ui.gameplay')
 
 SWIPE_POINTS_PER_SECOND = 600.0     # PORT INPUT: arrow keys in the swipe scheme drag at this speed
 
+#: PORT ADDITION (user report, 2026-10-05): how long fire settles after it is let go.  A press that comes
+#: sooner waits until then and counts only if it is still held: a trigger that springs back past half way
+#: as it is let go - a worn spring, or a trigger lock that makes a short pull a whole one - was read as a
+#: second, very short press, and a short press is a tap, which fires a shot (heard as an extra shot after a
+#: burst of the Machine Gun).  Keys go through the same wait.  No gun fires faster than every 0.2 s
+#: (Weapons.plist `fireRate`), so a tap that ends inside this would not have fired anyway.
+FIRE_SETTLE = 0.1
+
 
 class GameplayScreen(Screen):
     def __init__(self, host, controller):
@@ -43,6 +51,8 @@ class GameplayScreen(Screen):
         self.motion = KeyboardMotion()
         self._turn_keys: dict = {}                        # what is turning now: key or button -> action
         self._space_down = False
+        self._fire_let_go = float('-inf')                 # PORT ADDITION: see FIRE_SETTLE
+        self._fire_waiting = None                         # the key or button whose press waits for it
         self._corner_down: dict[int, tuple] = {}
         self._pan_translation = 0.0
         self._pan_active = False
@@ -196,6 +206,10 @@ class GameplayScreen(Screen):
         button_mode = GameParameters.shared().button_mode
         agv = self._agv()
         if action == 'fire' and not self._space_down:
+            wait = self._fire_let_go + FIRE_SETTLE - RunLoop.main().now()
+            if wait > 0.0:
+                self._wait_for_fire_to_settle(k, wait)
+                return
             self._space_down = True
             if agv is not None:
                 agv.touches_began(AccessibleGameView.TOP_RIGHT)
@@ -237,8 +251,12 @@ class GameplayScreen(Screen):
             self._update_turn()
             return
         agv = self._agv()
+        if action == 'fire' and k == self._fire_waiting:  # let go again before fire settled: a bounce
+            self._fire_waiting = None
+            return
         if action == 'fire' and self._space_down:
             self._space_down = False
+            self._fire_let_go = RunLoop.main().now()
             if agv is not None:
                 agv.touches_ended()
             elif GameParameters.shared().button_mode:
@@ -251,6 +269,22 @@ class GameplayScreen(Screen):
                 target.touched_up()
             elif agv is not None:
                 agv.touches_ended()
+
+    def _wait_for_fire_to_settle(self, k, wait: float) -> None:
+        """PORT ADDITION: a fire press too soon after fire was let go (FIRE_SETTLE) is pressed when the wait
+        is over, if it is still held then and the game is still in front."""
+        if self._fire_waiting is not None:                # a key repeat, or another key: one waits already
+            return
+        self._fire_waiting = k
+
+        def settled():
+            if self._fire_waiting != k:
+                return                                    # let go meanwhile
+            self._fire_waiting = None
+            if self.host.top() is self:
+                self._fire_let_go = float('-inf')
+                self.press('fire', k)
+        RunLoop.main().call_later(wait, settled)
 
     def _update_turn(self) -> None:
         """A turn key or a turn button decides while one is held; otherwise a controller's stick does, at
