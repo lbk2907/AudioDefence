@@ -3768,24 +3768,24 @@ _derive_order()
 #: what comes with what, and only the gaps between them change: over 1 they open, under 1 they close.
 _TEMPO: dict = {
     # Chapter 1
-    'port_clockwork': 1.15, 'port_nowake': 1.65, 'port_busker': 1.16, 'port_survivor': 1.8,
+    'port_clockwork': 1.15, 'port_nowake': 1.65, 'port_busker': 1.16, 'port_survivor': 2.0,
     # Chapter 2
     'port_stampede': 1.11, 'port_sidestep': 0.96, 'port_fore': 1.02, 'port_keg': (1.0, 1.6, 1.0, 2.0, 1.0, 2.3),
     'port_hydra': 1.3, 'port_biggame': 0.68,
     # Chapter 3
-    'port_ironsights': 1.41, 'port_cattlecall': 1.98, 'port_thunder': 2.0, 'port_rust': 1.3, 'port_frontline': 1.05,
-    'port_drop': 1.45, 'port_carousel': 1.45, 'port_last': 0.64,
+    'port_ironsights': 1.41, 'port_cattlecall': 2.15, 'port_thunder': 2.0, 'port_rust': 1.3, 'port_frontline': 1.05,
+    'port_drop': 1.45, 'port_carousel': 1.45, 'port_last': 0.67,
     # Chapter 4 (Bonfire Night as written)
     'port_pointblank': 2.6, 'port_oneswing': 1.64, 'port_fuse': 1.55, 'port_shortgame': 1.3, 'port_collateral': 2.15,
-    'port_crossfire': 1.9, 'port_armory': 0.76,
+    'port_crossfire': 1.9, 'port_armory': 0.74,
     # Chapter 5
-    'port_riot': 0.9, 'port_chain': 0.85, 'port_encore': 2.2, 'port_artillery': 0.97, 'port_blowback': 1.6,
+    'port_chain': 0.85, 'port_encore': 2.2, 'port_artillery': 0.97, 'port_blowback': 1.9,
     'port_titans': 1.45, 'port_scarecrows': 0.65, 'port_riotact': (1.6, 2.2, 2.4),
     # Chapter 6
     'port_beltfed': 1.55, 'port_coldsteel': 1.18, 'port_juggernaut': 1.53, 'port_racket': 1.05,
-    'port_heavyweights': 1.08, 'port_lightningrod': 1.17, 'port_tempo': 1.32, 'port_closingtime': 1.4,
+    'port_heavyweights': 1.2, 'port_lightningrod': 1.17, 'port_tempo': 1.32, 'port_closingtime': 1.33,
     # The Finale
-    'port_remix': 1.25,
+    'port_remix': 1.15,
 }
 
 

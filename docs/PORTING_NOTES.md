@@ -2682,7 +2682,7 @@ they were.
     twice as slowly: through the storm, two Whisperers screaming together leave a person no time.
   - Hydra grows back at nine units again, not seven; its third wave has three heads, no Runners, and a Reject
     for its Whisperer.
-  - Big Game and The Last Word come closer together (0.68 and 0.64): at level 4 the rifle made them the
+  - Big Game and The Last Word come closer together (0.68 and 0.67): at level 4 the rifle made them the
     easiest of their chapters.  Everything else in the three chapters is spacing alone.
 
   Chapters 4 to 6 and the Finale:
@@ -2691,7 +2691,7 @@ they were.
     Dodges and a Chainsaw a wave are gone, and it comes 1.45 times as slowly.  It had been the hardest arena of
     the mode, won in half the runs only quicker than 0.4 s; it sits where its place in chapter 5 asks now.
   - Blowback's crunches are a little smaller (the lone Riot Gear Zombies are pairs of Zombies, a Hulk pair a
-    wave fewer) and come 1.6 times as slowly.
+    wave fewer) and come 1.9 times as slowly.
   - Riot Act has a Runner fewer in its second wave and a Runner and a Dodge fewer in its third, which come
     2.2 and 2.4 times as slowly.
   - Point Blank's Whisperers are Rejects, its last wave's second Runner pack comes 2.5 s behind the first,
@@ -2700,7 +2700,7 @@ they were.
     the Runners rather than with them; Fuse's last Runners come after the Hulk pair rather than during it.
   - Bonfire Night is as written: at level 4 its fireworks and the wok take everything that comes near, and no
     spacing made it harder; it is the one arena of chapter 4 easier than the opener (see the measurements).
-  - Chapter 6 and Reprise are spacing alone, 1.05 to 1.55.
+  - Chapter 6 and Reprise are spacing alone, 1.05 to 1.55 for the chapter and 1.15 for Reprise.
 
 * PORT ADDITION: an arena of the Extra mode offers a revive (user request, 2026-10-01).  A death there
   offers what Endless offers - the revive for diamonds, twice the price each time (`show_revive_view`
