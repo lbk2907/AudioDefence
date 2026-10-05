@@ -230,11 +230,45 @@ they were.
   `s3d/decoder_android.py` put them where the engine expects `Device`, the reverb bus and the decoded arrays.
   The decoder runs two threads ahead of the game on the phone and one on a computer, and on every platform
   the sounds a hit brings - impacts, hits, deaths - go to the front of its queue.
-* **Speech, controllers, updates, vibration.**  `platform/__init__.py` gives the phone `speech_android`,
-  `pad_android` and `updater_android` in place of the desktop's modules: the phone's own text-to-speech,
-  driven by the Speech tab's engine, rate, pitch and volume rows, with the hints' keys named as the touches
-  that do the same; updating, below; and, not supported yet, game controllers.  TalkBack has to be off: the
-  game speaks for itself, and says so if TalkBack is on.
+* **Speech, controllers, updates, vibration.**  `platform/__init__.py` gives the phone `speech_android` and
+  `updater_android` in place of the desktop's modules: the phone's own text-to-speech, driven by the Speech
+  tab's engine, rate, pitch and volume rows; and updating, below.  The hints name the keys as the touches
+  that do the same (`pad.menu_words`).  TalkBack has to be off: the game speaks for itself, and says so if
+  TalkBack is on.
+  * **A keyboard** (user request, 2026-10-05).  `MainActivity.dispatchKeyEvent` hands a keyboard's keys to
+    `Bridge.keyEvent`, which passes them on as events 30 and 31 - Android's key code, meta state and
+    character - and leaves the phone's own keys to Android (`KeyEvent.isSystem`: Back, volume, power,
+    media) and a controller's buttons to the controllers, below.  Android's own repeats are not passed: the
+    screens repeat a held key themselves, as on the desktop.  `android_main.pygame_key` turns each into the
+    key and modifiers pygame would give, left and right apart, and `TouchInput.keyboard` gives it to the
+    screens as the desktop's keys are given, so Settings -> Keyboard, Control stopping the speech and every
+    menu key are the desktop's.  The pygame stand-in has the rest of a keyboard's keys - the function keys,
+    the punctuation, the number pad - so any of them can be bound.  The menus keep the phone's layout, left
+    and right through the items: the swipes are those keys.  The turn keys turn on top of the phone's own
+    turning (`PhoneMotion`, which keeps a `KeyboardMotion`): the gyroscope's yaw and the keys' together, and
+    under Tilt the keys' lean while one is held.  While the keyboard is in use the hints name its keys, as
+    written; the next touch brings back the touches (`pad.keyboard_in_use`).
+  * **Game controllers** (user request, 2026-10-05), with the desktop's `platform/pad.py`, which the phone
+    now uses as it is - `pad_android`, which had none, is gone.  The controllers are Android's: `Bridge`
+    keeps the input devices that are gamepads or joysticks (`InputManager`'s device listener, events 43 and
+    44 as one comes and goes), and gives their input in SDL's game controller terms, which pad.py reads:
+    the buttons by SDL's numbers (`padKeyEvent`, events 40 and 41), the sticks and the triggers as SDL's
+    six axes (`padMotionEvent`, event 42), the D-pad as its four buttons whether it comes as keys or as a
+    hat.  The right stick is Z and RZ on most controllers and RX and RY on some older drivers, and the
+    triggers LTRIGGER and RTRIGGER, BRAKE and GAS, or RX and RY, each scaled by the range the controller
+    gives it; L2 and R2 that come only as buttons are sent as their axis full or at rest.  The pygame
+    stand-in's `_sdl2.controller` lists and opens them through the bridge (`padIds`, `padName`), so
+    `Pads.start` and `Pads.handle` are the desktop's, and `android_main.pad_event` makes each the pygame
+    event SDL would.  A controller's name has its maker in front where Android leaves it out - a DualShock 4
+    is "Wireless Controller" there - so its buttons are named as printed (`pad.family`).  Its rumble is
+    `rumblePad`: each of two motors on Android 12 and later (`VibratorManager`), the stronger of the two on
+    one before.  The movement sensor, a DualSense's trigger feel and its fine haptics are SDL's, which the
+    phone has not (`pad.sdl` is None there).  Checked through the stand-in bridge with the phone's pygame
+    stand-in: Cross, R2 past half way, the D-pad, a stick turning at 0.63 for 70%, a flick up, R2 named R2
+    on a PlayStation pad, a hit rumbling the controller and the phone, the hints in touches, the controller's
+    buttons and keys, a second controller said and the first gone with its held inputs let go; and the phone
+    game itself, Cross skipping the intro, the D-pad and the keyboard's arrows moving through the main menu
+    with a click on both, and a controller said as it came.  The Java compiles against Android 15.
   * **The phone vibrates** (user request, 2026-10-05), with the desktop's `platform/haptics.py`, which the
     phone now uses as it is - `haptics_android`, which did nothing, is gone.  Every pulse a controller is
     given is felt in the phone too (`Haptics._phone`): the stronger of the shape's two motors, the phone

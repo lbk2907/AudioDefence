@@ -21,10 +21,12 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.hardware.display.DisplayManager;
+import android.hardware.input.InputManager;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CombinedVibration;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.VibrationEffect;
@@ -36,6 +38,9 @@ import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
 import android.view.Display;
+import android.view.InputDevice;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.Surface;
 
 import com.audiodefence.audio.AudioOut;
@@ -56,9 +61,11 @@ import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -147,6 +154,7 @@ public final class Bridge implements SensorEventListener {
         audio.start(ctx);
         first.start("");
         startSensors();
+        watchControllers();
     }
 
     /** The game's own HRTF, which the app carries: what the mixer starts with, and 3D sound's default. */
@@ -396,6 +404,336 @@ public final class Bridge implements SensorEventListener {
             return true;
         }
         return false;
+    }
+
+    // ------------------------------------------------------------------------------------ controllers
+    // PORT ADDITION (user request, 2026-10-05): a game controller paired with the phone or plugged into it, given to
+    // Python as SDL's game controller layer gives the desktop's (platform/pad.py, through the pygame stand-in's
+    // _sdl2.controller): its buttons by SDL's numbers, its sticks and triggers as SDL's six axes, the D-pad as
+    // four buttons whether it comes as keys or as a hat, and its coming and going.  40 a button down, 41 up, 42
+    // an axis moved (-1 to 1, a trigger 0 to 1), 43 a controller connected, 44 one gone; the device id first.
+
+    // SDL_GameControllerButton
+    private static final int PAD_A = 0, PAD_B = 1, PAD_X = 2, PAD_Y = 3, PAD_BACK = 4, PAD_GUIDE = 5, PAD_START = 6,
+            PAD_LEFTSTICK = 7, PAD_RIGHTSTICK = 8, PAD_LEFTSHOULDER = 9, PAD_RIGHTSHOULDER = 10, PAD_DPUP = 11,
+            PAD_DPDOWN = 12, PAD_DPLEFT = 13, PAD_DPRIGHT = 14;
+    // SDL_GameControllerAxis
+    private static final int AXIS_LEFT_X = 0, AXIS_LEFT_Y = 1, AXIS_RIGHT_X = 2, AXIS_RIGHT_Y = 3,
+            AXIS_TRIGGER_LEFT = 4, AXIS_TRIGGER_RIGHT = 5;
+    private final Set<Integer> pads = new HashSet<>();
+    /** Per controller: which of Android's axes are its right stick and its triggers, worked out once. */
+    private final Map<Integer, int[]> padAxes = new HashMap<>();
+    /** Per controller: the six axes as last sent, and the hat's two, so only a change is sent. */
+    private final Map<Integer, float[]> padLast = new HashMap<>();
+
+    private static boolean isPad(InputDevice d) {
+        if (d == null || d.isVirtual()) {
+            return false;
+        }
+        int s = d.getSources();
+        return (s & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+                || (s & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+    }
+
+    private void watchControllers() {
+        InputManager input = (InputManager) context.getSystemService(Context.INPUT_SERVICE);
+        if (input == null) {
+            return;
+        }
+        synchronized (pads) {
+            for (int id : input.getInputDeviceIds()) {
+                if (isPad(InputDevice.getDevice(id))) {
+                    pads.add(id);
+                }
+            }
+        }
+        input.registerInputDeviceListener(new InputManager.InputDeviceListener() {
+            @Override
+            public void onInputDeviceAdded(int id) {
+                if (isPad(InputDevice.getDevice(id))) {
+                    synchronized (pads) {
+                        pads.add(id);
+                    }
+                    events.add(new float[]{43, id, 0, 0, 0});
+                }
+            }
+
+            @Override
+            public void onInputDeviceRemoved(int id) {
+                boolean was;
+                synchronized (pads) {
+                    was = pads.remove(id);
+                    padAxes.remove(id);
+                    padLast.remove(id);
+                }
+                if (was) {
+                    events.add(new float[]{44, id, 0, 0, 0});
+                }
+            }
+
+            @Override
+            public void onInputDeviceChanged(int id) {
+                synchronized (pads) {
+                    padAxes.remove(id);                     // its axes are worked out again
+                }
+            }
+        }, main);
+    }
+
+    /** Python: the controllers connected now, by device id. */
+    public int[] padIds() {
+        synchronized (pads) {
+            int[] out = new int[pads.size()];
+            int i = 0;
+            for (int id : pads) {
+                out[i++] = id;
+            }
+            return out;
+        }
+    }
+
+    /** Python: a controller's name, with the maker in front where its own name leaves it out - Android calls a
+     *  DualShock 4 "Wireless Controller" - so that its buttons are named as printed (pad.family). */
+    public String padName(int id) {
+        InputDevice d = InputDevice.getDevice(id);
+        if (d == null) {
+            return "Controller";
+        }
+        String name = d.getName() == null ? "Controller" : d.getName();
+        String lower = name.toLowerCase(Locale.ROOT);
+        int vendor = d.getVendorId();
+        if (vendor == 0x054C && !(lower.contains("playstation") || lower.contains("dualsense")
+                || lower.contains("dualshock") || lower.contains("ps4") || lower.contains("ps5"))) {
+            return "PlayStation " + name;
+        }
+        if (vendor == 0x045E && !lower.contains("xbox")) {
+            return "Xbox " + name;
+        }
+        if (vendor == 0x057E && !(lower.contains("nintendo") || lower.contains("switch") || lower.contains("joy-con"))) {
+            return "Nintendo " + name;
+        }
+        return name;
+    }
+
+    private static int padButton(int code) {
+        switch (code) {
+            case KeyEvent.KEYCODE_BUTTON_A: return PAD_A;
+            case KeyEvent.KEYCODE_BUTTON_B: return PAD_B;
+            case KeyEvent.KEYCODE_BUTTON_X: return PAD_X;
+            case KeyEvent.KEYCODE_BUTTON_Y: return PAD_Y;
+            case KeyEvent.KEYCODE_BUTTON_SELECT: return PAD_BACK;
+            case KeyEvent.KEYCODE_BUTTON_MODE: return PAD_GUIDE;
+            case KeyEvent.KEYCODE_BUTTON_START: return PAD_START;
+            case KeyEvent.KEYCODE_BUTTON_THUMBL: return PAD_LEFTSTICK;
+            case KeyEvent.KEYCODE_BUTTON_THUMBR: return PAD_RIGHTSTICK;
+            case KeyEvent.KEYCODE_BUTTON_L1: return PAD_LEFTSHOULDER;
+            case KeyEvent.KEYCODE_BUTTON_R1: return PAD_RIGHTSHOULDER;
+            case KeyEvent.KEYCODE_DPAD_UP: return PAD_DPUP;
+            case KeyEvent.KEYCODE_DPAD_DOWN: return PAD_DPDOWN;
+            case KeyEvent.KEYCODE_DPAD_LEFT: return PAD_DPLEFT;
+            case KeyEvent.KEYCODE_DPAD_RIGHT: return PAD_DPRIGHT;
+            default: return -1;
+        }
+    }
+
+    /** MainActivity: a controller's button.  True when it was taken.  L2 and R2 that come only as buttons, on a
+     *  controller with no trigger axes, are sent as their axis full or at rest, as SDL does. */
+    public boolean padKeyEvent(KeyEvent e) {
+        int id = e.getDeviceId();
+        boolean pad;
+        synchronized (pads) {
+            pad = pads.contains(id);
+        }
+        if (!pad || e.isSystem()) {
+            return false;
+        }
+        int action = e.getAction();
+        if (action != KeyEvent.ACTION_DOWN && action != KeyEvent.ACTION_UP) {
+            return false;
+        }
+        boolean down = action == KeyEvent.ACTION_DOWN;
+        int code = e.getKeyCode();
+        if (code == KeyEvent.KEYCODE_BUTTON_L2 || code == KeyEvent.KEYCODE_BUTTON_R2) {
+            int[] axes = axesOf(id);
+            boolean analog = axes != null && axes[code == KeyEvent.KEYCODE_BUTTON_L2 ? 2 : 3] >= 0;
+            if (!analog && e.getRepeatCount() == 0) {
+                padAxis(id, code == KeyEvent.KEYCODE_BUTTON_L2 ? AXIS_TRIGGER_LEFT : AXIS_TRIGGER_RIGHT, down ? 1f : 0f);
+            }
+            return true;
+        }
+        int button = padButton(code);
+        if (button < 0) {
+            return false;
+        }
+        if (e.getRepeatCount() == 0) {
+            events.add(new float[]{down ? 40 : 41, id, button, 0, 0});
+        }
+        return true;
+    }
+
+    /** Which of Android's axes are this controller's right stick (x, y) and triggers (left, right); -1 for none.
+     *  Most controllers on Android put the right stick on Z and RZ and the triggers on LTRIGGER and RTRIGGER (or
+     *  BRAKE and GAS); some older drivers put the right stick on RX and RY, and some the triggers there instead. */
+    private int[] axesOf(int id) {
+        synchronized (pads) {
+            int[] axes = padAxes.get(id);
+            if (axes != null) {
+                return axes;
+            }
+            InputDevice d = InputDevice.getDevice(id);
+            if (d == null) {
+                return null;
+            }
+            boolean z = has(d, MotionEvent.AXIS_Z) && has(d, MotionEvent.AXIS_RZ);
+            boolean r = has(d, MotionEvent.AXIS_RX) && has(d, MotionEvent.AXIS_RY);
+            int rx = z ? MotionEvent.AXIS_Z : r ? MotionEvent.AXIS_RX : -1;
+            int ry = z ? MotionEvent.AXIS_RZ : r ? MotionEvent.AXIS_RY : -1;
+            int lt = has(d, MotionEvent.AXIS_LTRIGGER) ? MotionEvent.AXIS_LTRIGGER
+                    : has(d, MotionEvent.AXIS_BRAKE) ? MotionEvent.AXIS_BRAKE : z && r ? MotionEvent.AXIS_RX : -1;
+            int rt = has(d, MotionEvent.AXIS_RTRIGGER) ? MotionEvent.AXIS_RTRIGGER
+                    : has(d, MotionEvent.AXIS_GAS) ? MotionEvent.AXIS_GAS : z && r ? MotionEvent.AXIS_RY : -1;
+            axes = new int[]{rx, ry, lt, rt};
+            padAxes.put(id, axes);
+            return axes;
+        }
+    }
+
+    private static boolean has(InputDevice d, int axis) {
+        return d.getMotionRange(axis, InputDevice.SOURCE_JOYSTICK) != null;
+    }
+
+    /** A trigger from at rest, 0, to all the way down, 1, by the range its controller gives it: most run 0 to 1,
+     *  but a trigger an older driver puts on RX or RY runs -1 to 1. */
+    private static float trigger(MotionEvent e, int axis) {
+        float value = e.getAxisValue(axis);
+        InputDevice d = e.getDevice();
+        InputDevice.MotionRange range = d == null ? null : d.getMotionRange(axis, InputDevice.SOURCE_JOYSTICK);
+        if (range != null && range.getRange() > 0f) {
+            value = (value - range.getMin()) / range.getRange();
+        }
+        return Math.max(0f, Math.min(1f, value));
+    }
+
+    private void padAxis(int id, int axis, float value) {
+        float[] last;
+        synchronized (pads) {
+            last = padLast.get(id);
+            if (last == null) {
+                last = new float[8];
+                padLast.put(id, last);
+            }
+        }
+        if (Math.abs(last[axis] - value) < 0.004f) {
+            return;
+        }
+        last[axis] = value;
+        events.add(new float[]{42, id, axis, value, 0});
+    }
+
+    /** MainActivity: a controller's sticks, triggers and hat.  True when it was taken. */
+    public boolean padMotionEvent(MotionEvent e) {
+        int id = e.getDeviceId();
+        boolean pad;
+        synchronized (pads) {
+            pad = pads.contains(id);
+        }
+        if (!pad || (e.getSource() & InputDevice.SOURCE_JOYSTICK) != InputDevice.SOURCE_JOYSTICK
+                || e.getAction() != MotionEvent.ACTION_MOVE) {
+            return false;
+        }
+        int[] axes = axesOf(id);
+        padAxis(id, AXIS_LEFT_X, e.getAxisValue(MotionEvent.AXIS_X));
+        padAxis(id, AXIS_LEFT_Y, e.getAxisValue(MotionEvent.AXIS_Y));
+        if (axes != null) {
+            if (axes[0] >= 0) {
+                padAxis(id, AXIS_RIGHT_X, e.getAxisValue(axes[0]));
+                padAxis(id, AXIS_RIGHT_Y, e.getAxisValue(axes[1]));
+            }
+            if (axes[2] >= 0) {
+                padAxis(id, AXIS_TRIGGER_LEFT, trigger(e, axes[2]));
+            }
+            if (axes[3] >= 0) {
+                padAxis(id, AXIS_TRIGGER_RIGHT, trigger(e, axes[3]));
+            }
+        }
+        float[] last = padLast.get(id);
+        float hx = Math.round(e.getAxisValue(MotionEvent.AXIS_HAT_X));
+        float hy = Math.round(e.getAxisValue(MotionEvent.AXIS_HAT_Y));
+        if (last != null && (hx != last[6] || hy != last[7])) {
+            hat(id, last[6], hx, PAD_DPLEFT, PAD_DPRIGHT);
+            hat(id, last[7], hy, PAD_DPUP, PAD_DPDOWN);
+            last[6] = hx;
+            last[7] = hy;
+        }
+        return true;
+    }
+
+    /** A hat axis gone from `was` to `now`: the D-pad button of the old direction let go, the new one pressed. */
+    private void hat(int id, float was, float now, int negative, int positive) {
+        if (was == now) {
+            return;
+        }
+        if (was != 0) {
+            events.add(new float[]{41, id, was < 0 ? negative : positive, 0, 0});
+        }
+        if (now != 0) {
+            events.add(new float[]{40, id, now < 0 ? negative : positive, 0, 0});
+        }
+    }
+
+    /** Python: a controller's rumble, as SDL_GameControllerRumble: the heavy motor at `low` and the light one at
+     *  `high`, 0 to 1, for `ms`.  A controller with two motors Android can reach (Android 12 and later) has each;
+     *  one with one has the stronger of the two.  True when it was sent. */
+    @SuppressWarnings("deprecation")
+    public boolean rumblePad(int id, float low, float high, int ms) {
+        InputDevice d = InputDevice.getDevice(id);
+        if (d == null || ms <= 0 || (low <= 0f && high <= 0f)) {
+            return false;
+        }
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                VibratorManager manager = d.getVibratorManager();
+                int[] ids = manager.getVibratorIds();
+                if (ids.length == 0) {
+                    return false;
+                }
+                CombinedVibration.ParallelCombination both = CombinedVibration.startParallel();
+                if (ids.length >= 2) {
+                    boolean any = false;
+                    if (low > 0f) {
+                        both.addVibrator(ids[0], padEffect(manager.getVibrator(ids[0]), low, ms));
+                        any = true;
+                    }
+                    if (high > 0f) {
+                        both.addVibrator(ids[1], padEffect(manager.getVibrator(ids[1]), high, ms));
+                        any = true;
+                    }
+                    if (!any) {
+                        return false;
+                    }
+                } else {
+                    both.addVibrator(ids[0], padEffect(manager.getVibrator(ids[0]), Math.max(low, high), ms));
+                }
+                manager.vibrate(both.combine());
+                return true;
+            }
+            Vibrator v = d.getVibrator();
+            if (v == null || !v.hasVibrator()) {
+                return false;
+            }
+            v.vibrate(padEffect(v, Math.max(low, high), ms));
+            return true;
+        } catch (RuntimeException e) {
+            Log.w(TAG, "could not rumble " + d.getName(), e);
+            return false;
+        }
+    }
+
+    private static VibrationEffect padEffect(Vibrator v, float strength, int ms) {
+        if (!v.hasAmplitudeControl()) {
+            return VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE);
+        }
+        return VibrationEffect.createOneShot(ms, Math.max(1, Math.min(255, Math.round(strength * 255f))));
     }
 
     public void setScreen(float wDp, float hDp) {

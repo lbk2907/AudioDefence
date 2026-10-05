@@ -78,7 +78,8 @@ _key('K_SCROLLLOCK', _SCANCODE_MASK | 71, 'scroll lock')
 _key('K_PAUSE', _SCANCODE_MASK | 72, 'pause')
 _key('K_MENU', _SCANCODE_MASK | 118, 'menu')
 
-# the controller buttons the desktop port's pad module names (unused on Android, kept so imports work)
+# the controller buttons the desktop port's pad module names: SDL's numbers, which the phone's controllers are
+# given in too (Bridge.padKeyEvent, _sdl2/controller.py)
 for _n, _v in enumerate(('A', 'B', 'X', 'Y', 'BACK', 'GUIDE', 'START', 'LEFTSTICK', 'RIGHTSTICK',
                          'LEFTSHOULDER', 'RIGHTSHOULDER', 'DPAD_UP', 'DPAD_DOWN', 'DPAD_LEFT', 'DPAD_RIGHT')):
     globals()['CONTROLLER_BUTTON_' + _v] = _n

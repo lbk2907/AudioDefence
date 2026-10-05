@@ -45,6 +45,9 @@ log = logging.getLogger('android')
 DOWN, MOVE, UP, CANCEL = 0, 1, 2, 3
 PAUSED, RESUMED, BACK, MENU_KEY = 10, 11, 20, 21
 KEY_DOWN, KEY_UP = 30, 31                    # PORT ADDITION: a keyboard's key, with Android's key code
+#: PORT ADDITION: a controller's button (SDL's number), an axis moved (SDL's, -1 to 1), one come and one gone
+PAD_BUTTON_DOWN, PAD_BUTTON_UP, PAD_AXIS, PAD_ADDED, PAD_REMOVED = 40, 41, 42, 43, 44
+PAD_EVENTS = (PAD_BUTTON_DOWN, PAD_BUTTON_UP, PAD_AXIS, PAD_ADDED, PAD_REMOVED)
 
 SWIPE_MIN = 56.0            # dp a finger has to travel to be a swipe in a menu
 GAME_SWIPE = 48.0           # dp for the game area's swipe up or down (UISwipeGestureRecognizer)
@@ -110,6 +113,28 @@ def pygame_key(code: int, meta: int):
         if meta & either and not meta & sides:
             mod |= getattr(pygame, name)
     return key, mod
+
+
+def pad_event(kind: int, device, number, value, bridge):
+    """PORT ADDITION (user request, 2026-10-05): a controller's input from the phone (Bridge.padKeyEvent,
+    padMotionEvent and its device listener) as the pygame event SDL would give the desktop, for pad.py to read
+    (Pads.handle); None when it is not one."""
+    import pygame
+    iid = int(device)
+    if kind == PAD_ADDED:
+        ids = [int(i) for i in bridge.padIds()]
+        if iid not in ids:
+            return None
+        return pygame.event.Event(pygame.CONTROLLERDEVICEADDED, device_index=ids.index(iid))
+    if kind == PAD_REMOVED:
+        return pygame.event.Event(pygame.CONTROLLERDEVICEREMOVED, instance_id=iid)
+    if kind in (PAD_BUTTON_DOWN, PAD_BUTTON_UP):
+        return pygame.event.Event(pygame.CONTROLLERBUTTONDOWN if kind == PAD_BUTTON_DOWN else
+                                  pygame.CONTROLLERBUTTONUP, instance_id=iid, button=int(number))
+    if kind == PAD_AXIS:
+        return pygame.event.Event(pygame.CONTROLLERAXISMOTION, instance_id=iid, axis=int(number),
+                                  value=int(round(max(-1.0, min(1.0, float(value))) * 32767)))
+    return None
 
 
 class _Finger:
@@ -565,6 +590,10 @@ def run(home: str, fake: bool = False) -> int:
     Speech.shared().set_second_engine(params.second_speech_engine())
 
     host = ScreenManager()
+    from .platform.pad import Pads                       # PORT ADDITION (user request, 2026-10-05): the phone's
+    Pads.shared().start()                                # controllers, as the desktop's (__main__)
+    Pads.shared().speak = lambda text: Speech.shared().speak(text, False)
+    Pads.shared().changed = host.pads_changed
     running = [True]
     host.request_quit = lambda: running.__setitem__(0, False)
     app = App.delegate()
@@ -586,6 +615,10 @@ def run(home: str, fake: bool = False) -> int:
                     touch.handle(kind, int(events[i + 1]), float(events[i + 2]), float(events[i + 3]), now)
                 elif kind in (KEY_DOWN, KEY_UP):
                     touch.keyboard(kind == KEY_DOWN, events[i + 1], events[i + 2], events[i + 3])
+                elif kind in PAD_EVENTS:
+                    event = pad_event(kind, events[i + 1], events[i + 2], events[i + 3], b)
+                    if event is not None:
+                        host.handle_event(event)
                 elif kind == PAUSED:
                     app.application_will_resign_active()
                 elif kind == BACK:

@@ -352,6 +352,20 @@ class FakeBridge:
     def vibrate(self, strength, ms, style):
         self.__dict__.setdefault('vibrations', []).append((strength, ms, style))
 
+    # --- controllers ----------------------------------------------------------------------------------
+    #: the stand-in phone's controllers: Android device id -> name
+    pads = {}
+
+    def padIds(self):
+        return list(self.pads)
+
+    def padName(self, device):
+        return self.pads.get(device, 'Controller')
+
+    def rumblePad(self, device, low, high, ms):
+        self.__dict__.setdefault('rumbles', []).append((device, round(low, 3), round(high, 3), ms))
+        return device in self.pads
+
     def gameEnded(self):
         pass
 

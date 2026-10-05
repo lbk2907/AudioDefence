@@ -773,6 +773,20 @@ In a challenge, Skip dialogue is the first button on the pause screen while
 there is a line to skip: one of Dr. Bastard's, or a part of the Extra mode's
 story. In the intro, a triple tap with one finger skips it.
 
+A keyboard or a game controller paired with the phone, or plugged into it,
+works as it does on a computer: the same keys and buttons, set in **Settings →
+Keyboard** and **Settings → Joystick**, in the menus and in a game, and the
+phone says when a controller comes or goes. See
+[With a game controller](#with-a-game-controller) for what its buttons do. In
+the menus the arrows and the D-pad move as the swipes do: left and right through
+the items, up and down through the tabs. The turn keys and the sticks turn on
+top of the phone's own turning under Gyro and Tilt. While you use the keyboard,
+the hints name its keys; a touch on the screen brings back the touches. A
+controller that can vibrate does, as on a computer; on Android 12 and later
+each of its two motors is reached, and before that the phone gives it one. A
+DualSense's trigger feel and fine haptics, and shaking a controller for melee,
+are only on a computer: Android does not give the game those.
+
 The phone vibrates with the game, for what a controller vibrates for: the
 heartbeat, hits, kills, explosions, the tornado, your death, and a click as you
 move through the menus. **Settings → Miscellaneous → Phone vibration** sets how

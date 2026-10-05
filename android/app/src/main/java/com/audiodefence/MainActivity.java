@@ -6,6 +6,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -116,13 +117,23 @@ public final class MainActivity extends Activity {
         }
     }
 
-    /** A keyboard plugged into the phone: its keys go to the game (Bridge.keyEvent); the phone's own go on. */
+    /** A controller's buttons and a keyboard's keys go to the game (Bridge.padKeyEvent, Bridge.keyEvent); the
+     *  phone's own go on. */
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (bridge != null && started && bridge.keyEvent(event)) {
+        if (bridge != null && started && (bridge.padKeyEvent(event) || bridge.keyEvent(event))) {
             return true;
         }
         return super.dispatchKeyEvent(event);
+    }
+
+    /** A controller's sticks, triggers and D-pad go to the game (Bridge.padMotionEvent). */
+    @Override
+    public boolean dispatchGenericMotionEvent(MotionEvent event) {
+        if (bridge != null && started && bridge.padMotionEvent(event)) {
+            return true;
+        }
+        return super.dispatchGenericMotionEvent(event);
     }
 
     @Override

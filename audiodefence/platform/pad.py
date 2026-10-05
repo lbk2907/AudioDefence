@@ -25,6 +25,12 @@ What a controller does:
 Triggers are read as buttons, pressed past half way and let go below a third.  A stick counts as pushed in
 a direction past 60% and let go below 30%, with the direction taken from the larger of its two axes, so
 turning with a stick does not flick it up or down by accident.
+
+The phone uses this module too, since 2026-10-05 (user request): its controllers are Android's, given here
+in SDL's terms by the pygame stand-in's _sdl2.controller and android_main, so everything above holds there.
+What SDL itself gives the desktop - a controller's movement sensor, a DualSense's triggers and grips - the
+phone has not (`sdl` is None there).  On the phone the hints name the touches that do the same, unless a
+keyboard is in use or the controller's buttons have been chosen (`menu_words`).
 """
 from __future__ import annotations
 
@@ -136,18 +142,37 @@ _MENU_KEY_WORDS = ((r'Shift plus Enter|Shift\+Enter|Shift Enter', 'x'), (r'\bEnt
                    (r'\bDelete\b', 'y'), (r'\bEscape\b', 'b'))
 
 
-def menu_words(text):
+#: PORT ADDITION (Android): the desktop's key names, as the phone's gestures that do the same in a menu
+#: (android_main.TouchInput)
+_TOUCH_WORDS = (
+    (r'Shift plus Enter|Shift\+Enter|Shift Enter', 'touch and hold'),
+    (r'\bPress Enter\b', 'Double tap'),
+    (r'\bpress Enter\b', 'double tap'),
+    (r'\bEnter\b', 'double tap'),
+    (r'\bEscape\b', 'two-finger tap'),
+)
+#: PORT ADDITION (Android, user request, 2026-10-05): a keyboard plugged into the phone is being used - its
+#: last input was a key, not a touch (android_main.TouchInput) - so the hints name its keys, as written
+keyboard_in_use = False
+
+
+def menu_words(text, *a, **k):
     """A hint as it should be spoken: as written, or - when the player has chosen Controller buttons in
     Settings -> Miscellaneous -> Names in hints and tutorial and a controller is connected - with the keys it
     names turned into that controller's buttons that do the same in a menu: "Press Cross to select", "Square
-    for the previous"."""
+    for the previous".  On the phone, with neither those nor a keyboard in use, the keys are named as the
+    touches that do the same: "Double tap to select"."""
     if not text:
         return text
+    import re
     from ..game.parameters import GameParameters
     kind = GameParameters.shared().controller_names()
     if not kind:
+        if host.ANDROID and not keyboard_in_use:
+            text = str(text)
+            for pattern, words in _TOUCH_WORDS:
+                text = re.sub(pattern, words, text)
         return text
-    import re
     for pattern, name in _MENU_KEY_WORDS:
         text = re.sub(pattern, input_name(name, kind), text)
     return text
@@ -375,6 +400,8 @@ def _sdl_path() -> str:
 def sdl():
     """pygame's SDL2, or None where it cannot be reached (then there is no shake and no trigger feel)."""
     global _sdl
+    if _sdl is None and host.ANDROID:                     # the phone's controllers are Android's, not SDL's
+        _sdl = False
     if _sdl is None:
         try:
             lib = ctypes.CDLL(_sdl_path())
@@ -648,7 +675,7 @@ class Pads:
         self.accelerometers.discard(iid)
         self.dualsenses.discard(iid)
         self.triggers_set.pop(iid, None)
-        if not self.dualsenses:                           # its sound card goes with it
+        if not self.dualsenses and not host.ANDROID:      # its sound card goes with it
             from .haptic_audio import HapticAudio
             HapticAudio.shared().close()
         for key in [k for k in self.pushed if k[0] == iid]:
@@ -714,8 +741,9 @@ class Pads:
     def stop(self) -> None:
         """The game is closing: a DualSense keeps a trigger effect until it is told otherwise."""
         self.set_triggers('off')
-        from .haptic_audio import HapticAudio
-        HapticAudio.shared().close()
+        if not host.ANDROID:                              # the phone has no DualSense sound card
+            from .haptic_audio import HapticAudio
+            HapticAudio.shared().close()
 
     # --- turning --------------------------------------------------------------------------------------
     def turn(self) -> float:
