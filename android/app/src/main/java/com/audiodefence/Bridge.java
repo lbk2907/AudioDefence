@@ -955,6 +955,23 @@ public final class Bridge implements SensorEventListener {
             }
         }
 
+        /** Whether anything given to this voice is still to be heard: queued while its engine starts, or being
+         *  read. */
+        boolean speaking() {
+            TextToSpeech t;
+            synchronized (spokenBeforeReady) {
+                if (!ready || tts == null) {
+                    return !spokenBeforeReady.isEmpty();
+                }
+                t = tts;
+            }
+            try {
+                return t.isSpeaking();
+            } catch (RuntimeException e) {
+                return false;
+            }
+        }
+
         boolean speak(String text, boolean interrupt) {
             if (text == null || text.isEmpty()) {
                 return false;
@@ -1089,6 +1106,11 @@ public final class Bridge implements SensorEventListener {
     }
 
     // --- the first speech: what Python and MainActivity have always called
+    /** MainActivity: whether the first speech has anything still to be heard (Voice.speaking). */
+    public boolean speaking() {
+        return first.speaking();
+    }
+
     public boolean speak(String text, boolean interrupt) {
         return first.speak(text, interrupt);
     }

@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -146,27 +147,33 @@ public final class MainActivity extends Activity {
     }
 
     // ------------------------------------------------------------------------------------ start-up
+    /** Waits while the phone's speech has anything still to be heard, for `mostMs` at the most: a little for
+     *  it to begin, then for as long as it reads. */
+    private void waitForSpeech(long mostMs) throws InterruptedException {
+        long start = SystemClock.uptimeMillis();
+        while (!bridge.speaking() && SystemClock.uptimeMillis() - start < 1500) {
+            Thread.sleep(50);
+        }
+        while (bridge.speaking() && SystemClock.uptimeMillis() - start < mostMs) {
+            Thread.sleep(100);
+        }
+    }
+
     private void boot() {
         try {
-            AccessibilityManager am = (AccessibilityManager) getSystemService(ACCESSIBILITY_SERVICE);
-            boolean warned = am != null && am.isTouchExplorationEnabled();
-            if (warned) {
-                bridge.speak("TalkBack is on. The game speaks for itself and needs TalkBack turned off. "
-                        + "Turn TalkBack off, then open the game again.", true);
-            }
             File home = new File(getFilesDir(), "adhome");
             // The game's data is built into each APK from the repository it is made in.  DataSync compares the
             // APK's list of it with the list of what was unpacked last time and unpacks only what changed, so a
-            // start after an update that left the data alone goes straight to the game.  A line said here is
-            // queued behind the TalkBack warning rather than cutting it off.
+            // start after an update that left the data alone goes straight to the game.  It comes first, before
+            // the TalkBack line below (user request, 2026-10-05).
             DataSync.sync(home, DATA_VERSION, getAssets()::open, new DataSync.Listener() {
                 @Override
                 public void starting(DataSync.Plan plan) {
                     if (plan.full) {
                         bridge.speak("Setting up the game. This only happens the first time and takes a minute "
-                                + "or two.", !warned);
+                                + "or two.", true);
                     } else if (plan.announce()) {
-                        bridge.speak("Unpacking the update.", !warned);
+                        bridge.speak("Unpacking the update.", true);
                     }
                 }
 
@@ -182,6 +189,14 @@ public final class MainActivity extends Activity {
                     }
                 }
             });
+            // TalkBack reads the screen as well as the game speaking: only asked to be turned off, once the data
+            // is in place.  The game goes on all the same, and plays once it is off - nothing has to be opened
+            // again.  It is waited for, so the game's own first line does not cut it off.
+            AccessibilityManager am = (AccessibilityManager) getSystemService(ACCESSIBILITY_SERVICE);
+            if (am != null && am.isTouchExplorationEnabled()) {
+                bridge.speak("TalkBack is on. Please turn it off: the game speaks for itself.", false);
+                waitForSpeech(15000);
+            }
             Python.getInstance().getModule("audiodefence.android_main")
                     .callAttr("run", home.getAbsolutePath());
         } catch (Throwable t) {

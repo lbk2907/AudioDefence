@@ -222,8 +222,12 @@ they were.
     player's settings and saves, and a language file of their own, are in neither list and never touched.
   * What the player hears: nothing when nothing changed, or for up to 40 files and 8 MB; above that "Unpacking
     the update." and "The game is ready."; and percentages for a full unpack, or above 400 files or 40 MB.
-    Those thresholds are judgement, not measured on a phone.  The opening line now waits for the TalkBack
-    warning instead of cutting it off.
+    Those thresholds are judgement, not measured on a phone.  The unpacking is said first and the TalkBack
+    line after it (user request, 2026-10-05), which only asks for TalkBack to be turned off - "TalkBack is
+    on. Please turn it off: the game speaks for itself." - since the game goes on and plays once it is,
+    with nothing to open again; it said to open the game again, which was never needed.  The game's start
+    waits for that line to have been read, fifteen seconds at the most (`MainActivity.waitForSpeech`, on
+    `Bridge.speaking`), so the game's first line does not cut it off.
 * **Sound.**  There is no OpenAL Soft on the phone, so `com.audiodefence.audio.MiniAl` takes its calls - a
   small Java mixer with the game's own HRTF, the same Freeverb and the same per-ear filters - and
   `SoundDecoder` decodes the bundle's files with the phone's MediaCodec.  `s3d/android.py` and
