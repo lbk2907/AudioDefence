@@ -2027,7 +2027,13 @@ they were.
   name exactly as it finds one of theirs, and every screen that reads the game's data reads these too.
 
   The menu is built like the play menu rather than like the challenge selector, which is a table of worlds
-  and stars and locks that these are not part of: one button a challenge, Back to Play.  The Extra button
+  and stars and locks that these are not part of: one button a challenge, Back to Play.  Extra itself opens
+  once every challenge under Challenge is unlocked (user request, 2026-10-05;
+  `ChallengeData.all_challenges_unlocked`): every world's stars won and every challenge's own requirement
+  beaten, as the world and challenge lists ask - a challenge whose gun is not bought is open, its row
+  offering the armory.  Until then the Extra button is locked the way the original locks Endless before
+  the tutorial is done (`viewDidLoad` 0x1000ab0c4): dimmed, read as "Extra mode is locked" with what opens
+  it as its hint, and its info button hidden.  The Extra button
   sits after Endless on the play menu, which its frame decides - `reading_order` sorts by a frame's
   vertical centre.
 

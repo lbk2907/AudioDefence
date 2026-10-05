@@ -92,6 +92,21 @@ class ChallengeData:
     def number_of_challenges_for_world(self, world) -> int:   # 0x10001f094
         return len((self._world(world) or {}).get('challenges') or [])
 
+    def all_challenges_unlocked(self) -> bool:
+        """PORT ADDITION (user request, 2026-10-05): whether every challenge under Play, Challenge is open -
+        every world's stars won (`starsRequirementForWorld:` 0x10001eefc, as the world list asks) and every
+        challenge's own requirements beaten (`hasChallengeRequirementsForChallengeWithName:` 0x10001ffbc, as
+        the challenge list asks) - which is what opens Extra.  A challenge whose gun is not bought yet is
+        open: its row offers the armory, not a lock."""
+        total = self.total_stars_unlocked()
+        for world, entry in (data.plist_ro('challenges_index') or {}).items():
+            if total < self.stars_requirement_for_world(world):
+                return False
+            for plist_name in (entry or {}).get('challenges') or []:
+                if not self.has_challenge_requirements_for_challenge_with_name(plist_name):
+                    return False
+        return True
+
     def _last_challenge_id(self, world):
         challenges = (self._world(world) or {}).get('challenges') or []
         last = challenges[-1] if challenges else None

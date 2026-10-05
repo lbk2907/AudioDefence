@@ -495,6 +495,13 @@ class PlayMenuScreen(ViewControllerScreen):
         sb.set_armory_button_visibility(False)
         sb.set_currencies_visibility(False)
         sb.back_button.set_title('Main Menu')
+        # PORT ADDITION (user request, 2026-10-05): Extra opens once every challenge under Challenge is
+        # unlocked, and until then is locked as Endless is below
+        if not ChallengeData.shared().all_challenges_unlocked():
+            self.extra_button.enabled = False
+            self.extra_button.label = 'Extra mode is locked'
+            self.extra_button.hint = 'Unlock every challenge under Challenge to open it'
+            self.extra_info_button.hidden = True
         if ChallengeData.shared().has_completed_challenge_with_name('tutorial_5'):
             self.endless_mode_lock_view.hidden = True
             return
