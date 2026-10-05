@@ -342,6 +342,16 @@ class FakeBridge:
     def takeShake(self):
         return False
 
+    # --- vibration ------------------------------------------------------------------------------------
+    #: what the stand-in phone's motor is: 0 none, 1 on and off only, 2 haptics, 3 haptics with clicks
+    vibration_kind = 3
+
+    def vibrationKind(self):
+        return self.vibration_kind
+
+    def vibrate(self, strength, ms, style):
+        self.__dict__.setdefault('vibrations', []).append((strength, ms, style))
+
     def gameEnded(self):
         pass
 

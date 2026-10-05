@@ -556,7 +556,7 @@ Settings, saves and the log live in `%APPDATA%\AudioDefence` (on the Mac,
 | file | what is in it |
 |---|---|
 | `save.json` | progress: coins, diamonds, weapons, power-ups, missions, challenges, statistics |
-| `settings.json` | control scheme, button mode, turn sensitivity, menu arrows, cursor memory, tutorial text, the announcer, the game volume, menu music volume, the update check and a version you skipped, how strong the vibration and the trigger feel are, and whether hints name keys or controller buttons, and which controller's, the speech output and SAPI 5's voice, rate, rate boost, pitch and volume, whether hints are read and the pause before them, whether the second speech is used and its own output, voice, rate, rate boost, pitch and volume, whether it follows the first speech's calibration, and how fast each speech was measured to read, the 3D sound; on the phone, each speech's engine and the shake sensitivity too |
+| `settings.json` | control scheme, button mode, turn sensitivity, menu arrows, cursor memory, tutorial text, the announcer, the game volume, menu music volume, the update check and a version you skipped, how strong the vibration and the trigger feel are, and whether hints name keys or controller buttons, and which controller's, the speech output and SAPI 5's voice, rate, rate boost, pitch and volume, whether hints are read and the pause before them, whether the second speech is used and its own output, voice, rate, rate boost, pitch and volume, whether it follows the first speech's calibration, and how fast each speech was measured to read, the 3D sound; on the phone, each speech's engine, the shake sensitivity and how strongly the phone vibrates too |
 | `keys.json` | the key bindings, and each kind of controller's, by its name |
 
 Deleting the folder starts a fresh profile — the first run then begins on Gyro
@@ -772,6 +772,16 @@ In a game, Settings → Controls chooses between two modes, as the original did.
 In a challenge, Skip dialogue is the first button on the pause screen while
 there is a line to skip: one of Dr. Bastard's, or a part of the Extra mode's
 story. In the intro, a triple tap with one finger skips it.
+
+The phone vibrates with the game, for what a controller vibrates for: the
+heartbeat, hits, kills, explosions, the tornado, your death, and a click as you
+move through the menus. **Settings → Miscellaneous → Phone vibration** sets how
+strongly: Off, Light, Medium (the default) or Strong. A phone with haptics feels
+each one as hard as it is, and the menus click with the phone's own clicks where
+it has them. A phone with plain vibration only buzzes, a lighter setting more
+briefly. The row is not there on a phone with nothing to vibrate. Android's own
+vibration setting for media has to be on, in the phone's Sound and vibration
+settings.
 
 ### Building the app
 

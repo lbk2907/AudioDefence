@@ -389,6 +389,18 @@ class GameParameters:
     def vibration(self) -> bool:
         return self.vibration_level() != 'off'
 
+    #: PORT ADDITION (Android, user request, 2026-10-05): how strongly the phone itself vibrates
+    #: (platform/haptics.py, Haptics._phone) - the same pulses a controller is given, and the same four
+    #: levels, kept apart from the controller's since a phone and a controller are held differently.
+    DEFAULT_PHONE_VIBRATION = 'medium'
+
+    def phone_vibration_level(self) -> str:
+        return self._level('phoneVibration', self.DEFAULT_PHONE_VIBRATION)
+
+    def set_phone_vibration_level(self, level: str) -> None:
+        self.defaults.set_object(level, 'phoneVibration')
+        self.defaults.synchronize()
+
     def trigger_level(self) -> str:
         return self._level('triggerEffects', self.DEFAULT_TRIGGER_FEEL)
 

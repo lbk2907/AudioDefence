@@ -231,10 +231,27 @@ they were.
   The decoder runs two threads ahead of the game on the phone and one on a computer, and on every platform
   the sounds a hit brings - impacts, hits, deaths - go to the front of its queue.
 * **Speech, controllers, updates, vibration.**  `platform/__init__.py` gives the phone `speech_android`,
-  `pad_android`, `updater_android` and `haptics_android` in place of the desktop's four modules: the
-  phone's own text-to-speech, driven by the Speech tab's engine, rate, pitch and volume rows, with the hints'
-  keys named as the touches that do the same; updating, below; and, not supported yet, game controllers and
-  vibration.  TalkBack has to be off: the game speaks for itself, and says so if TalkBack is on.
+  `pad_android` and `updater_android` in place of the desktop's modules: the phone's own text-to-speech,
+  driven by the Speech tab's engine, rate, pitch and volume rows, with the hints' keys named as the touches
+  that do the same; updating, below; and, not supported yet, game controllers.  TalkBack has to be off: the
+  game speaks for itself, and says so if TalkBack is on.
+  * **The phone vibrates** (user request, 2026-10-05), with the desktop's `platform/haptics.py`, which the
+    phone now uses as it is - `haptics_android`, which did nothing, is gone.  Every pulse a controller is
+    given is felt in the phone too (`Haptics._phone`): the stronger of the shape's two motors, the phone
+    having one, for the shape's length, at Settings -> Miscellaneous -> Phone vibration's strength (Off,
+    Light, Medium by default, Strong; `phoneVibration` in settings.json, kept apart from Joystick
+    vibration since a phone and a controller are held differently).  `Bridge.vibrate` plays it as the
+    phone can: with haptics - a motor driven at any strength, `hasAmplitudeControl` - at that strength;
+    with the phone's own click and tick for the menus where it has them (`areAllPrimitivesSupported`,
+    Android 11 and later), a cursor move a tick, a toggle a click, into a screen a click and a lighter one
+    and back out the other way round; and with plain vibration, a motor that is only on or off, a weaker
+    pulse a shorter one, never under 25 ms.  It is a game's vibration (`USAGE_GAME`), which follows the
+    phone's media vibration setting.  The row is not offered on a phone with no vibrator, and its hint says
+    which of the three the phone has.  The haptics module reaches the DualSense's fine haptics
+    (haptic_audio.py, not in the app) only for a DualSense, which the phone does not see, and Fine haptics
+    and Trigger feel are not offered there.  Checked through the stand-in bridge: a shotgun into three
+    zombies one pulse of 0.7 for 180 ms at Medium, the menus' four clicks, Light, Strong and Off; the
+    bridge compiled against Android 15's library.
   * **The speech engine** (user request, 2026-10-01).  The Speech tab has an Android speech engine row:
     Phone default - the engine set in the phone's settings, which is all the first builds used - then every
     engine `TextToSpeech.getEngines` lists, by name.  It is saved as `sapiEngine` beside the SAPI keys,

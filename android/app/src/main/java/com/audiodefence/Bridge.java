@@ -21,11 +21,15 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.hardware.display.DisplayManager;
+import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.Settings;
@@ -194,6 +198,114 @@ public final class Bridge implements SensorEventListener {
             }
             return out.toByteArray();
         }
+    }
+
+    // ------------------------------------------------------------------------------------ vibration
+    // PORT ADDITION (Settings > Miscellaneous > Phone vibration, user request, 2026-10-05): what a controller is
+    // made to feel (platform/haptics.py), felt in the phone.  A phone whose motor can be driven at any strength -
+    // haptics - is given each pulse at its strength, and the menus' clicks as the phone's own click and tick where
+    // it has them; a phone whose motor is only on or off is given plain vibration, a weaker pulse a shorter one.
+
+    /** What the phone's motor can do, once looked at: 0 there is none, 1 on or off only, 2 haptics (any strength),
+     *  3 haptics with the phone's own click and tick.  -1 until looked at. */
+    private volatile int vibrationKind = -1;
+    private Vibrator vibrator;
+    /** A vibration of a game's, not a notification's, so it follows the phone's media vibration setting. */
+    @SuppressWarnings("deprecation")
+    private static final AudioAttributes GAME_VIBRATION = new AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_GAME).build();
+    /** The shortest plain vibration that is felt: an on-off motor needs this long to spin up. */
+    private static final int PLAIN_SHORTEST_MS = 25;
+
+    @SuppressWarnings("deprecation")
+    private synchronized Vibrator phoneVibrator() {
+        if (vibrator == null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                VibratorManager manager = (VibratorManager) context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+                vibrator = manager != null ? manager.getDefaultVibrator() : null;
+            } else {
+                vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+            }
+        }
+        return vibrator;
+    }
+
+    /** Python: what the phone's motor can do (see vibrationKind). */
+    public int vibrationKind() {
+        if (vibrationKind < 0) {
+            Vibrator v = phoneVibrator();
+            int kind;
+            if (v == null || !v.hasVibrator()) {
+                kind = 0;
+            } else if (!v.hasAmplitudeControl()) {
+                kind = 1;
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && v.areAllPrimitivesSupported(
+                    VibrationEffect.Composition.PRIMITIVE_CLICK, VibrationEffect.Composition.PRIMITIVE_TICK)) {
+                kind = 3;
+            } else {
+                kind = 2;
+            }
+            vibrationKind = kind;
+            Log.i(TAG, "the phone's vibration: " + new String[]{"none", "plain", "haptics", "haptics with clicks"}[kind]);
+        }
+        return vibrationKind;
+    }
+
+    /** Python: one pulse, `strength` 0 to 1 for `ms` milliseconds.  `style` 0 is a game's pulse; the menus' are
+     *  1 a tick, 2 a click, 3 a click and then a lighter one (into a screen), 4 the other way round (back out). */
+    @SuppressWarnings("deprecation")
+    public void vibrate(float strength, int ms, int style) {
+        int kind = vibrationKind();
+        if (kind == 0 || ms <= 0 || strength <= 0f) {
+            return;
+        }
+        float s = Math.min(1f, strength);
+        try {
+            phoneVibrator().vibrate(effect(kind, s, ms, style), GAME_VIBRATION);
+        } catch (RuntimeException e) {
+            Log.w(TAG, "could not vibrate", e);
+        }
+    }
+
+    private static VibrationEffect effect(int kind, float s, int ms, int style) {
+        if (kind == 3 && style > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            VibrationEffect.Composition c = VibrationEffect.startComposition();
+            int click = VibrationEffect.Composition.PRIMITIVE_CLICK;
+            int tick = VibrationEffect.Composition.PRIMITIVE_TICK;
+            if (style == 1) {
+                c.addPrimitive(tick, s);
+            } else if (style == 2) {
+                c.addPrimitive(click, s);
+            } else if (style == 3) {
+                c.addPrimitive(click, s);
+                c.addPrimitive(tick, s * 0.7f, 60);
+            } else {
+                c.addPrimitive(tick, s * 0.7f);
+                c.addPrimitive(click, s, 60);
+            }
+            return c.compose();
+        }
+        boolean pair = style == 3 || style == 4;
+        if (kind >= 2) {
+            int a = Math.max(1, Math.min(255, Math.round(s * 255f)));
+            int light = Math.max(1, Math.round(a * 0.7f));
+            if (pair) {
+                int first = style == 3 ? a : light;
+                int second = style == 3 ? light : a;
+                return VibrationEffect.createWaveform(new long[]{0, 35, 45, 35}, new int[]{0, first, 0, second}, -1);
+            }
+            // a menu's tick or click is a short one, not the controller's 60 ms of a motor winding up
+            int length = style == 1 ? Math.min(ms, 20) : style == 2 ? Math.min(ms, 30) : ms;
+            return VibrationEffect.createOneShot(length, a);
+        }
+        if (pair) {
+            return VibrationEffect.createWaveform(new long[]{0, 35, 50, 35}, -1);
+        }
+        int length = Math.max(PLAIN_SHORTEST_MS, Math.round(ms * (0.35f + 0.65f * s)));
+        if (style == 1 || style == 2) {
+            length = Math.min(length, style == 1 ? PLAIN_SHORTEST_MS : PLAIN_SHORTEST_MS + 10);
+        }
+        return VibrationEffect.createOneShot(length, VibrationEffect.DEFAULT_AMPLITUDE);
     }
 
     // ------------------------------------------------------------------------------------ lifecycle

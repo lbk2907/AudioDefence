@@ -1,7 +1,8 @@
-"""PORT ADDITION: what a game controller makes you feel.
+"""PORT ADDITION: what a game controller makes you feel - and, on Android, the phone itself.
 
 The phone game has no vibration at all - the original never calls AudioServicesPlaySystemSound with the
-vibrate sound - so everything here is the port's own, for players with a controller in their hands:
+vibrate sound - so everything here is the port's own, for players with a controller in their hands, and
+since 2026-10-05 for a phone in them (user request; `_phone`, below):
 
 * the **heartbeat** that plays when a zombie is close (``ADPlayer``'s proximity heartbeat, player.py) is
   felt on each beat, harder the closer the zombie is, as the sound is louder;
@@ -27,10 +28,16 @@ it all (light, medium, strong) or turns it off.
 Every pad that can rumble does, through SDL.  A DualSense on USB is played its fine haptics instead
 (haptic_audio.py): the heartbeat recording the game has just played, felt as it is heard, and a waveform of
 its own for each of the rest.  Nothing here waits: a pulse is sent and the pad times it.
+
+On Android the same pulse is felt in the phone as well, at Settings -> Miscellaneous -> Phone vibration's
+strength (`_phone`).  This is the module the phone uses too: haptic_audio.py is not in the app, and is only
+reached for a DualSense, which the phone does not see.
 """
 from __future__ import annotations
 
 import logging
+
+from . import host
 
 log = logging.getLogger('platform.haptics')
 
@@ -73,6 +80,11 @@ SHAPES = {
                                                           # as long as its start sound where it has one
 }
 
+#: PORT ADDITION (Android): the menus' pulses as the phone's own clicks (Bridge.vibrate): 1 a tick, 2 a
+#: click, 3 a click and then a lighter one going into a screen, 4 the other way round coming out.  Anything
+#: else - everything in a game - is 0, a pulse of the shape's strength and length.
+PHONE_STYLES = {'menu': 1, 'toggle': 2, 'enter': 3, 'back': 4}
+
 #: the damage a hit does, as how hard it is felt: every hit that lands is well felt - a Micro SMG round
 #: (5 damage) is 0.68, a Revolver's (10) 0.71 - and damage adds the rest, up to the full jolt at 80, a
 #: Bazooka's or a Claymore's at their best.  The floor was 0.5, which left a small gun's hit faint.
@@ -95,6 +107,7 @@ class Haptics:
 
     def __init__(self):
         self.sent: list = []                              # the last pulses, for tests: (low, high, ms)
+        self.phone_sent: list = []                        # the phone's, for tests: (strength, ms, style)
         self.played: list = []                            # the last haptics played, for tests: (what, gain)
         self.pending: dict = {}                           # kind -> [strongest, how many] this pass
         self.flush_due = False
@@ -204,15 +217,18 @@ class Haptics:
         `seconds` makes this pulse last that long instead of the shape's own time, waveform and all, so
         what is felt runs with the sound it goes with."""
         from ..game.parameters import GameParameters
-        from .haptic_audio import WAVES, HapticAudio
         from .pad import Pads
         pads = Pads.shared()
+        strengths = {kind: min(1.0, s + 0.1 * (n - 1)) for kind, (s, n) in events.items()}
+        long_ms = int(seconds * 1000) if seconds else 0
+        if host.ANDROID:
+            self._phone(strengths, long_ms)
         scale = LEVEL_SCALE.get(GameParameters.shared().vibration_level(), 0.0)
         if not pads.pads or scale <= 0.0:
             return
-        strengths = {kind: min(1.0, s + 0.1 * (n - 1)) for kind, (s, n) in events.items()}
         fine = set()
-        if pads.dualsenses and GameParameters.shared().fine_haptics() and HapticAudio.shared().available():
+        if pads.dualsenses and GameParameters.shared().fine_haptics() and self._fine_available():
+            from .haptic_audio import WAVES, HapticAudio
             audio = HapticAudio.shared()
             for kind, s in strengths.items():
                 if kind == 'heartbeat' and recording:
@@ -222,7 +238,6 @@ class Haptics:
                 audio.play(wave, s * scale)
                 self.played = (self.played + [(kind, round(s * scale, 3))])[-20:]
             fine = set(pads.dualsenses)
-        long_ms = int(seconds * 1000) if seconds else 0
         low, high, ms = self._shape(strengths, scale)
         self._pulse(low, high, long_ms or ms, skip=fine)
         if fine:                                          # and the motors too, for the big ones
@@ -230,6 +245,45 @@ class Haptics:
             if heavy:
                 low, high, ms = self._shape(heavy, scale)
                 self._pulse(low, high, long_ms or ms, skip=set(pads.pads) - fine)
+
+    @staticmethod
+    def phone_kind() -> int:
+        """PORT ADDITION (Android): what the phone's motor can do (Bridge.vibrationKind): 0 there is none, 1
+        it is on or off only, 2 it has haptics, 3 haptics with clicks of its own.  0 off the phone."""
+        if not host.ANDROID:
+            return 0
+        try:
+            from .jbridge import bridge
+            return int(bridge().vibrationKind())
+        except Exception as exc:
+            log.debug('the phone did not say how it vibrates: %s', exc)
+            return 0
+
+    @staticmethod
+    def _fine_available() -> bool:
+        from .haptic_audio import HapticAudio
+        return HapticAudio.shared().available()
+
+    def _phone(self, strengths: dict, long_ms: int) -> None:
+        """PORT ADDITION (Android, user request, 2026-10-05): the pulse a controller is given, felt in the
+        phone, at Settings -> Miscellaneous -> Phone vibration's strength: the stronger of its two motors,
+        the phone having one, and its length.  A menu's click alone is the phone's own click or tick
+        (PHONE_STYLES).  The phone decides how it can play it (Bridge.vibrate): at that strength where it has
+        haptics, as plain vibration, shorter for weaker, where it has not."""
+        from ..game.parameters import GameParameters
+        scale = LEVEL_SCALE.get(GameParameters.shared().phone_vibration_level(), 0.0)
+        if scale <= 0.0:
+            return
+        low, high, ms = self._shape(strengths, scale)
+        style = PHONE_STYLES.get(next(iter(strengths)), 0) if len(strengths) == 1 else 0
+        strength = max(0.0, min(1.0, max(low, high)))
+        ms = int(long_ms or ms)
+        self.phone_sent = (self.phone_sent + [(round(strength, 3), ms, style)])[-20:]
+        try:
+            from .jbridge import bridge
+            bridge().vibrate(float(strength), ms, style)
+        except Exception as exc:                          # the phone's vibration must not stop the game
+            log.debug('the phone could not vibrate: %s', exc)
 
     @staticmethod
     def _shape(strengths: dict, scale: float):

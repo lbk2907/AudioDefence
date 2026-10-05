@@ -29,6 +29,7 @@ from .. import localization
 from ..game import data
 from ..game.parameters import GameParameters
 from ..platform import host as system
+from ..platform.haptics import Haptics
 from ..platform.keymap import ACTIONS, BY_MODE, KeyMap, key_text, mode_text
 from ..platform.speech import VOICE_NAME
 from ..s3d.engine import S3DEngine
@@ -63,6 +64,22 @@ AIMING_ROWS = (('Gyro', 'Turns slowest', 1),
 # say what the mode changes for a keyboard player instead - with the keys bound in that mode, or the
 # buttons, when a controller's names are chosen (Settings -> Miscellaneous).
 CONTROL_ROWS = (('Button', True), ('Gesture', False))
+
+#: PORT ADDITION (Android, user request, 2026-10-05): Phone vibration's hint, by what the phone's motor can
+#: do (Haptics.phone_kind): on and off only, haptics, or haptics with clicks of the phone's own
+PHONE_VIBRATION_HINTS = {
+    1: 'How strongly the phone vibrates, for what a controller vibrates for: hits, kills, explosions, the '
+       'heartbeat, your death and moving through the menus. This phone has plain vibration, so a lighter '
+       'setting is shorter rather than softer. Press Enter for the next setting and Shift plus Enter for the '
+       'previous.',
+    2: 'How strongly the phone vibrates, for what a controller vibrates for: hits, kills, explosions, the '
+       'heartbeat, your death and moving through the menus. This phone has haptics, so each is felt as hard '
+       'as it is. Press Enter for the next setting and Shift plus Enter for the previous.',
+    3: 'How strongly the phone vibrates, for what a controller vibrates for: hits, kills, explosions, the '
+       'heartbeat, your death and moving through the menus. This phone has haptics, so each is felt as hard '
+       "as it is, and the menus click with the phone's own clicks. Press Enter for the next setting and Shift "
+       'plus Enter for the previous.',
+}
 
 
 def control_description(button: bool) -> str:
@@ -264,16 +281,25 @@ class ControlSchemePanel:
                         'and your death. Press Enter for the next setting and Shift plus Enter for the '
                         'previous.',
                    action=self.step_vibration, shift_action=self.step_vibration_back)
-            t.cell('Fine haptics', 'ON' if params.fine_haptics() else 'OFF',
-                   hint='Press Enter to toggle: when on, a controller that can play what you feel in its '
-                        'grips does so - a DualSense plugged in by USB - instead of shaking its motors. '
-                        'With no such controller the motors are used either way.',
-                   action=self.toggle_fine_haptics)
-            t.cell('Trigger feel', levels[params.trigger_level()],
-                   hint="Only for a DualSense controller; other controllers have no trigger feel. How stiff "
-                        "its triggers are while you play: R2 like a gun's trigger, L2 a pull where it "
-                        'reloads. Press Enter for the next setting and Shift plus Enter for the previous.',
-                   action=self.step_trigger_level, shift_action=self.step_trigger_level_back)
+            # PORT ADDITION (Android, user request, 2026-10-05): the phone itself, as a controller is made to
+            # feel (Haptics._phone); not offered on a phone with nothing to vibrate.  A DualSense's grips and
+            # triggers are reached through SDL, which the phone has not: those two rows are the desktop's.
+            phone_kind = Haptics.phone_kind() if system.ANDROID else 0
+            if phone_kind:
+                t.cell('Phone vibration', levels[params.phone_vibration_level()],
+                       hint=PHONE_VIBRATION_HINTS[min(phone_kind, 3)],
+                       action=self.step_phone_vibration, shift_action=self.step_phone_vibration_back)
+            if not system.ANDROID:
+                t.cell('Fine haptics', 'ON' if params.fine_haptics() else 'OFF',
+                       hint='Press Enter to toggle: when on, a controller that can play what you feel in its '
+                            'grips does so - a DualSense plugged in by USB - instead of shaking its motors. '
+                            'With no such controller the motors are used either way.',
+                       action=self.toggle_fine_haptics)
+                t.cell('Trigger feel', levels[params.trigger_level()],
+                       hint="Only for a DualSense controller; other controllers have no trigger feel. How stiff "
+                            "its triggers are while you play: R2 like a gun's trigger, L2 a pull where it "
+                            'reloads. Press Enter for the next setting and Shift plus Enter for the previous.',
+                       action=self.step_trigger_level, shift_action=self.step_trigger_level_back)
             t.cell('Check for updates when the game starts', 'ON' if params.check_updates() else 'OFF',
                    hint='Press Enter to toggle: when on, the main menu looks for a new build and tells '
                         'you only if there is one.',
@@ -889,6 +915,7 @@ class ControlSchemePanel:
         if system.ANDROID:                                # PORT ADDITION: the phone's own settings
             params.set_shake_sensitivity(params.DEFAULT_SHAKE_SENSITIVITY)
             params.set_speech_engine(None)
+            params.set_phone_vibration_level(params.DEFAULT_PHONE_VIBRATION)
         params.set_check_updates(params.DEFAULT_CHECK_UPDATES)
         params.set_menu_music_volume(params.DEFAULT_MENU_MUSIC_VOLUME)
         params.set_vibration_level(params.DEFAULT_VIBRATION)
@@ -1081,6 +1108,17 @@ class ControlSchemePanel:
 
     def step_vibration_back(self) -> None:
         self.step_vibration(-1)
+
+    def step_phone_vibration(self, step: int = 1) -> None:
+        """PORT ADDITION (Android): Phone vibration's next strength, felt at once as a hit."""
+        params = GameParameters.shared()
+        params.set_phone_vibration_level(self._next_level(params.phone_vibration_level(), step))
+        self.reload_data()
+        self.announce('Phone vibration %s' % dict(params.FEEL_LEVELS)[params.phone_vibration_level()])
+        Haptics.shared().sample()
+
+    def step_phone_vibration_back(self) -> None:
+        self.step_phone_vibration(-1)
 
     #: PORT ADDITION: seconds a stepped Trigger feel is left on the pad, to squeeze R2 and feel it.  The
     #: triggers are a game's feel, and the game is not running while you are choosing it.

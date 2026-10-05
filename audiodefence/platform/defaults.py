@@ -29,7 +29,7 @@ from .. import paths
 #: carried over (MOVED_TO_SETTINGS).
 SETTINGS_KEYS = frozenset({'buttonMode', 'controlScheme', 'sensivity', 'menuAxis', 'debugMapVisible',
                           'tutorialText', 'rememberFocus', 'checkUpdates', 'skippedUpdate',
-                          'menuMusicVolume', 'vibration', 'triggerEffects', 'keyNames',
+                          'menuMusicVolume', 'vibration', 'phoneVibration', 'triggerEffects', 'keyNames',
                           'keyNamesController', 'speechOutput', 'fineHaptics', 'sapiVoice', 'sapiRate',
                           'sapiRateBoost',
                           'sapiPitch', 'sapiVolume', 'sapiModernAudio', 'sapiEngine', 'announcer', 'masterGain',
