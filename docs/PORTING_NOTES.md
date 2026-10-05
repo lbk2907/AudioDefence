@@ -2937,7 +2937,10 @@ they were.
   came up at any point.
 * PORT ADDITION: Extra holds campaigns, and a campaign holds chapters (user request, 2026-10-01).  Play,
   Extra opens on a list of campaigns (`additions.CAMPAIGNS`, `ExtraMenuScreen`), each row its name and the
-  stars won of the stars it holds - "The Long Way Home, 30 of 147 stars" - and each opening its chapters
+  stars won of the stars it holds - "The Long Way Home, Stars unlocked 30 / 147", their world list's words
+  since 2026-10-05, when every Extra row came to read as one of theirs (user request): a campaign's and a
+  chapter's as a world's, with no hint, and an arena's as a challenge's, "3 stars unlocked" and "Press Enter
+  to play this challenge.", its objective left to the overview - and each opening its chapters
   (`ExtraCampaignScreen`), which open their arenas as before.  There is one so far, named after the story
   its arenas tell, and the list is shown anyway so that the next has somewhere to go.  A campaign counts
   its own stars: a chapter asks for those of the chapters before it in its campaign less `SPARE_STARS`

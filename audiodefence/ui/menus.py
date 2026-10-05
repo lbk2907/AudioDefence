@@ -12,7 +12,7 @@ from ..app import App
 from ..game import data
 from ..game.parameters import GameParameters
 from ..platform.runloop import RunLoop
-from .accessibility import Button, View, play_button_click
+from .accessibility import CELL, Button, View, play_button_click
 from .host import AlertScreen, register
 from .viewcontroller import NoBarScreen, ViewControllerScreen
 
@@ -235,8 +235,9 @@ class ExtraMenuScreen(ViewControllerScreen):
     has no screen for.  Extra is to hold more than one collection of arenas in time, so it opens on a list
     of them (`additions.CAMPAIGNS`), even while there is one; each opens its chapters.
 
-    One button a campaign, Back to the play menu.  A campaign is always open, and its row says where a
-    player stands with it as a chapter's row does: "The Long Way Home, 30 of 147 stars".
+    One button a campaign, Back to the play menu.  A campaign is always open, and its row reads as a world's
+    does in their world list (user request, 2026-10-05): "The Long Way Home, Stars unlocked 30 / 147", and no
+    hint, as theirs has none.
     """
     page_title = 'Extra'
 
@@ -249,11 +250,11 @@ class ExtraMenuScreen(ViewControllerScreen):
         for i, (campaign, _chapters) in enumerate(CAMPAIGNS):
             b = Button(campaign, (192, 34 + i * 38, 187, 34), parent=v,
                        actions=[lambda c=campaign: self.campaign_chosen(c)], name='extra %s' % campaign)
-            # Handed to `translate` so the localization tools offer the two lines: they read calls, not
-            # assignments.
-            b.label = localization.translate('%s, %i of %i stars' % (
-                campaign, cd.stars_unlocked_for_campaign(campaign), cd.stars_available_in_campaign(campaign)))
-            b.hint = localization.translate('Press Enter to open this campaign.')
+            # their world list's own words (ui/challenges.py), which a language file has already
+            b.label = '%s, %s' % (localization.translate(campaign), localization.translate(
+                'Stars unlocked %i / %i' % (cd.stars_unlocked_for_campaign(campaign),
+                                            cd.stars_available_in_campaign(campaign))))
+            b.traits = CELL                               # read as a row of theirs: no "button"
             self.buttons.append(b)
         if self.buttons:
             self.first_accessible_element = self.buttons[0]
@@ -288,10 +289,10 @@ class ExtraCampaignScreen(ViewControllerScreen):
     0x10001ecd4 sums every world in it and gates theirs on the answer (`additions.CHAPTERS` says why).  One
     button a chapter, Back to the campaigns.
 
-    A chapter opens on stars won in its own campaign, the way one of their worlds does, and the row says
-    where a player stands: "Chapter 1, 3 of 21 stars", or "Chapter 2, You need 19 stars to play this level".
-    A locked button does nothing and says nothing when pressed, which is what their selector's locked rows
-    do.
+    A chapter opens on stars won in its own campaign, the way one of their worlds does, and its row reads as a
+    world's in their list (user request, 2026-10-05): "Chapter 1, Stars unlocked 3 / 24", or "Chapter 2, You
+    need 19 stars to play this level", with no hint.  A locked button does nothing and says nothing when
+    pressed, which is what their selector's locked rows do.
     """
     def __init__(self, host, campaign: str = ''):
         super().__init__(host)
@@ -312,15 +313,16 @@ class ExtraCampaignScreen(ViewControllerScreen):
             # What is drawn stays the chapter's name; what is read is the name and where the player stands
             # with it, because on this screen there is nothing else to say it.
             if open_now:
-                b.label = '%s, %i of %i stars' % (chapter, cd.stars_unlocked_for_chapter(chapter),
-                                                  cd.stars_available_in_chapter(chapter))
-                b.hint = 'Press Enter to open this chapter.'
+                stars = 'Stars unlocked %i / %i' % (cd.stars_unlocked_for_chapter(chapter),
+                                                    cd.stars_available_in_chapter(chapter))
+                b.label = '%s, %s' % (chapter, stars)
             else:
                 # Their world list's own words for a locked world (user request): "Maya Ruin, You need 40
                 # stars to play this level" (ui/challenges.py, the world selector), so a chapter reads as
                 # one of their worlds does, and a language file that has the line already translates it.
                 b.label = '%s, %s' % (chapter, 'You need %i stars to play this level'
                                       % chapter_stars_required(chapter))
+            b.traits = CELL                               # read as a row of theirs: no "button"
             self.buttons.append(b)
         if self.buttons:
             self.first_accessible_element = self.buttons[0]
@@ -368,6 +370,7 @@ class ExtraChapterScreen(ViewControllerScreen):
             # that go somewhere, as the selector's rows do.
             b = Button(str(d.get('title') or name), (192, 34 + i * 38, 187, 34), parent=v, font_button=False,
                        actions=[lambda n=name: self.challenge_chosen(n)], name='extra %s' % name)
+            b.traits = CELL                               # read as a row of theirs: no "button"
             self.buttons.append(b)
         self.read_out_arenas()
         if self.buttons:
@@ -375,7 +378,9 @@ class ExtraChapterScreen(ViewControllerScreen):
         self.roots = [v]
 
     def read_out_arenas(self) -> None:
-        """What each row says: its title and the status the accessible selector gives (0x100054960).
+        """What each row says: its title and the status the accessible selector gives (0x100054960), and the
+        selector's hint (0x100054570) - a row read as one of their challenges (user request, 2026-10-05).  The
+        objective is the overview's to read, as theirs is, not the row's.
 
         Done again whenever the screen comes back, because the armory is presented over it: a player sent
         there to buy a gun comes back to a row whose status has changed under it."""
@@ -385,7 +390,8 @@ class ExtraChapterScreen(ViewControllerScreen):
             status = AccessibleChallengeSelectorScreen.status_for_challenge_with_dict(d)
             b.label = '%s, %s' % (str(d.get('title') or name), status)
             # on the phone a locked row goes on to name the arena that opens it (statusForChallengeWithDict)
-            b.hint = None if status.startswith('locked') else str(d.get('objective') or '')
+            b.hint = None if status.startswith('locked') else 'Press Enter to play this challenge.'
+            b.label_key_words = True                      # "press Enter to go to armory", or the button
 
     def view_will_appear(self) -> None:
         super().view_will_appear()
