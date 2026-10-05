@@ -84,12 +84,13 @@ def measured_pace(seconds: float, words: int):
     return per_word
 
 
-#: PORT ADDITION (user report, 2026-10-05): what a pause costs a voice, in words.  A voice stops at the end of
-#: a sentence and draws breath at a comma, and a text of short sentences takes longer than its words say: Closing
-#: Time's closing story, 44 words in six sentences, took SAPI 5 18.0 s where its words at the calibrated pace came
-#: to 13.7, and the completed screen came while it was still being read.  Fitted over the Extra mode's 66 story
-#: and closing texts spoken by SAPI 5's Zira and David at two rates: the worst text still being read when its time
-#: was up went from 29% past it to 8-9%, counting these as well as the words.
+#: PORT ADDITION (user report, 2026-10-05): what a pause costs a voice, in words - one rule for every voice and
+#: every platform, as the calibration is.  Every voice stops at the end of a sentence and draws breath at a comma,
+#: and a text of short sentences takes longer than its words say: Closing Time's closing story, 44 words in six
+#: sentences, took 18.0 s where its words at the calibrated pace came to 13.7, and the completed screen came while
+#: it was still being read.  The figures are fitted over the Extra mode's 66 story and closing texts, spoken by
+#: text-to-speech voices at two rates and timed: the worst text still being read when its time was up went from
+#: 29% past it to 8-9%, counting these as well as the words.
 SENTENCE_END_WORDS = 4.6
 COMMA_WORDS = 2.7
 _SENTENCE_ENDS = re.compile(r'[.!?…]+(?=\s|$)')

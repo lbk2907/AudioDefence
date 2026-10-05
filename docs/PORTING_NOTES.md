@@ -3328,9 +3328,10 @@ they were.
   words times the seconds a word measured in Speech calibration (below), or at `DEFAULT_WORDS_PER_MINUTE`
   until it has been, and the pause counts from that moment (`reading_seconds`, `ui/reading.py`).  Its
   pauses count too, since 2026-10-05 (user report): Closing Time's closing story, 44 words in six short
-  sentences, took SAPI 5 a third longer than its words at the calibrated pace, and the completed screen came
-  over it.  A sentence's end is counted as 4.6 words and a comma as 2.7 (`reading_length`), fitted over the
-  Extra mode's 66 story and closing texts spoken by SAPI 5's Zira and David at two rates, and the calibration
+  sentences, took a third longer than its words at the calibrated pace, and the completed screen came over
+  it.  A sentence's end is counted as 4.6 words and a comma as 2.7 (`reading_length`) - one rule for every
+  voice and platform, as the calibration is - fitted over the Extra mode's 66 story and closing texts spoken
+  by text-to-speech voices at two rates and timed, and the calibration
   sentence is measured the same way, so a calibration already saved means the same and a text paused as it
   is comes out as before: the worst text still being read when its time was up went from 29% past it to 8-9%,
   and a part of the story is held a tenth longer than that besides (`Narration.MARGIN`).  It is the one

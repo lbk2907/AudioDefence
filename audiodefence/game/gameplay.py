@@ -503,7 +503,7 @@ class Narration:
     WAITING, DUE, READING = 'waiting', 'due', 'reading'
     #: PORT ADDITION (user report, 2026-10-05): the time a part of the story is held for, over the time its
     #: reading is taken to need (ui/reading.reading_seconds): what is left after the pauses are counted -
-    #: the slowest of the Extra mode's texts was still being read 8-9% past its time by SAPI 5 - so that a
+    #: the slowest of the Extra mode's texts was still being read 8-9% past its time - so that a
     #: wave, or the completed screen after a closing story, does not come in over its last words
     MARGIN = 1.1
 
