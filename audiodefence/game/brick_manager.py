@@ -191,7 +191,7 @@ class BrickManager:
         weapons = (brick.brick_dictionary or {}).get('Weapons')          # PORT ADDITION: see
         gvc = self.gameplay_view_controller                             # ChallengeGameplayController
         if weapons and gvc is not None and hasattr(gvc, 'hand_over_weapons'):   # .hand_over_weapons
-            gvc.hand_over_weapons(weapons, after_story=self.current_wave == 1)
+            gvc.hand_over_weapons(weapons, first=self.current_wave == 1)
         if len(self.bricks) == 1:
             brick.activate_all_playlists()
         elif len(self.bricks) >= 2:
