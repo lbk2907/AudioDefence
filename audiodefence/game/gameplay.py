@@ -550,6 +550,7 @@ class GameplayController:
         self.pause_view = None
         self.revive_view_controller = None
         self.turning_by_itself = 0                        # PORT ADDITION: The Magpie, 1 or -1 while it turns you
+        self.turning_left = 0.0                           # and the seconds it has left at the most
         self.nb_revives = 0
         self.announcer_value_on_entering_pause = False
         self.accessible_game_view = None
@@ -710,26 +711,30 @@ class GameplayController:
     # --- The Magpie (PORT ADDITION, user request, 2026-10-05) -------------------------------------
     def start_turning_by_itself(self, direction: int) -> None:
         """The Magpie's catch: the player is spun round, `direction` 1 or -1, until they kill a Zombie
-        (`stop_turning_by_itself`), and cannot turn themselves meanwhile - not by a key, a stick, a swipe,
-        the gyroscope or the tilt (`InfiniteScrollView.spun`).  Already turning, they go on the way they were
-        going."""
+        (`stop_turning_by_itself`) or modifiers.LOOSE_CONTROL_SECONDS have gone by, and cannot turn
+        themselves meanwhile - not by a key, a stick, a swipe, the gyroscope or the tilt
+        (`InfiniteScrollView.spun`).  Already turning, they go on the way they were going, for as long as
+        was left."""
+        from .modifiers import LOOSE_CONTROL_SECONDS
         if not self.turning_by_itself:
             self.turning_by_itself = direction
+            self.turning_left = LOOSE_CONTROL_SECONDS
             log.info('The Magpie: turning by itself, %s', 'one way' if direction > 0 else 'the other')
         for v in list(self.infinite_scroll_views):
             v.spun = True
 
-    def stop_turning_by_itself(self) -> None:
+    def stop_turning_by_itself(self, why: str = 'a kill') -> None:
         if self.turning_by_itself:
-            log.info('The Magpie: a kill, and the turning stops')
+            log.info('The Magpie: %s, and the turning stops', why)
         self.turning_by_itself = 0
+        self.turning_left = 0.0
         for v in list(self.infinite_scroll_views):
             v.spun = False
 
     def turn_by_itself(self, dt: float) -> None:
         """One tick of it: the view - and the aim with it - turned by a whole turn a second
-        (modifiers.LOOSE_CONTROL_RADIANS_PER_SECOND), whatever the player does.  Not while paused or dead,
-        when the player cannot turn either."""
+        (modifiers.LOOSE_CONTROL_RADIANS_PER_SECOND), whatever the player does, and its time counted down.
+        Not while paused or dead, when the player cannot turn either and the time stands still."""
         direction = self.turning_by_itself
         if (not direction or self.paused or getattr(self, 'death_overlay_visible', False)
                 or self.player is None):
@@ -737,6 +742,9 @@ class GameplayController:
         from .modifiers import LOOSE_CONTROL_RADIANS_PER_SECOND
         for v in list(self.infinite_scroll_views):
             v.turn_by(direction * LOOSE_CONTROL_RADIANS_PER_SECOND * dt)
+        self.turning_left -= dt
+        if self.turning_left <= 1e-6:
+            self.stop_turning_by_itself('time up')
 
     def holds_the_wave(self) -> bool:
         """PORT ADDITION (user request, 2026-10-03): whether the wave just loaded is kept from beginning while

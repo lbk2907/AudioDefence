@@ -3149,12 +3149,15 @@ they were.
   let what they are given go unread while it lasts (`InfiniteScrollView.spun`), and the yaw the gyroscope
   and the keys gather meanwhile is taken and thrown away each update as it always is, so the view does not
   jump when the turning stops.  It was a sixth of a turn a second at first, which turning against it won;
-  the user asked for it faster, funny, and with no way out but the kill.  It does not run while paused or
-  dead.  A second Diamond while turning keeps the turn as it was.  The rolls are Python's own, not the C `rand()` the original's stream is reproduced
+  the user asked for it faster, funny, and with no way out but the kill.  Or the time: it stops by itself
+  after `LOOSE_CONTROL_SECONDS`, eight whole turns, counted only while the game runs (user request,
+  2026-10-05), for when no Zombie is in reach.  It does not run while paused or dead, and its time stands
+  still meanwhile.  A second Diamond while turning keeps the turn as it was, and the time it had left.  The rolls are Python's own, not the C `rand()` the original's stream is reproduced
   with, so a hand without the card draws exactly what it drew before.  It is dealt as a good card.
   Checked in an Endless game, muted: a Diamond shot down and the heading a whole turn round each second,
   the same with the turn key held against it, none at all in the second and a half after a Zombie was
-  killed, and the turn key turning the player again after that.
+  killed, and the turn key turning the player again after that; and with no kill, eight turns and then
+  none.
 
 * PORT ADDITION: Empty Chambers, a level-3 tarot card for the melee weapon alone (user request,
   2026-10-05): "Your guns are empty, so your Melee weapon is all you have. No Hulk, Berserk or Colossus will

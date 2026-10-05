@@ -80,6 +80,10 @@ LOOSE_CONTROL_PERCENT = 50
 #: a sixth of a turn a second, which turning against it won; the user asked for it faster, and funny, and
 #: for no way out but the kill.
 LOOSE_CONTROL_RADIANS_PER_SECOND = 2.0 * 3.14159265
+#: and how long at the most, counted only while the game runs: a kill stops it sooner, and with no Zombie in
+#: reach - between waves, say - this does (user request).  Eight whole turns: long enough to be dizzy and
+#: funny, short enough not to leave a player spinning helplessly through a quiet moment.
+LOOSE_CONTROL_SECONDS = 8.0
 
 #: PORT ADDITION (user request, 2026-10-05): the enemies Empty Chambers keeps away - the ones a melee weapon
 #: alone could not be expected to bring down (`Enemy.kept_away`)
