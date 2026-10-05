@@ -1973,7 +1973,10 @@ they were.
   and a dead end.  Its Loadout lists every weapon a challenge has, since 2026-10-05, where the original
   has three rows whatever it has (rows per section 2 / 3 / 3, tconst_100181ba0): none of the original's
   45 challenges has more than three, so they read as before, and Closing Time's fourth, the Golf Club,
-  had never been read out.
+  had never been read out.  A challenge whose waves hand over sets of their own, Reprise, has one row
+  instead (user request, 2026-10-05): its weapons change with every act and each set is read out as it
+  is handed over.  Its `weapons` name all fifteen only so that the armory check asks for every one of
+  them, and read as a loadout they were a list of guns it is never fought with all at once.
 
   The three rings get worse and the challenge can still be finished (user request).  A ring is cleared by
   one kill whatever is standing in it, the chain doing the rest, so what makes a ring hard is not how

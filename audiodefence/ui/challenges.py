@@ -394,9 +394,14 @@ class AccessibleChallengeOverviewScreen(ViewControllerScreen):
         t.cell(d.get('title'), 'Title')
         t.cell(d.get('objective'), 'Objective')
         t.header('Loadout')
+        changes = _weapons_change_in_game(d)
+        if changes:
+            # PORT ADDITION (user request, 2026-10-05): a challenge whose waves hand over sets of their own
+            # (Reprise) is not fought with its `weapons`, which name every gun only for the armory check above
+            t.cell('Changes with every act', 'each new set is read out as it is handed over')
         # PORT DIVERGENCE (2026-10-05): every weapon a challenge has, not three rows whatever it has - none of
         # the original's 45 has more than three, and Closing Time's fourth, the Golf Club, was never shown
-        for row in range(max(3, len(weapons))):
+        for row in () if changes else range(max(3, len(weapons))):
             w = weapons[row] if row < len(weapons) else {}
             if ns_int_value(w.get('ammo')) >= 1:
                 detail = '%i bullets' % ns_int_value(w.get('ammo'))
