@@ -264,16 +264,17 @@ class ControlSchemePanel:
                             'buttons. Close the game before you put files into it, or it writes its own over '
                             'them as it closes.',
                        action=self.open_data_folder)
-            t.cell('Reset all settings',
-                   hint='Press Enter to put every setting back to its default. Your key and controller '
-                        'bindings stay as they are.',
-                   action=self.reset_all_settings)
             if not in_game:
                 t.cell('Clear all saves',
                        hint='Press Enter to start the game again from nothing: your coins, diamonds, weapons, '
                             'power-ups, missions, challenges, stars and high score are deleted. Your settings '
                             'and buttons stay. You are asked first.',
                        action=self.clear_all_saves)
+            # last, in the game and out of it (user request, 2026-10-05)
+            t.cell('Reset all settings',
+                   hint='Press Enter to put every setting back to its default. Your key and controller '
+                        'bindings stay as they are.',
+                   action=self.reset_all_settings)
         elif self.category == 'speech' and self.page is not None:   # PORT ADDITION: a speech's own page
             self.speech_page_rows(t, params, self.page == 'second')
         elif self.category == 'speech':                   # PORT ADDITION: who speaks, and how
