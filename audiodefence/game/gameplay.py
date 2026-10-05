@@ -501,6 +501,11 @@ class Narration:
     completed screen for an epilogue."""
 
     WAITING, DUE, READING = 'waiting', 'due', 'reading'
+    #: PORT ADDITION (user report, 2026-10-05): the time a part of the story is held for, over the time its
+    #: reading is taken to need (ui/reading.reading_seconds): what is left after the pauses are counted -
+    #: the slowest of the Extra mode's texts was still being read 8-9% past its time by SAPI 5 - so that a
+    #: wave, or the completed screen after a closing story, does not come in over its last words
+    MARGIN = 1.1
 
     def __init__(self, text: str, lines=(), after=None):
         self.text = text
@@ -1238,7 +1243,7 @@ class ChallengeGameplayController(GameplayController):
         if n.state == n.DUE:
             Speech.shared().speak_in_game(n.text)
             n.read_at = now
-            n.seconds = reading_seconds(localization.translate(n.text), in_game_speech())
+            n.seconds = reading_seconds(localization.translate(n.text), in_game_speech()) * n.MARGIN
             n.state = n.READING
             return
         if now - n.read_at >= n.seconds:
@@ -1370,6 +1375,36 @@ class ChallengeGameplayController(GameplayController):
         reading = self.host.announce('New weapons: %s' % ', '.join(names))
         self.draw_left = (reading or 0.0) + self.DRAW_PAUSE
         self.arming = True
+
+    def weapons_now(self):
+        """PORT ADDITION (user request, 2026-10-05): what a revive puts back - every gun's clip and spare rounds
+        and which gun is in hand - as the wave beginning finds them (`BrickManager.load_next_brick`), a set it
+        hands over included.  The game's own guns: `weapon_manager`, never the power-up's shared one."""
+        weapons = self.weapon_manager
+        if weapons is None:
+            return None
+        guns = [(w.name, w.bullets_in_clip, w.bullets_total) for w in weapons.weapons_array or []]
+        return guns, (weapons.current_weapon.name if weapons.current_weapon is not None else None)
+
+    def put_weapons_back(self, kept) -> None:
+        """PORT ADDITION (user request, 2026-10-05): a revive's weapons as `weapons_now` kept them at the start of
+        the wave died in: each gun's clip and spare rounds, and the gun that was in hand back in hand - without
+        a word or a sound, no "New weapons", no draw and no name, as if the wave were simply begun again.  The
+        guns are the fresh set the revive has just handed back (`BrickManager.hand_back_weapons`), at rest, so
+        nothing of the death - a reload, a held trigger - carries over; only their rounds are put back."""
+        weapons = self.weapon_manager
+        if weapons is None or kept is None:
+            return
+        guns, in_hand = kept
+        rounds = {}
+        for name, clip, spare in guns:
+            rounds.setdefault(name, (clip, spare))
+        for index, w in enumerate(weapons.weapons_array or []):
+            if w.name in rounds:
+                w.bullets_in_clip, w.bullets_total = rounds[w.name]
+            if w.name == in_hand:
+                weapons.current_weapon_index = index
+                weapons.set_current_weapon(w)
 
     #: PORT ADDITION (user request, 2026-10-03): the brief pause, in seconds, between the predicted end of
     #: "New weapons: ..." and the new gun being drawn (`hand_over_weapons`) - long enough to hear the list

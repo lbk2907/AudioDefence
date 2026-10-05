@@ -29,6 +29,7 @@ would take the item off the display a second after it arrived (`Screen.speak_ele
 from __future__ import annotations
 
 import logging
+import re
 
 log = logging.getLogger('ui.reading')
 
@@ -83,9 +84,35 @@ def measured_pace(seconds: float, words: int):
     return per_word
 
 
+#: PORT ADDITION (user report, 2026-10-05): what a pause costs a voice, in words.  A voice stops at the end of
+#: a sentence and draws breath at a comma, and a text of short sentences takes longer than its words say: Closing
+#: Time's closing story, 44 words in six sentences, took SAPI 5 18.0 s where its words at the calibrated pace came
+#: to 13.7, and the completed screen came while it was still being read.  Fitted over the Extra mode's 66 story
+#: and closing texts spoken by SAPI 5's Zira and David at two rates: the worst text still being read when its time
+#: was up went from 29% past it to 8-9%, counting these as well as the words.
+SENTENCE_END_WORDS = 4.6
+COMMA_WORDS = 2.7
+_SENTENCE_ENDS = re.compile(r'[.!?…]+(?=\s|$)')
+_COMMAS = re.compile(r'[,;:]+(?=\s|$)')
+
+
+def reading_length(text) -> float:
+    """How long a text is to read, in words: its words, and its pauses as the words they take the time of."""
+    text = str(text or '')
+    return (word_count(text) + SENTENCE_END_WORDS * len(_SENTENCE_ENDS.findall(text))
+            + COMMA_WORDS * len(_COMMAS.findall(text)))
+
+
 def reading_seconds(text, speech=None) -> float:
-    """How long the speech is taken to need to read this: the first speech, or the one named."""
-    return word_count(text) * seconds_per_word(speech)
+    """How long the speech is taken to need to read this: the first speech, or the one named.
+
+    The calibration measured seconds a word over its own sentence, pauses and all; so its pace is taken as
+    seconds a word of that sentence's reading length (`reading_length`), and a text is its own reading length
+    at that.  A text paused as the sentence is comes out as its words always did; one paused more takes
+    longer.  What the calibration saved, and what it says, is unchanged: nothing is measured again."""
+    from .settings import SpeechCalibration              # here: settings imports this module
+    sample = SpeechCalibration.sample()
+    return reading_length(text) * seconds_per_word(speech) * word_count(sample) / max(1.0, reading_length(sample))
 
 
 def hint_for(element) -> str:

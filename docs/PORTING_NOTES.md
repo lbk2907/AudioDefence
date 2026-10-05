@@ -2827,7 +2827,15 @@ they were.
   wave died in again from its beginning (`BrickManager.retry_current_brick`), and the skip is a choice of
   its own on the same screen, "Skip this wave", at ten times the price and only while a wave follows
   (`revive_skip_cost`), so a win is never bought.  Either way the wave is fought with the weapons it was
-  begun with, fresh: its own `Weapons`, the last set handed over before it, or the challenge's.  Checked
+  begun with: its own `Weapons`, the last set handed over before it, or the challenge's - and since
+  2026-10-05 as it found them, not fresh (user request): `load_next_brick` keeps each gun's clip and spare
+  rounds and the gun in hand as a wave begins (`weapons_now`, a set the wave hands over included), and the
+  revive, after handing the set back at rest, puts those back with nothing said or drawn
+  (`put_weapons_back`), so the gun the wave began with is in hand again and every round spent in the go that
+  ended in a death is spent no more.  Fresh, a revive had been a free reload of every gun.  A skip starts the
+  next wave the same way, unless it hands over a set of its own.  Checked in the game: rounds spent in wave 1,
+  wave 2 begun, more spent and the gun switched, and the revive put back wave 2's start, the Bazooka in hand,
+  with no draw and no line; the skip began wave 3 with it.  Checked
   headless with a three-wave arena: a death in the second wave offered a revive for 1 diamond or a skip for
   10, and the skip went on to the third with the first wave's guns full and read out; deaths in the third
   offered no skip and revives for 2 and 4, the second refused to the failed screen with 8 of 20 diamonds
@@ -3318,7 +3326,15 @@ they were.
 
   When the item has been read is predicted, the same way for every voice (user request, 2026-10-02): its
   words times the seconds a word measured in Speech calibration (below), or at `DEFAULT_WORDS_PER_MINUTE`
-  until it has been, and the pause counts from that moment (`reading_seconds`, `ui/reading.py`).  The 180 is
+  until it has been, and the pause counts from that moment (`reading_seconds`, `ui/reading.py`).  Its
+  pauses count too, since 2026-10-05 (user report): Closing Time's closing story, 44 words in six short
+  sentences, took SAPI 5 a third longer than its words at the calibrated pace, and the completed screen came
+  over it.  A sentence's end is counted as 4.6 words and a comma as 2.7 (`reading_length`), fitted over the
+  Extra mode's 66 story and closing texts spoken by SAPI 5's Zira and David at two rates, and the calibration
+  sentence is measured the same way, so a calibration already saved means the same and a text paused as it
+  is comes out as before: the worst text still being read when its time was up went from 29% past it to 8-9%,
+  and a part of the story is held a tenth longer than that besides (`Narration.MARGIN`).  It is the one
+  estimate, so every voice and every platform, and the hints, take it alike.  The 180 is
   the story's, which moved from `ui/gameplay_screen.py` so that the two share it.  This replaces the first
   design, of the same day, in which the game's own voices - SAPI 5, the Mac's system voice and the phone's
   text-to-speech - were followed to their real end (`Speech.still_speaking`, built for the Extra mode's
