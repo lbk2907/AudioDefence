@@ -193,18 +193,23 @@ per set. For example:
 
 Read a set's terms before you give a file made from it to anyone else.
 
-**Step 2: get makemhr**, the tool that turns a set into an `.mhr` file. It
-comes with OpenAL Soft's Windows download, `openal-soft-<version>-bin.zip`,
-from [OpenAL Soft's website](https://openal-soft.org/) or its
-[releases on GitHub](https://github.com/kcat/openal-soft/releases). Unzipped,
-it is `makemhr\makemhr.exe`, with `zlib1.dll` beside it: keep the two
-together. Nothing else needs installing. An `.mhr` is the same file on every
-system, so one made on Windows works on the Mac and the phone too.
+**Step 2: get makemhr**, the tool that turns a set into an `.mhr` file, for
+Windows. This repository carries it, in `vendor\makemhr`: `makemhr.exe` with
+`zlib1.dll` beside it, from OpenAL Soft 1.25.2, unchanged, under the GNU GPL
+(its `README.txt` says more). The original comes with OpenAL Soft's Windows
+download, `openal-soft-<version>-bin.zip`, from
+[OpenAL Soft's website](https://openal-soft.org/) or its
+[releases on GitHub](https://github.com/kcat/openal-soft/releases), in the
+zip's `makemhr` folder: take it from there if you have only the game, or want a
+newer version. Either way, keep the two files together. Nothing else needs
+installing. An `.mhr` is the same file on every system, so one made on Windows
+works on the Mac and the phone too.
 
 **Step 3: make the `.mhr`.** In a Command Prompt, in the folder with the
-`.sofa` file:
+`.sofa` file, where `C:\path\to\makemhr` is the folder makemhr is in - the
+repository's `vendor\makemhr`, or the download's `makemhr`:
 
-    "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i mit_kemar_normal_pinna.sofa -o "MIT KEMAR.mhr"
+    "C:\path\to\makemhr\makemhr.exe" -r 44100 -i mit_kemar_normal_pinna.sofa -o "MIT KEMAR.mhr"
 
 `-r 44100` is the game's sample rate. `-o` names the file, and that name is
 what the 3D sound list says. It takes a few seconds and ends with **Operation
@@ -1671,7 +1676,8 @@ went with it.
                         which readies a computer to build the Android app, and
                         android_keys.py, which makes and chooses its signing keys
     vendor/             OpenAL Soft (the Windows DLL, and the Mac dylib in
-                        openal-mac/), the NVDA controller client
+                        openal-mac/), the NVDA controller client, and
+                        makemhr/, OpenAL Soft's tool for making an HRTF
 
 ### `game/` — the original
 
@@ -1869,7 +1875,8 @@ the folders this game cares about are:
 - `bin\Win64\soft_oal.dll`: the library itself, 64-bit. `bin\Win32` holds the
   32-bit one, which the game does not use.
 - `makemhr\makemhr.exe`, with `zlib1.dll` beside it: the tool that makes an
-  HRTF file. Keep the two together.
+  HRTF file. Keep the two together. The repository carries a copy, in
+  `vendor\makemhr`.
 - `hrtf_defs`: example definition files for well-known research sets
   (`MIT_KEMAR.def`, `MIT_KEMAR_sofa.def`, `IRC_1005.def`, `SCUT_KEMAR.def`,
   `CIAIR.def`). Each says at the top where its recordings can be downloaded,
@@ -1899,13 +1906,14 @@ the ones in `hrtf_defs`.
 `hrtf_defs` says where.
 
 **Step 2:** in a Command Prompt, in the folder with the recordings, run
-`makemhr.exe` at the game's sample rate, 44100. For a SOFA file:
+`makemhr.exe` at the game's sample rate, 44100. For a SOFA file, with the
+repository's copy:
 
-    "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i set.sofa -o set.mhr
+    "C:\path\to\AudioDefence\vendor\makemhr\makemhr.exe" -r 44100 -i set.sofa -o set.mhr
 
 Or with one of the definition files:
 
-    "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i MIT_KEMAR.def -o MIT_KEMAR.mhr
+    "C:\path\to\AudioDefence\vendor\makemhr\makemhr.exe" -r 44100 -i MIT_KEMAR.def -o MIT_KEMAR.mhr
 
 **Step 3:** put the `.mhr` in the `hrtf` folder next to the game, not in
 `assets\hrtf`, and choose it in Settings → Sound → 3D sound. See
@@ -1914,6 +1922,11 @@ players.
 
 **Step 4:** check the research set's licence before giving the file to anyone:
 some may not be passed on with a game, which is why none is built into it.
+
+**Updating makemhr.** Copy the zip's `makemhr` folder, both files, over
+`vendor\makemhr`, and change the version in `vendor\makemhr\README.txt`: it
+names the OpenAL Soft release the files came from, and links to that release's
+source, which the GPL asks to be findable.
 
 ## Building an executable
 
@@ -2254,3 +2267,10 @@ contains all of it.
 
 This project is not affiliated with Somethin' Else, and no claim is made to
 their work.
+
+`vendor/makemhr` is OpenAL Soft's makemhr, copied unchanged from OpenAL Soft
+1.25.2: it is under the GNU General Public License, version 2 or any later
+version, whose text is beside it in `COPYING.GPLv2`, and its source is
+[OpenAL Soft 1.25.2's](https://github.com/kcat/openal-soft/tree/1.25.2/utils/makemhr).
+Its `zlib1.dll` is zlib, under the zlib licence. Neither is part of the game,
+and a build does not carry them.
