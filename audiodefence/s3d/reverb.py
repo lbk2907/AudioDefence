@@ -24,7 +24,8 @@ Setters: room = size * 0.28 + 0.3 (sub_1000ed4e8), damp = d * 0.01 * 0.4 (sub_10
 dampening 2, wet 0, dry 0, active YES; the ObjC setters then apply 1.5 / 1 / 50.
 
 PORT: OpenAL Soft cannot run this effect, so sounds that send to the reverb play on a second OpenAL Soft
-device (a loopback device with the same HRTF): its stereo render is the FanOut signal.  A callback buffer
+device (a loopback device with the same HRTF - the one Settings -> Sound -> 3D sound chose, `use_hrtf`): its
+stereo render is the FanOut signal.  A callback buffer
 source on the output device pulls that render, adds the Stereoverb output and plays the sum with direct
 channels - exactly dryMixer + Stereoverb.  Every sound the game sends to the reverb uses dryGain 1 and
 wetGain 1 (-[ADEnemy setReverbAndWetBalanceOnSound:] 0x100063a48); other values are not supported.
@@ -37,6 +38,7 @@ from __future__ import annotations
 
 import ctypes
 import logging
+import threading
 
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
@@ -163,6 +165,10 @@ class ReverbBus:
         self._callback = None
         self._scratch = np.zeros(BLOCK * 2, dtype=np.float32)
         self._failed = False
+        #: held while the bus renders (on OpenAL Soft's mixer thread) and while it is reset with another HRTF
+        #: (on the main one), so the two never meet
+        self._lock = threading.Lock()
+        self.attrs = []
         self._open()
 
     @property
@@ -174,7 +180,10 @@ class ReverbBus:
         if not al.alIsExtensionPresent(b'AL_SOFT_callback_buffer'):
             log.error('AL_SOFT_callback_buffer missing: sounds play without the reverb')
             return
-        from .device import HRTF_NAME, SAMPLE_RATE
+        from . import sound3d
+        from .device import SAMPLE_RATE
+        # PORT ADDITION (2026-10-05): the HRTF the output device was opened with, the game's own by default
+        hrtf = sound3d.openal_name(getattr(self.device, 'sound_3d', sound3d.GAME))
         dev = al.loopback_open()
         if not dev:
             log.error('cannot open the reverb bus device: sounds play without the reverb')
@@ -188,12 +197,12 @@ class ReverbBus:
             log.error('cannot create the reverb bus context: sounds play without the reverb')
             return
         names = al.hrtf_names(dev)
-        if HRTF_NAME in names:
-            al.reset_device(dev, attrs + [oal.ALC_HRTF_ID_SOFT, names.index(HRTF_NAME)])
+        if hrtf in names:
+            al.reset_device(dev, attrs + [oal.ALC_HRTF_ID_SOFT, names.index(hrtf)])
         status = al.get_int(dev, oal.ALC_HRTF_STATUS_SOFT)
-        if HRTF_NAME not in names or status != 1:
-            log.error('reverb bus: game HRTF %s not in use (status %s)', HRTF_NAME, status)
-        self.bus_device, self.context = dev, ctx
+        if hrtf not in names or status != 1:
+            log.error('reverb bus: HRTF %s not in use (status %s)', hrtf, status)
+        self.bus_device, self.context, self.attrs = dev, ctx, attrs
         al.make_current(ctx)
         al.alDistanceModel(0)
         # the output source lives on the output device
@@ -216,9 +225,32 @@ class ReverbBus:
         al.alSourcePlay(self._source)
         al.check('reverb bus play')
 
+    def use_hrtf(self, name: str) -> bool:
+        """PORT ADDITION (user report, 2026-10-05): the bus hears with the HRTF OpenAL Soft lists as `name`, as
+        the output device does (S3DEngine.use_3d_sound); reset while it is not rendering.  False where it is
+        not listed or does not load, the one before kept."""
+        if self.bus_device is None:
+            return False
+        al = self.al
+        names = al.hrtf_names(self.bus_device)
+        if name not in names:
+            return False
+        with self._lock:
+            ok = (al.reset_device(self.bus_device, self.attrs + [oal.ALC_HRTF_ID_SOFT, names.index(name)])
+                  and al.get_int(self.bus_device, oal.ALC_HRTF_STATUS_SOFT) == 1)
+            current = al.alcGetString(self.bus_device, oal.ALC_HRTF_SPECIFIER_SOFT)
+            if not ok or (current or b'').decode('utf-8', 'replace') != name:
+                log.warning('reverb bus: %s did not load', name)
+                return False
+        return True
+
     def _render(self, _userptr, sampledata, numbytes) -> int:
         """ALBUFFERCALLBACKTYPESOFT, on OpenAL Soft's mixer thread: dryMixer + Stereoverb."""
         frames = numbytes // 8
+        with self._lock:
+            return self._render_locked(sampledata, frames)
+
+    def _render_locked(self, sampledata, frames) -> int:
         try:
             out = np.ctypeslib.as_array((ctypes.c_float * (frames * 2)).from_address(sampledata))
             scratch = self._scratch

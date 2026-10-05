@@ -35,6 +35,7 @@ from .. import paths
 from ..platform import crand
 from . import decoder, model as s3dmodel
 from . import openal as oal
+from . import sound3d
 from .device import Device
 from .reverb import ReverbBus
 from ..platform import host as _host
@@ -85,6 +86,8 @@ class S3DEngine:
         # masterMixer <- dryMixer, masterMixer <- Stereoverb(wetMixer); Stereoverb 2.2 / 2 / wet 0 / dry 0
         self.bus = ReverbBus(self.device)
         self.bus_al = oal.ContextAL(self.device.al, self.bus.context) if self.bus.available else None
+        #: PORT ADDITION: what every spatialised sound is scaled by for the 3D sound in use (sound3d.level)
+        self.hrtf_level = sound3d.level(getattr(self.device, 'sound_3d', sound3d.GAME))
         self.set_reverb_room_size(1.5)
         self.set_reverb_volume(1.0)
         self.set_reverb_dampening(50.0)
@@ -228,6 +231,25 @@ class S3DEngine:
     def set_master_gain(self, gain: float) -> None:      # 0x1000fa76c
         self.master_gain = float(gain)
         self.al.alListenerf(oal.AL_GAIN, max(0.0, self.master_gain))
+
+    def use_3d_sound(self, choice: str) -> bool:
+        """PORT ADDITION (user request, 2026-10-05): Settings -> Sound -> 3D sound.  The output device hears with
+        it (Device.use_3d_sound), and so does the reverb bus, where every sound that sends to the reverb is
+        spatialised - every zombie - which kept the HRTF it was opened with until the user heard their loops
+        stay with the game's own while their hits changed.  Every spatialised sound then takes the new HRTF's
+        level, the ones playing at once (sound3d.level).  False, and nothing changed, where the device cannot
+        have it."""
+        if not self.device.use_3d_sound(choice):
+            return False
+        use_hrtf = getattr(self.bus, 'use_hrtf', None)          # the phone's bus is the mixer's own context
+        if use_hrtf is not None and self.bus.available and not use_hrtf(sound3d.openal_name(choice)):
+            log.warning('the reverb bus kept its 3D sound; %s is on the output only', choice)
+        self.hrtf_level = sound3d.level(choice)
+        for playlist in list(self.dispatcher.play_lists):
+            for sound in list(playlist.agent_cache.values()):
+                if sound is not None and sound._source and sound._spatial:
+                    sound._apply_gain()
+        return True
 
     @classmethod
     def set_master_spatialised_gain(cls, gain: float) -> None:
@@ -1028,7 +1050,7 @@ class S3DSound:
     def _apply_gain(self) -> None:
         g = self.gain * self.fade_gain * self.volume
         if self._spatial:
-            g *= S3DEngine.master_spatialised_gain * getattr(self, '_distance_gain', 1.0)
+            g *= S3DEngine.master_spatialised_gain * getattr(self, '_distance_gain', 1.0) * self.engine.hrtf_level
         self.al.alSourcef(self._source, oal.AL_GAIN, max(0.0, g))
 
     def update_position(self) -> None:

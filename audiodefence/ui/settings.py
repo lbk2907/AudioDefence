@@ -719,7 +719,7 @@ class ControlSchemePanel:
         before is kept."""
         from ..s3d import sound3d
         params = GameParameters.shared()
-        if S3DEngine.engine().device.use_3d_sound(choice):
+        if S3DEngine.engine().use_3d_sound(choice):
             params.set_sound_3d(choice)
             self.reload_data()
             self.announce('3D sound: %s' % sound3d.label(choice))
@@ -831,7 +831,7 @@ class ControlSchemePanel:
         choice = params.sound_3d()
         if not choice.startswith(sound3d.FILE):
             return
-        S3DEngine.engine().device.use_3d_sound(sound3d.GAME)
+        S3DEngine.engine().use_3d_sound(sound3d.GAME)
         params.set_sound_3d(sound3d.GAME)
         _remove_quietly(sound3d.path_of(choice))
         self.reload_data()
@@ -901,7 +901,7 @@ class ControlSchemePanel:
             params.set_second_speech_engine(None)
         params.forget_speech_word_times()                 # the pace measured is forgotten, both speeches'
         params.set_sound_3d(params.DEFAULT_SOUND_3D)      # PORT ADDITION (2026-10-05): the game's own 3D sound
-        S3DEngine.engine().device.use_3d_sound(params.DEFAULT_SOUND_3D)
+        S3DEngine.engine().use_3d_sound(params.DEFAULT_SOUND_3D)
         params.set_second_follows(params.DEFAULT_SECOND_FOLLOWS)
         App.apply_menu_music_volume()
         self.reload_data()

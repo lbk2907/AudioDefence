@@ -1202,6 +1202,19 @@ they were.
   and taken out with Remove 3D sound file.  Test 3D sound, not in a pause, takes the Machine's steady loop once
   around the listener in six seconds at two units, from ahead towards the right of wherever the head last
   faced.  Reset all settings puts the game's own back.
+  Two things the first build missed, from the user's playing it (2026-10-05).  The reverb bus - a second
+  OpenAL Soft device, a loopback one, on which every sound that sends to the reverb is spatialised, every
+  zombie among them - kept the HRTF it was opened with, so the zombies' loops stayed with the game's own while
+  their hits, on the output device, changed; it now opens with the choice and switches with it
+  (`ReverbBus.use_hrtf`, reset under a lock its render on OpenAL Soft's mixer thread also takes, through
+  `S3DEngine.use_3d_sound`).  And another head was much louder: the game's own HRTF comes out about 14 dB
+  quieter than a set makemhr normalises - MIT's KEMAR 13.8 dB louder, OpenAL Soft's built-in 13.4, measured
+  with white noise from eight directions rendered on a loopback device - and the game's mix is the
+  original's, made round its own.  Every spatialised sound is scaled by `sound3d.level`, the game's own over
+  the chosen in amplitude (`S3DSound._apply_gain`, `S3DEngine.hrtf_level`, the ones playing at once): a file's
+  loudness is the power of its horizontal ring, which comes within 0.1 dB of what OpenAL Soft makes of it and
+  is what the phone's mixer hears; the built-in, which has no file, is the measured figure
+  (`BUILTIN_LOUDER_DB`).
 * PORT ADDITION: Settings -> Speech -> Speech output (`speechOutput` in settings.json,
   `Speech.choice`, `platform/speech.py OUTPUTS`): Automatic by default - NVDA through its controller
   client, else another screen reader through Prism, else SAPI 5 (`Speech.speak_automatic`) - or one of
