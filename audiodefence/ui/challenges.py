@@ -101,6 +101,13 @@ class _TableLoader:
         return v
 
 
+def _weapons_change_in_game(challenge) -> bool:
+    """PORT ADDITION: whether a challenge's waves hand over weapons of their own (`Weapons`, read by
+    `BrickManager.load_brick_with_name`), so that what it is fought with is told in the game, set by set."""
+    from ..game import data
+    return any((data.plist(name) or {}).get('Weapons') for name in challenge.get('bricks') or [])
+
+
 def game_over_with_stats_view_did_load(screen) -> None:
     """-[ADGameOverWithStatsViewController viewDidLoad] 0x100041958, after its [super viewDidLoad].
 
@@ -387,7 +394,9 @@ class AccessibleChallengeOverviewScreen(ViewControllerScreen):
         t.cell(d.get('title'), 'Title')
         t.cell(d.get('objective'), 'Objective')
         t.header('Loadout')
-        for row in range(3):
+        # PORT DIVERGENCE (2026-10-05): every weapon a challenge has, not three rows whatever it has - none of
+        # the original's 45 has more than three, and Closing Time's fourth, the Golf Club, was never shown
+        for row in range(max(3, len(weapons))):
             w = weapons[row] if row < len(weapons) else {}
             if ns_int_value(w.get('ammo')) >= 1:
                 detail = '%i bullets' % ns_int_value(w.get('ammo'))

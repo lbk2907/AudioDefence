@@ -1970,7 +1970,10 @@ they were.
   player who has not bought one of its guns to go and buy it.  A dictionary is all it wants, so the
   port's own get every bit of that for nothing.  The accessible one is used whether a screen reader is
   running or not: the sighted overview is a nib nobody ported, so asking for it hands back a placeholder
-  and a dead end.
+  and a dead end.  Its Loadout lists every weapon a challenge has, since 2026-10-05, where the original
+  has three rows whatever it has (rows per section 2 / 3 / 3, tconst_100181ba0): none of the original's
+  45 challenges has more than three, so they read as before, and Closing Time's fourth, the Golf Club,
+  had never been read out.
 
   The three rings get worse and the challenge can still be finished (user request).  A ring is cleared by
   one kill whatever is standing in it, the chain doing the rest, so what makes a ring hard is not how
