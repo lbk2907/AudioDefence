@@ -83,7 +83,7 @@ PLUMBING = (
     re.compile(r'^(https?://|www\.)'),
     re.compile(r'^[A-Za-z_][A-Za-z0-9_]*\s*=\s*'),
     re.compile(r'^[a-z][a-z0-9_]*$'),                           # sound_name, level_3
-    re.compile(r'^\d'),
+    re.compile(r'^\d(?!D )'),                                 # a number - but "3D sound" is words
     re.compile(r'\\|\^|\{|\}|\[|\]|\|'),                        # a regular expression or a format
 )
 

@@ -173,7 +173,8 @@ missing.
 
 **A line a player reads starts with a word, not a digit.**  The translators' list leaves out any phrase
 that starts with a number (it looks like a value, not a sentence), so "0 is the speed..." was never
-offered for translating; "At 0 it speaks..." is.
+offered for translating; "At 0 it speaks..." is.  "3D" and a space is the one exception it knows: "3D sound"
+is words.
 
 **A line with a gap in it goes to a translator whole.**  Write it as one `%` template - "Tarot card number
 %i : %s" - and the tools offer it as it is, for the translator to write their sentence round, in their own

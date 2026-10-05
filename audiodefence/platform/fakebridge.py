@@ -202,6 +202,7 @@ class FakeBridge:
         self.picker_answer = None
         self.pickers = []
         self.document_state = ''
+        self.hrtf_in_use = ''                             # 3D sound: '' for the game's own, else the file's path
 
     # --- decoding -------------------------------------------------------------------------------------
     def decode(self, path):
@@ -434,3 +435,22 @@ class FakeBridge:
 
     def documentState(self):
         return self.document_state
+
+    def documentName(self):
+        import os
+        return os.path.basename(self.picker_answer) if self.picker_answer else ''
+
+    # --- 3D sound -------------------------------------------------------------------------------------
+    @staticmethod
+    def checkHrtf(path):
+        try:
+            with open(path, 'rb') as fh:
+                return '' if fh.read(8) == b'MinPHR03' else 'not a MinPHR03 HRTF'
+        except OSError as exc:
+            return str(exc)
+
+    def setHrtf(self, path):
+        problem = self.checkHrtf(path) if path else ''
+        if not problem:
+            self.hrtf_in_use = path
+        return problem

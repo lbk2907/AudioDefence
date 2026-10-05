@@ -147,6 +147,89 @@ order VoiceOver read it, with the same labels and hints, and a good number of
 places where the original said the wrong thing or nothing at all have been
 fixed. They are all listed under *How faithful this is*.
 
+## 3D sound
+
+The game's sound is 3D: each zombie is heard from where it is, ahead of you,
+behind you or to a side. That comes from an HRTF, a recording of how one head
+hears a sound from every direction. Every head hears a little differently, so
+one that makes ahead and behind clear for one player can blur them for
+another.
+
+**Settings → Sound → 3D sound** chooses which head the game hears with. It
+changes at once and is kept with your settings; Reset all settings puts the
+game's own back. **Test 3D sound** plays a steady sound once around you,
+starting ahead and turning to your right, so you can compare them by ear.
+
+- **The game's own**, the default: the original game's, built from the set
+  inside the original app.
+- **OpenAL Soft's built-in**, on Windows and the Mac only: the one inside the
+  sound library the game plays through. The phone has no OpenAL Soft, so it
+  does not have this one.
+- **Your own**: any `.mhr` file you add, listed under its file name.
+
+No research set is built into the game. Each set has terms of its own, and you
+bring the file under them.
+
+### Your own 3D sound
+
+1. **Get a set of recordings.** Research sets come as SOFA files (`.sofa`).
+   Many are gathered in the
+   [SOFA conventions database](https://sofacoustics.org/data/database/), a
+   folder per set. For example:
+   - `mit`: MIT's KEMAR dummy head, `mit_kemar_normal_pinna.sofa`, 1.1 MB.
+     Free to use as long as its authors, Bill Gardner and Keith Martin of the
+     MIT Media Lab, are credited.
+   - `listen (hrtf)`: IRCAM's LISTEN set, one file per listener, such as
+     `IRC_1002_R_44100.sofa`, about 5 MB each.
+   - `sadie`: SADIE II from the University of York, twenty heads. Its own page,
+     [SADIE II](https://www.york.ac.uk/sadie-project/database.html), gives it
+     under the Apache 2.0 licence, which asks that the set is credited.
+
+   Read a set's terms before you give a file made from it to anyone else.
+2. **Get makemhr**, the tool that turns a set into an `.mhr` file. It comes
+   with OpenAL Soft's Windows download, `openal-soft-<version>-bin.zip`, from
+   [OpenAL Soft's website](https://openal-soft.org/) or its
+   [releases on GitHub](https://github.com/kcat/openal-soft/releases).
+   Unzipped, it is `makemhr\makemhr.exe`, with `zlib1.dll` beside it: keep the
+   two together. Nothing else needs installing. An `.mhr` is the same file on
+   every system, so one made on Windows works on the Mac and the phone too.
+3. **Make the `.mhr`.** In a Command Prompt, in the folder with the `.sofa`
+   file:
+
+       "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i mit_kemar_normal_pinna.sofa -o "MIT KEMAR.mhr"
+
+   `-r 44100` is the game's sample rate. `-o` names the file, and that name is
+   what the 3D sound list says. It takes a few seconds and ends with
+   **Operation completed.** The KEMAR file comes to about 320 KB. Leave
+   makemhr's other options as they are: the game takes up to 128 points per
+   ear, which is the most OpenAL Soft takes too.
+4. **Add it to the game.**
+   - **Windows:** put the `.mhr` in the `hrtf` folder of the game data folder,
+     `%APPDATA%\AudioDefence\hrtf`. **Settings → Miscellaneous → Open game
+     data folder** opens the folder it is in. The game makes the `hrtf` folder
+     when it first starts, and a file put there while the game runs is in the
+     list the next time you open it.
+   - **Mac:** the same, in
+     `~/Library/Application Support/AudioDefence/hrtf`.
+   - **The phone:** Android lets the game read only the files it made itself,
+     so a file cannot just be put in a folder. Copy the `.mhr` to the phone
+     first, to the Download folder for example. Then choose **Settings → Sound
+     → Add 3D sound file**: Android's own file picker opens, which TalkBack
+     reads, not the game, so turn TalkBack on, choose the file, and turn
+     TalkBack off again once you are back in the game. The game copies the
+     file in and uses it at once. **Remove 3D sound file** takes the one in
+     use out again. A backup (Export backup) holds your settings and progress,
+     not these files: after a reinstall, add them again.
+5. **Choose it** in **Settings → Sound → 3D sound**, and try it with **Test 3D
+   sound**.
+
+If a file cannot be used, because it is not an `.mhr` or it is damaged, the
+game says so and keeps the 3D sound it had.
+
+On a computer, OpenAL Soft uses the whole set. On the phone, the game's own
+mixer uses only the directions at the height of your ears, as it does with the
+game's own: every sound in the game is on the ground around you.
+
 ## Languages
 
 The game can be played in another language. **Settings → Miscellaneous →
@@ -449,7 +532,7 @@ Settings, saves and the log live in `%APPDATA%\AudioDefence` (on the Mac,
 | file | what is in it |
 |---|---|
 | `save.json` | progress: coins, diamonds, weapons, power-ups, missions, challenges, statistics |
-| `settings.json` | control scheme, button mode, turn sensitivity, menu arrows, cursor memory, tutorial text, the announcer, the game volume, menu music volume, the update check and a version you skipped, how strong the vibration and the trigger feel are, and whether hints name keys or controller buttons, and which controller's, the speech output and SAPI 5's voice, rate, rate boost, pitch and volume, whether hints are read and the pause before them, whether the second speech is used and its own output, voice, rate, rate boost, pitch and volume, whether it follows the first speech's calibration, and how fast each speech was measured to read; on the phone, each speech's engine and the shake sensitivity too |
+| `settings.json` | control scheme, button mode, turn sensitivity, menu arrows, cursor memory, tutorial text, the announcer, the game volume, menu music volume, the update check and a version you skipped, how strong the vibration and the trigger feel are, and whether hints name keys or controller buttons, and which controller's, the speech output and SAPI 5's voice, rate, rate boost, pitch and volume, whether hints are read and the pause before them, whether the second speech is used and its own output, voice, rate, rate boost, pitch and volume, whether it follows the first speech's calibration, and how fast each speech was measured to read, the 3D sound; on the phone, each speech's engine and the shake sensitivity too |
 | `keys.json` | the key bindings, and each kind of controller's, by its name |
 
 Deleting the folder starts a fresh profile — the first run then begins on Gyro
@@ -627,7 +710,8 @@ The backup is the three files a computer keeps, zipped: unzipped into the game
 data folder on a computer, it carries your progress over, and a computer's
 three files zipped together can be imported on the phone. The game makes no
 backup in the cloud: uninstalling it deletes its files, so export a backup
-first.
+first. A 3D sound file of your own is not in the backup: add it again after a
+reinstall (see [Your own 3D sound](#your-own-3d-sound)).
 
 ### Controls on the phone
 
@@ -1231,7 +1315,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **180 divergences** and **15 original quirks kept on purpose** in the notes, of which 80 are
+There are **181 divergences** and **15 original quirks kept on purpose** in the notes, of which 81 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -1422,6 +1506,9 @@ replacing them.
   and on the pause screen, the keys do nothing and the game's music and ambience are untouched.
 - **Settings → Miscellaneous → Reset all settings** puts every setting back to its default, except your key
   bindings.
+- **Settings → Sound → 3D sound** chooses which head the game hears with: the game's own, OpenAL Soft's
+  built-in on a computer, or an `.mhr` file of your own; **Test 3D sound** plays a sound once around you. See
+  [3D sound](#3d-sound).
 - **Settings → Miscellaneous → Clear all saves** starts the game again from nothing and keeps your settings
   and buttons; **Open game data folder** opens the folder the game keeps its files in, and on the phone
   **Export backup** and **Import backup** keep a copy of them in Documents and bring it back.
@@ -1756,9 +1843,12 @@ Soft's settings file, `alsoft.ini`, to the system's temporary folder
 (`%TEMP%\AudioDefence\alsoft.ini` on Windows), and points OpenAL Soft at it
 with the `ALSOFT_CONF` environment variable, so OpenAL Soft reads the game's
 settings and nobody else's. The file turns HRTF on, says where the game's HRTF
-files are (`hrtf-paths`, the `assets\hrtf` folder) and which one to use
-(`default-hrtf`, `audiodefence_ircam1050`). Editing it does nothing: it is
-written again at the next start. Your own OpenAL settings for other programs,
+files are (`hrtf-paths`: the `assets\hrtf` folder, then the `hrtf` folder of
+the game data folder, then OpenAL Soft's own places, which is what brings in
+its built-in HRTF) and which one to start with (`default-hrtf`,
+`audiodefence_ircam1050`). The game then switches to the one chosen in
+Settings → Sound → 3D sound. Editing the file does nothing: it is written
+again at the next start. Your own OpenAL settings for other programs,
 `%APPDATA%\alsoft.ini`, are never read or changed.
 
 **What is in OpenAL Soft's Windows zip.** The binaries,
@@ -1807,11 +1897,12 @@ the ones in `hrtf_defs`.
 
        "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i MIT_KEMAR.def -o MIT_KEMAR.mhr
 
-3. Put the `.mhr` in `assets\hrtf`. OpenAL Soft then lists it beside the
-   game's own, but the game still uses `audiodefence_ircam1050`: it has no
-   setting to choose another yet.
+3. Put the `.mhr` in the `hrtf` folder of the game data folder, not in
+   `assets\hrtf`, and choose it in Settings → Sound → 3D sound. See
+   [Your own 3D sound](#your-own-3d-sound), which goes through all of this
+   for players.
 4. Check the research set's licence before giving the file to anyone: some
-   may not be passed on with a game.
+   may not be passed on with a game, which is why none is built into it.
 
 ## Building an executable
 

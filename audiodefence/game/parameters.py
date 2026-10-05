@@ -424,6 +424,20 @@ class GameParameters:
         self.defaults.set_bool(bool(value), 'fineHaptics')
         self.defaults.synchronize()
 
+    #: PORT ADDITION (user request, 2026-10-05): Settings -> Sound -> 3D sound (s3d/sound3d.py): the game's own
+    #: HRTF by default, OpenAL Soft's built-in on a computer, or a file of the player's own.  What is stored is
+    #: what was chosen; what the sound device uses is that where it can be had (`sound3d.usable`).
+    DEFAULT_SOUND_3D = 'game'
+
+    def sound_3d(self) -> str:
+        from ..s3d import sound3d
+        value = self.defaults.object('sound3d')
+        return sound3d.usable(value) if isinstance(value, str) else self.DEFAULT_SOUND_3D
+
+    def set_sound_3d(self, value: str) -> None:
+        self.defaults.set_object(value, 'sound3d')
+        self.defaults.synchronize()
+
     #: PORT ADDITION: Settings -> Miscellaneous -> Language: the language the port's own text is shown and
     #: spoken in (audiodefence/localization.py, localization/<code>.json).  English by default, so a player
     #: who does not choose one sees exactly what the port always showed.

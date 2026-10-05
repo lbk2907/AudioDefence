@@ -12,6 +12,7 @@ import time
 
 from ..platform.jbridge import bridge
 from . import openal as oal
+from . import sound3d
 
 log = logging.getLogger('s3d.android')
 
@@ -37,6 +38,25 @@ class Device:
         self.context = 0
         self.hrtf_found = True
         self.hrtf_status = 1
+        #: Settings -> Sound -> 3D sound, as it is in use (s3d/sound3d.py): the mixer starts with the game's own
+        self.sound_3d = sound3d.GAME
+        chosen = sound3d.stored()
+        if chosen != sound3d.GAME and not self.use_3d_sound(chosen):
+            log.warning("3D sound %s could not be used: the game's own instead", chosen)
+
+    def use_3d_sound(self, choice: str) -> bool:
+        """PORT ADDITION: the mixer hears with the game's own HRTF, which the app carries, or a file of the
+        player's from the game data folder's hrtf folder, where Add 3D sound file put it (Bridge.setHrtf).
+        False, and the one in use kept, where the file cannot be read as an HRTF."""
+        if choice != sound3d.usable(choice):
+            return False
+        problem = str(self.br.setHrtf(sound3d.path_of(choice)) or '')
+        if problem:
+            log.warning('3D sound %s could not be used: %s', choice, problem)
+            return False
+        self.sound_3d = choice
+        log.info('3D sound: %s', choice)
+        return True
 
     def close(self) -> None:
         pass

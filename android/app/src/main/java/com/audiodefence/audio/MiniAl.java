@@ -104,7 +104,8 @@ public final class MiniAl {
     }
 
     private final Object lock = new Object();
-    private final Hrtf hrtf;
+    /** The HRTF the sound is heard with, taken under the lock: Settings > Sound > 3D sound changes it (setHrtf). */
+    private Hrtf hrtf;
     private final Freeverb reverb = new Freeverb();
     private final Context[] contexts = {new Context(), new Context()};
     private final Map<Integer, Buf> buffers = new HashMap<>();
@@ -126,6 +127,34 @@ public final class MiniAl {
 
     public MiniAl(byte[] hrtfFile) {
         this.hrtf = new Hrtf(hrtfFile);
+    }
+
+    /**
+     * PORT ADDITION (Settings > Sound > 3D sound, user request, 2026-10-05): the sound heard with another HRTF from
+     * the next block on, nothing stopped.  A source moving from one direction to the next fades between them; one
+     * that was heard with the other HRTF starts afresh, there being nothing of the new one to fade from.  An
+     * IllegalArgumentException, and the HRTF in use kept, when the file is not one this mixer can read.
+     */
+    public void setHrtf(byte[] hrtfFile) {
+        Hrtf next = new Hrtf(hrtfFile);
+        synchronized (lock) {
+            hrtf = next;
+            for (Context c : contexts) {
+                for (Source s : c.sources.values()) {
+                    s.lastIdx = -1;
+                }
+            }
+        }
+    }
+
+    /** What is wrong with this file as an HRTF for the mixer, or "" when nothing is. */
+    public static String hrtfProblem(byte[] hrtfFile) {
+        try {
+            new Hrtf(hrtfFile);
+            return "";
+        } catch (RuntimeException e) {
+            return e.getMessage() == null ? "it cannot be read" : e.getMessage();
+        }
     }
 
     // ------------------------------------------------------------------------------------ decoded sounds

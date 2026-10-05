@@ -182,6 +182,38 @@ class ControlSchemePanel:
             t.cell('Announcer', 'ON' if params.last_announcer_value() else 'OFF',
                    hint='Press Enter to toggle in-game announcements.', action=self.toggle_announcer)
             t.cell('Test headphones', hint='Press Enter to test your headphones.', action=self.test_headphones)
+            # PORT ADDITION (user request, 2026-10-05): which head the game hears with (s3d/sound3d.py).  The test
+            # and the phone's files are not offered in a pause: the game's own sounds are held there.
+            from ..s3d import sound3d
+            in_game = isinstance(self.screen, PauseScreen)
+            t.cell('3D sound', sound3d.label(params.sound_3d()),
+                   hint=("Which head the game's 3D sound is heard with. Every head hears a little differently: "
+                         "choose the one that makes ahead, behind and the sides clearest to you. The game's own is "
+                         "the original's. Your own .mhr files are listed too, added with Add 3D sound file. The "
+                         'README says how to make one. Press Enter for the list.'
+                         if system.ANDROID else
+                         "Which head the game's 3D sound is heard with. Every head hears a little differently: "
+                         "choose the one that makes ahead, behind and the sides clearest to you. The game's own is "
+                         "the original's, and OpenAL Soft's built-in comes with the sound library. Your own .mhr "
+                         'files are listed too, from the hrtf folder in the game data folder. The README says how '
+                         'to make one. Press Enter for the list.'),
+                   action=self.choose_3d_sound, shift_action=self.choose_3d_sound)
+            if not in_game:
+                t.cell('Test 3D sound',
+                       hint='Press Enter to hear a sound go once around you with the 3D sound chosen: it starts '
+                            'ahead of you and turns to your right.',
+                       action=self.test_3d_sound)
+            if system.ANDROID and not in_game:
+                t.cell('Add 3D sound file',
+                       hint="Press Enter to add a 3D sound of your own, an .mhr file, from the phone's storage, "
+                            'and use it. Copy the file to the phone first, to the Download folder for example. It '
+                            "is chosen in Android's own file picker, which TalkBack reads, not the game.",
+                       action=self.add_3d_sound_file)
+                if params.sound_3d().startswith(sound3d.FILE):
+                    t.cell('Remove 3D sound file',
+                           hint="Press Enter to take the 3D sound file in use out of the game; the game's own is "
+                                'used again. You are asked first.',
+                           action=self.remove_3d_sound_file)
         elif self.category == 'misc':                     # PORT ADDITION: everything else
             # Language leads the tab: it decides what every other row on every screen is read in,
             # so a player who wants it should not have to walk past the rest to reach it (user request).
@@ -672,6 +704,139 @@ class ControlSchemePanel:
         if sound is not None:
             sound.play()
 
+    # --- 3D sound (PORT ADDITION, user request, 2026-10-05: s3d/sound3d.py) -----------------------------
+    #: Test 3D sound: the Machine's loop - steady, and wide enough in pitch to be placed by ear - once around the
+    #: listener at two units, in this many seconds
+    TEST_3D_SECONDS = 6.0
+    TEST_3D_DISTANCE = 2.0
+
+    def choose_3d_sound(self) -> None:
+        from ..s3d import sound3d
+        self.open_choices('3D sound', sound3d.choices(), GameParameters.shared().sound_3d(), self.take_3d_sound)
+
+    def take_3d_sound(self, choice: str) -> None:
+        """The device hears with it at once, and it is kept; one that does not load is said, and the one
+        before is kept."""
+        from ..s3d import sound3d
+        params = GameParameters.shared()
+        if S3DEngine.engine().device.use_3d_sound(choice):
+            params.set_sound_3d(choice)
+            self.reload_data()
+            self.announce('3D sound: %s' % sound3d.label(choice))
+        else:
+            self.reload_data()
+            self.announce('%s could not be used as a 3D sound. The one before is kept.' % sound3d.label(choice))
+
+    def test_3d_sound(self) -> None:
+        """The Machine's loop goes once around the listener, from ahead towards the right, wherever the head was
+        last turned (S3DEngine.normalize_to_head_position: ahead is +x and the right +y of where it faces).  Its
+        playlist is put away again afterwards unless something else had it out."""
+        import math
+        from ..platform.runloop import RunLoop
+        self.stop_3d_test()
+        engine = S3DEngine.engine()
+        pl = engine.play_list_with_name('Machine')
+        if pl is None:
+            return
+        was_active = pl.active
+        loop = RunLoop.main()
+
+        def start(_playlist=None) -> None:
+            sound = pl.sound('Machine_machine_loop_SPA')
+            if sound is None or self._test_3d is not None:
+                return
+            began = loop.now()
+
+            def place() -> None:
+                turned = (loop.now() - began) / self.TEST_3D_SECONDS
+                if turned >= 1.0:
+                    self.stop_3d_test()
+                    return
+                angle = 2.0 * math.pi * turned
+                ahead = self.TEST_3D_DISTANCE * math.cos(angle)
+                right = self.TEST_3D_DISTANCE * math.sin(angle)
+                h = engine.head_orientation
+                hx, hy, _hz = engine.head_position
+                dy = -right                                   # the planar frame's y is the head's left
+                sound.set_planar((hx + ahead * math.cos(h) - dy * math.sin(h),
+                                  hy + ahead * math.sin(h) + dy * math.cos(h), 0.0))
+            place()
+            sound.set_spatialized(True)
+            sound.play(True)
+            self._test_3d = (sound, loop.schedule_timer(0.02, place), pl, was_active)
+        self._test_3d = None
+        if was_active:
+            start()
+        else:
+            pl.activate(start)
+
+    def stop_3d_test(self) -> None:
+        test, self._test_3d = getattr(self, '_test_3d', None), None
+        if test is None:
+            return
+        sound, timer, pl, was_active = test
+        timer.invalidate()
+        sound.stop()
+        if not was_active:
+            pl.deactivate()
+
+    def add_3d_sound_file(self) -> None:
+        """Android: an .mhr file chosen in Android's file picker, copied into the game data folder's hrtf folder
+        under its own name once the mixer has read it, and used."""
+        import os
+        from ..s3d import sound3d
+        made = os.path.join(sound3d.folder(), 'adding.tmp')
+        if self._pick_document('open', made, picked=lambda state, why: self._added_3d_sound(made, state, why)):
+            self.announce("Android's file picker is open. Turn TalkBack on and choose the .mhr file.")
+
+    def _added_3d_sound(self, made: str, state: str, why: str) -> None:
+        import os
+        from ..platform.jbridge import bridge
+        from ..s3d import sound3d
+        if state != 'done':
+            _remove_quietly(made)
+            self.announce('No file chosen. Nothing was added.' if state == 'cancelled' else
+                          'The file could not be read: %s.' % why)
+            return
+        phone = bridge()
+        problem = str(phone.checkHrtf(made) or '')
+        if problem:
+            _remove_quietly(made)
+            self.announce('That file is not a 3D sound the game can use: %s.' % problem)
+            return
+        name = os.path.basename(str(phone.documentName() or '').replace('\\', '/')).strip() or '3D sound'
+        if name.lower().endswith('.mhr'):
+            name = name[:-4]
+        if name in (sound3d.GAME_NAME, sound3d.BUILTIN_NAME):
+            name += ' (yours)'
+        try:
+            os.replace(made, os.path.join(sound3d.folder(), name + '.mhr'))
+        except OSError as exc:
+            _remove_quietly(made)
+            self.announce('The file could not be added: %s.' % exc)
+            return
+        self.take_3d_sound(sound3d.FILE + name)
+
+    def remove_3d_sound_file(self) -> None:
+        from .host import AlertScreen
+        host = self.screen.host
+        host.push_overlay(AlertScreen(
+            host, 'Remove 3D sound file?',
+            "The 3D sound file in use is taken out of the game, and the game's own is used again.",
+            [('No', None), ('Yes, remove it', self._remove_3d_sound_now)]))
+
+    def _remove_3d_sound_now(self) -> None:
+        from ..s3d import sound3d
+        params = GameParameters.shared()
+        choice = params.sound_3d()
+        if not choice.startswith(sound3d.FILE):
+            return
+        S3DEngine.engine().device.use_3d_sound(sound3d.GAME)
+        params.set_sound_3d(sound3d.GAME)
+        _remove_quietly(sound3d.path_of(choice))
+        self.reload_data()
+        self.announce("3D sound file removed. The game's own is used again.")
+
     # --- keyboard --------------------------------------------------------------------------------
     @staticmethod
     def menu_axis_text(axis=None) -> str:
@@ -735,6 +900,8 @@ class ControlSchemePanel:
         if system.ANDROID:
             params.set_second_speech_engine(None)
         params.forget_speech_word_times()                 # the pace measured is forgotten, both speeches'
+        params.set_sound_3d(params.DEFAULT_SOUND_3D)      # PORT ADDITION (2026-10-05): the game's own 3D sound
+        S3DEngine.engine().device.use_3d_sound(params.DEFAULT_SOUND_3D)
         params.set_second_follows(params.DEFAULT_SECOND_FOLLOWS)
         App.apply_menu_music_volume()
         self.reload_data()
@@ -840,11 +1007,11 @@ class ControlSchemePanel:
         else:                                             # Android 8 and 9: the picker is the only way there
             self.announce("Android's file picker is open. Turn TalkBack on and choose AudioDefence backup.zip.")
 
-    def _pick_document(self, kind: str, path: str, name: str = '') -> bool:
+    def _pick_document(self, kind: str, path: str, name: str = '', picked=None) -> bool:
         """Android's file picker, for a backup to read into `path` ('open') or to write `path` to ('create',
-        as `name`), and what came of it said when it closes; False if it could not be opened, which has been
-        said.  The game goes on running underneath: the picker's answer is looked for four times a second
-        (Bridge.documentState)."""
+        as `name`), and what came of it said when it closes - or, given `picked`, handed to it as the state
+        and why; False if it could not be opened, which has been said.  The game goes on running underneath:
+        the picker's answer is looked for four times a second (Bridge.documentState)."""
         from ..platform.jbridge import bridge
         from ..platform.runloop import RunLoop
         phone = bridge()
@@ -858,6 +1025,8 @@ class ControlSchemePanel:
             state, _newline, why = str(phone.documentState() or '').partition('\n')
             if state == 'waiting':
                 RunLoop.main().call_later(0.25, look)
+            elif picked is not None:
+                picked(state, why)
             elif kind == 'create':
                 _remove_quietly(path)
                 self.announce('Backup saved.' if state == 'done' else
@@ -1502,6 +1671,7 @@ class SettingsScreen(ViewControllerScreen):
     def on_dismiss(self) -> None:
         from ..platform.pad import Pads
         self.control_scheme._trigger_sample = None        # PORT ADDITION: no Trigger feel left on the pad
+        self.control_scheme.stop_3d_test()                # nor Test 3D sound going round (2026-10-05)
         Pads.shared().set_triggers('off')
         super().on_dismiss()
 

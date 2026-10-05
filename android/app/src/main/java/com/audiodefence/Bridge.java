@@ -134,7 +134,7 @@ public final class Bridge implements SensorEventListener {
         MiniAl.SAMPLE_RATE = AudioOut.nativeRate(ctx);
         MiniAl mixer;
         try {
-            mixer = new MiniAl(readAsset("hrtf/audiodefence_ircam1050.mhr"));
+            mixer = new MiniAl(readAsset(GAME_HRTF));
         } catch (Exception e) {
             throw new RuntimeException("cannot load the game's HRTF", e);
         }
@@ -143,6 +143,45 @@ public final class Bridge implements SensorEventListener {
         audio.start(ctx);
         first.start("");
         startSensors();
+    }
+
+    /** The game's own HRTF, which the app carries: what the mixer starts with, and 3D sound's default. */
+    private static final String GAME_HRTF = "hrtf/audiodefence_ircam1050.mhr";
+    /** The largest HRTF file taken: the biggest research sets come to a few megabytes. */
+    private static final long HRTF_MOST = 32L * 1024 * 1024;
+
+    // ------------------------------------------------------------------------------------ 3D sound
+    // PORT ADDITION (Settings > Sound > 3D sound, user request, 2026-10-05): the mixer hears with the game's own
+    // HRTF or with a file of the player's, made with OpenAL Soft's makemhr and added through Android's file picker
+    // into the game data folder's hrtf folder (s3d/sound3d.py).
+
+    /** Python: hear with the HRTF in the file at `path`, or with the game's own for "".  "" when it is in use,
+     *  else why not, and the one in use is kept. */
+    public String setHrtf(String path) {
+        try {
+            al.setHrtf(path.isEmpty() ? readAsset(GAME_HRTF) : readFile(path, HRTF_MOST));
+            return "";
+        } catch (Exception e) {
+            Log.w(TAG, "could not use the HRTF " + path, e);
+            return oneLine(String.valueOf(e.getMessage()));
+        }
+    }
+
+    /** Python: "" when the file at `path` is an HRTF the mixer can hear with, else why not. */
+    public String checkHrtf(String path) {
+        try {
+            return MiniAl.hrtfProblem(readFile(path, HRTF_MOST));
+        } catch (IOException e) {
+            return oneLine(String.valueOf(e.getMessage()));
+        }
+    }
+
+    private static byte[] readFile(String path, long most) throws IOException {
+        try (InputStream in = new FileInputStream(path)) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            copy(in, out, most);
+            return out.toByteArray();
+        }
     }
 
     private byte[] readAsset(String name) throws java.io.IOException {
@@ -964,6 +1003,7 @@ public final class Bridge implements SensorEventListener {
     private static final long BACKUP_MOST = 4L * 1024 * 1024;
     private volatile String documentState = "";
     private volatile String documentPath = "";
+    private volatile String documentName = "";
 
     /** Python: the zip at `from` written over this installation's backup, or as a new one.  "ok\n" and the name
      *  it has there; "picker" on Android 8 and 9; "failed\n" and why. */
@@ -1014,7 +1054,7 @@ public final class Bridge implements SensorEventListener {
                 done.put(MediaStore.MediaColumns.IS_PENDING, 0);
                 resolver.update(uri, done, null, null);
             }
-            return "ok\n" + displayName(resolver, uri);
+            return "ok\n" + displayName(resolver, uri, BACKUP_NAME);
         } catch (Exception e) {
             Log.w(TAG, "could not export the backup", e);
             if (made) {
@@ -1055,15 +1095,16 @@ public final class Bridge implements SensorEventListener {
         return null;
     }
 
-    private static String displayName(ContentResolver resolver, Uri uri) {
+    /** The name a file has where it is, as the picker shows it, or `otherwise`. */
+    private static String displayName(ContentResolver resolver, Uri uri, String otherwise) {
         try (Cursor c = resolver.query(uri, new String[]{MediaStore.MediaColumns.DISPLAY_NAME}, null, null, null)) {
             if (c != null && c.moveToFirst()) {
                 return oneLine(c.getString(0));
             }
         } catch (Exception e) {
-            Log.w(TAG, "could not read the backup's name", e);
+            Log.w(TAG, "could not read a file's name", e);
         }
-        return BACKUP_NAME;
+        return otherwise;
     }
 
     private static void copyIn(ContentResolver resolver, Uri uri, String to) throws IOException {
@@ -1140,6 +1181,7 @@ public final class Bridge implements SensorEventListener {
             ContentResolver resolver = context.getContentResolver();
             try {
                 if (code == PICK_OPEN) {
+                    documentName = displayName(resolver, uri, "");
                     copyIn(resolver, uri, path);
                 } else {
                     try (InputStream in = new FileInputStream(path);
@@ -1161,6 +1203,11 @@ public final class Bridge implements SensorEventListener {
     /** Python: "", "waiting", "done", "cancelled", or "failed\n" and why. */
     public String documentState() {
         return documentState;
+    }
+
+    /** Python: the name of the file last chosen to read, as the picker showed it (Add 3D sound file). */
+    public String documentName() {
+        return documentName;
     }
 
     // ------------------------------------------------------------------------------------ sensors

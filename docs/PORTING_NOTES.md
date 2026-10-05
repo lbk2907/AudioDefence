@@ -1178,6 +1178,28 @@ they were.
   TalkBack has to read it; on Android 8 and 9, which have no such folder for an app, both rows use the
   picker.  A backup is taken by its file names wherever they are in the zip, each a JSON object, save.json
   required.  Nothing goes online: `allowBackup` stays off at the user's asking.
+* PORT ADDITION (user request, 2026-10-05): Settings -> Sound -> 3D sound, which HRTF the game hears with
+  (`s3d/sound3d.py`, `sound3d` in settings.json).  The original has one, the 24 horizontal IRCAM directions in
+  its binary, which the port plays as `audiodefence_ircam1050` (tools/build_hrtf.py); it stays the default.
+  Besides it: OpenAL Soft's built-in (Windows, the Mac) and any `.mhr` of the player's in the game data
+  folder's `hrtf` folder, made with OpenAL Soft's makemhr from a research set.  None is built in: each set has
+  terms of its own, and the player brings the file under them (user request); the README's "Your own 3D sound"
+  goes through it, from where the sets are to the makemhr command, checked on MIT's KEMAR.  Plain stereo was
+  offered and not wanted.  On a computer alsoft.ini's `hrtf-paths` lists the game's folder, the player's, and
+  an empty entry for OpenAL Soft's own places, which is what lists its built-in; a choice resets the device
+  with `ALC_HRTF_ID_SOFT` (`Device.use_3d_sound`), everything playing carrying on, and OpenAL Soft lists the
+  folders again each time it is asked, so a file put there while the game runs is found.  One that does not
+  load, or loads as another, is said, and the HRTF before it is put back.  The phone has no OpenAL Soft and so
+  no built-in; its mixer (`MiniAl`) swaps its HRTF under its lock (`setHrtf`), and its reader (`Hrtf`) now takes
+  what makemhr writes besides the game's layout - fewer taps than 128 (padded) or more (cut), one ear stored
+  (the right mirrored, as OpenAL Soft does), several distances (the farthest) - still hearing only the
+  horizontal ring, where every sound of the game is.  It reads the game's own file exactly as before (checked
+  value for value against the old reader), and made-up files of the other layouts as they should be read, files
+  OpenAL Soft also loads.  Android shows an app only the files it made, so on the phone a file is added through
+  Android's file picker (Add 3D sound file: checked by the mixer's reader, copied in under its own name, used)
+  and taken out with Remove 3D sound file.  Test 3D sound, not in a pause, takes the Machine's steady loop once
+  around the listener in six seconds at two units, from ahead towards the right of wherever the head last
+  faced.  Reset all settings puts the game's own back.
 * PORT ADDITION: Settings -> Speech -> Speech output (`speechOutput` in settings.json,
   `Speech.choice`, `platform/speech.py OUTPUTS`): Automatic by default - NVDA through its controller
   client, else another screen reader through Prism, else SAPI 5 (`Speech.speak_automatic`) - or one of

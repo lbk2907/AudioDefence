@@ -8,6 +8,12 @@ The file is written to the system's temporary folder (user request, 2026-10-03, 
 Windows, which does the same).  It is plumbing, not a setting: rewritten from scratch at every start, with an
 absolute path to wherever this copy of the game is, and nothing a player changes in it lasts.  Next to the
 settings and the save it looked like one of them.
+
+PORT ADDITION (user request, 2026-10-05): the HRTF is the one chosen in Settings -> Sound -> 3D sound
+(s3d/sound3d.py), the game's own by default.  OpenAL Soft is shown the player's own folder as well, and its
+default places after them - the empty entry that the trailing comma of `hrtf-paths` is - which is what lists
+its built-in HRTF.  What else may be in those default places is not offered: `use_3d_sound` takes only what
+3D sound lists.
 """
 from __future__ import annotations
 
@@ -17,6 +23,7 @@ import tempfile
 
 from .. import paths
 from . import openal as oal
+from . import sound3d
 
 log = logging.getLogger('s3d')
 
@@ -42,7 +49,7 @@ def write_alsoft_config() -> str:
         '[general]',
         'stereo-encoding = hrtf',
         'hrtf = true',
-        f'hrtf-paths = {paths.HRTF_DIR}',
+        f'hrtf-paths = {paths.HRTF_DIR},{sound3d.folder()},',
         f'default-hrtf = {HRTF_NAME}',
         f'frequency = {SAMPLE_RATE}',
         'output-limiter = true',
@@ -77,10 +84,8 @@ class Device:
         names = self.al.hrtf_names(self.device)
         self.hrtf_found = HRTF_NAME in names
         #: what the device is opened with, and so what it is opened with again on another output
-        self.attrs = []
-        for k, v in {**attrs, **({oal.ALC_HRTF_ID_SOFT: names.index(HRTF_NAME)} if self.hrtf_found
-                                 else {})}.items():
-            self.attrs += [k, v]
+        self.base_attrs = attrs
+        self.attrs = self._attrs_for(names.index(HRTF_NAME) if self.hrtf_found else None)
         if self.hrtf_found:
             self.al.reset_device(self.device, self.attrs)
         self.hrtf_status = self.al.get_int(self.device, oal.ALC_HRTF_STATUS_SOFT)
@@ -88,10 +93,52 @@ class Device:
             # the built-in HRTF (or none) would sound plausible but not like the original
             log.error('game HRTF %s not in use (found=%s, status=%s, offered=%s)',
                       HRTF_NAME, self.hrtf_found, self.hrtf_status, names)
+        #: Settings -> Sound -> 3D sound, as it is in use
+        self.sound_3d = sound3d.GAME
+        chosen = sound3d.stored()
+        if chosen != sound3d.GAME and not self.use_3d_sound(chosen):
+            log.warning("3D sound %s could not be used: the game's own instead", chosen)
         log.info('sound goes to %s', self.output_name())
         self._events = None
         self._follow_pending = False
         self.follow_default_device()
+
+    def _attrs_for(self, hrtf_id) -> list:
+        listed = []
+        for k, v in {**self.base_attrs, **({} if hrtf_id is None else {oal.ALC_HRTF_ID_SOFT: hrtf_id})}.items():
+            listed += [k, v]
+        return listed
+
+    def current_hrtf(self) -> str:
+        name = self.al.alcGetString(self.device, oal.ALC_HRTF_SPECIFIER_SOFT) if self.device else None
+        return name.decode('utf-8', 'replace') if name else ''
+
+    def use_3d_sound(self, choice: str) -> bool:
+        """PORT ADDITION: Settings -> Sound -> 3D sound - the device reset with that HRTF, everything playing
+        carrying on.  OpenAL Soft lists the folders again each time it is asked, so a file put in the player's
+        folder meanwhile is found.  False, and the HRTF in use kept, where the choice is not listed or does not
+        load - a file that is not an HRTF, or one OpenAL Soft cannot read."""
+        if not self.device or choice != sound3d.usable(choice):
+            return False
+        names = self.al.hrtf_names(self.device)
+        wanted = sound3d.openal_name(choice)
+        if wanted not in names:
+            log.warning('3D sound %s is not among %s', wanted, names)
+            return False
+        before = self.attrs
+        self.attrs = self._attrs_for(names.index(wanted))
+        if (self.al.reset_device(self.device, self.attrs)
+                and self.al.get_int(self.device, oal.ALC_HRTF_STATUS_SOFT) == 1
+                and self.current_hrtf() == wanted):
+            self.sound_3d = choice
+            self.hrtf_status = 1
+            log.info('3D sound: %s', wanted)
+            return True
+        log.warning('3D sound %s did not load (in use: %s); back to the one before', wanted, self.current_hrtf())
+        self.attrs = before
+        self.al.reset_device(self.device, self.attrs)
+        self.hrtf_status = self.al.get_int(self.device, oal.ALC_HRTF_STATUS_SOFT)
+        return False
 
     def output_name(self) -> str:
         name = self.al.alcGetString(self.device, oal.ALC_ALL_DEVICES_SPECIFIER) if self.device else None
