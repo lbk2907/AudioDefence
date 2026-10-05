@@ -196,13 +196,13 @@ Read a set's terms before you give a file made from it to anyone else.
 **Step 2, on Windows: let the game make it.** Put the `.sofa` file in the
 `hrtf` folder in the game's own folder, next to `AudioDefence.exe`. The game
 makes that folder when it first starts, and an update of the game leaves it
-alone. Then, in the Sound tab in Settings, press Enter on **3D sound**. The game
-says it is making a 3D sound from the file, and carries on as usual while it
-does. MIT KEMAR takes about 15 seconds; a large set can take a minute or two.
-It tells you when it is ready. Press Enter on 3D sound again, and it is in the
-list, under the file's name. A file the game cannot make into a 3D sound is
-named, with the reason. A `.sofa` you replace with a newer one is made again
-the next time.
+alone. Then start the game. Before the logo, it says it is making a 3D sound
+from the file, and how far it has got every tenth of the way: MIT KEMAR takes
+about 15 seconds, a large set a minute or two. Then it says the sound is ready,
+and goes on to the logo. Escape skips it, and the file is made the next time
+the game starts instead. In the 3D sound list it is under the file's name. A
+file the game cannot make into a 3D sound is named, with the reason. A `.sofa`
+you replace with a newer one is made again at the next start.
 
 **Step 3: choose it** in **Settings → Sound → 3D sound**, and try it with
 **Test 3D sound**.

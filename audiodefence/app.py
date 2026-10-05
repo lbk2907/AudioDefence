@@ -42,6 +42,18 @@ class App:
         self.init_papa_engine()
         Tracker.shared().init_game_play_tracker()
         Tracker.shared().init_armory_tracker()
+        # PORT ADDITION (user request, 2026-10-05): a .sofa put in the player's hrtf folder is made into a 3D
+        # sound first, on a screen that says how far it has got, and the logo comes after (ui/make_sounds.py)
+        from .s3d import makehrtf
+        files = makehrtf.waiting() if self.host is not None and makehrtf.can_make() else []
+        if files:
+            from .ui.make_sounds import MakeSoundsScreen
+            self.load_view_controller(MakeSoundsScreen(self.host, files, then=self.show_logo))
+            return
+        self.show_logo()
+
+    def show_logo(self) -> None:
+        """The rest of `applicationDidFinishLaunching:` 0x10008099c: the logo, and what goes with it."""
         # the logo is presented over the empty root controller
         self.load_view_controller_named('ADLogoScreenViewController')
         self.run_sanity_check()

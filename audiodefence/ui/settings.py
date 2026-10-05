@@ -196,7 +196,7 @@ class ControlSchemePanel:
                          "choose the one that makes ahead, behind and the sides clearest to you. The game's own is "
                          "the original's, and OpenAL Soft's built-in comes with the sound library. Your own .mhr "
                          'files are listed too, from the hrtf folder next to the game, and a .sofa file of '
-                         'recordings put there is made into one when you press Enter here. The README says more. '
+                         'recordings put there is made into one when the game starts. The README says more. '
                          'Press Enter for the list.'
                          if system.WINDOWS else
                          "Which head the game's 3D sound is heard with. Every head hears a little differently: "
@@ -718,39 +718,10 @@ class ControlSchemePanel:
     TEST_3D_DISTANCE = 2.0
 
     def choose_3d_sound(self) -> None:
-        """The list - or first, on Windows, the .sofa files in the hrtf folder made into 3D sounds (s3d/makehrtf.py,
-        user request, 2026-10-05): started in the background and said, each said again when it is ready, and the
-        list opened by the next Enter, with what is ready by then."""
-        from ..s3d import makehrtf, sound3d
-        files = makehrtf.waiting() if makehrtf.can_make() and not makehrtf.busy() else []
-        if files and self._make_3d_sounds(files):
-            return
+        """The list.  A .sofa put in the hrtf folder is made into a 3D sound when the game starts, before the logo
+        (ui/make_sounds.py); it was made from here at first, and the list did not open while it was."""
+        from ..s3d import sound3d
         self.open_choices('3D sound', sound3d.choices(), GameParameters.shared().sound_3d(), self.take_3d_sound)
-
-    def _make_3d_sounds(self, files: list) -> bool:
-        import os
-        from ..platform.runloop import RunLoop
-        from ..s3d import makehrtf
-        loop = RunLoop.main()
-
-        def made(sofa: str, problem: str) -> None:            # on makemhr's thread: said on the main one
-            name = os.path.splitext(os.path.basename(sofa))[0]
-            if problem:
-                loop.call_soon_threadsafe(lambda: self.announce(
-                    '%s could not be made into a 3D sound: %s' % (name, problem)))
-            else:
-                loop.call_soon_threadsafe(lambda: self.announce(
-                    '3D sound %s is ready. Press Enter on 3D sound to choose it.' % name))
-        if not makehrtf.make_in_background(files, made, lambda: None):
-            return False
-        first = os.path.splitext(os.path.basename(files[0]))[0]
-        if len(files) == 1:
-            self.announce('Making a 3D sound from %s. It takes up to a minute; you are told when it is ready.'
-                          % first)
-        else:
-            self.announce('Making 3D sounds from %s and %d more. Each takes up to a minute; you are told as each '
-                          'is ready.' % (first, len(files) - 1))
-        return True
 
     def take_3d_sound(self, choice: str) -> None:
         """The device hears with it at once, and it is kept; one that does not load is said, and the one
