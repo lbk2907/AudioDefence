@@ -1215,6 +1215,14 @@ they were.
   loudness is the power of its horizontal ring, which comes within 0.1 dB of what OpenAL Soft makes of it and
   is what the phone's mixer hears; the built-in, which has no file, is the measured figure
   (`BUILTIN_LOUDER_DB`).
+  On Windows the game makes a `.sofa` into an `.mhr` itself (user request, 2026-10-05; `s3d/makehrtf.py`): a
+  `.sofa` in the player's `hrtf` folder with no `.mhr` as new as itself is made, when Enter is pressed on 3D
+  sound, by OpenAL Soft's makemhr, which the Windows build now carries (vendor/makemhr, GPL 2 or later, with
+  its text and README) - on a thread of its own, all but one of the processor's threads given to makemhr
+  (MIT's KEMAR, 42 s on makemhr's own two, 15 s on eight, the same file), said when it starts and as each is
+  ready or given up on, with makemhr's reason; written to `.mhr.part` and renamed once whole, so the list
+  never offers half a file.  `tools/make_3d_sounds.py` does the same for whoever has the repository.  The
+  Mac and the phone have no makemhr: there an `.mhr` made on Windows is put in or added.
 * PORT ADDITION: Settings -> Speech -> Speech output (`speechOutput` in settings.json,
   `Speech.choice`, `platform/speech.py OUTPUTS`): Automatic by default - NVDA through its controller
   client, else another screen reader through Prism, else SAPI 5 (`Speech.speak_automatic`) - or one of

@@ -28,5 +28,8 @@ Licences
 - zlib1.dll: zlib, the compression library, under the zlib licence:
   https://zlib.net/zlib_license.html
 
-They are not part of the game and are not built into it: they are here so that
-anyone with this repository can make an .mhr without downloading anything.
+They are separate programs, not part of the game's own code. The Windows build
+of the game carries them, with this file and the licence, so that the game can
+make a .sofa put in its hrtf folder into a 3D sound by itself (the Sound tab in
+Settings, 3D sound); and anyone with the repository can do the same with
+tools\make_3d_sounds.py.

@@ -193,37 +193,24 @@ per set. For example:
 
 Read a set's terms before you give a file made from it to anyone else.
 
-**Step 2: get makemhr**, the tool that turns a set into an `.mhr` file, for
-Windows. This repository carries it, in `vendor\makemhr`: `makemhr.exe` with
-`zlib1.dll` beside it, from OpenAL Soft 1.25.2, unchanged, under the GNU GPL
-(its `README.txt` says more). The original comes with OpenAL Soft's Windows
-download, `openal-soft-<version>-bin.zip`, from
-[OpenAL Soft's website](https://openal-soft.org/) or its
-[releases on GitHub](https://github.com/kcat/openal-soft/releases), in the
-zip's `makemhr` folder: take it from there if you have only the game, or want a
-newer version. Either way, keep the two files together. Nothing else needs
-installing. An `.mhr` is the same file on every system, so one made on Windows
-works on the Mac and the phone too.
+**Step 2, on Windows: let the game make it.** Put the `.sofa` file in the
+`hrtf` folder in the game's own folder, next to `AudioDefence.exe`. The game
+makes that folder when it first starts, and an update of the game leaves it
+alone. Then, in the Sound tab in Settings, press Enter on **3D sound**. The game
+says it is making a 3D sound from the file, and carries on as usual while it
+does. MIT KEMAR takes about 15 seconds; a large set can take a minute or two.
+It tells you when it is ready. Press Enter on 3D sound again, and it is in the
+list, under the file's name. A file the game cannot make into a 3D sound is
+named, with the reason. A `.sofa` you replace with a newer one is made again
+the next time.
 
-**Step 3: make the `.mhr`.** In a Command Prompt, in the folder with the
-`.sofa` file, where `C:\path\to\makemhr` is the folder makemhr is in - the
-repository's `vendor\makemhr`, or the download's `makemhr`:
+**Step 3: choose it** in **Settings → Sound → 3D sound**, and try it with
+**Test 3D sound**.
 
-    "C:\path\to\makemhr\makemhr.exe" -r 44100 -i mit_kemar_normal_pinna.sofa -o "MIT KEMAR.mhr"
+**On the Mac and the phone,** the game cannot make a 3D sound itself: make the
+`.mhr` on a Windows computer, as above or by hand as below, then add it.
 
-`-r 44100` is the game's sample rate. `-o` names the file, and that name is
-what the 3D sound list says. It takes a few seconds and ends with **Operation
-completed.** The KEMAR file comes to about 320 KB. Leave makemhr's other
-options as they are: the game takes up to 128 points per ear, which is the most
-OpenAL Soft takes too.
-
-**Step 4: add it to the game.**
-
-- **Windows:** put the `.mhr` in the `hrtf` folder in the game's own folder,
-  next to `AudioDefence.exe`. The game makes the folder when it first starts,
-  and a file put there while the game runs is in the list the next time you
-  open it. An update of the game leaves the folder alone.
-- **Mac:** the same, in the `hrtf` folder next to `AudioDefence.app`.
+- **Mac:** put the `.mhr` in the `hrtf` folder next to `AudioDefence.app`.
 - **The phone:** Android lets the game read only the files it made itself, so
   a file cannot just be put in a folder. Copy the `.mhr` to the phone first, to
   the Download folder for example. Then choose **Settings → Sound → Add 3D
@@ -234,8 +221,31 @@ OpenAL Soft takes too.
   backup) holds your settings and progress, not these files: after a
   reinstall, add them again.
 
-**Step 5: choose it** in **Settings → Sound → 3D sound**, and try it with
-**Test 3D sound**.
+**Making the `.mhr` yourself.** The game does it with makemhr, OpenAL Soft's
+tool, which it carries on Windows. The same tool is in this repository, in
+`vendor\makemhr`: `makemhr.exe` with `zlib1.dll` beside it, from OpenAL Soft
+1.25.2, unchanged, under the GNU GPL (its `README.txt` says more). The original
+comes with OpenAL Soft's Windows download, `openal-soft-<version>-bin.zip`,
+from [OpenAL Soft's website](https://openal-soft.org/) or its
+[releases on GitHub](https://github.com/kcat/openal-soft/releases), in the
+zip's `makemhr` folder. Keep the two files together. An `.mhr` is the same file
+on every system, so one made on Windows works on the Mac and the phone too.
+
+- **With the repository:** `py tools\make_3d_sounds.py` makes every `.sofa` in
+  the `hrtf` folder into an `.mhr`, as the game does; name another folder after
+  it to work there instead, or add `--all` to make them all again.
+  Double-clicked, it works on the repository's own `hrtf` folder.
+- **By hand,** in a Command Prompt in the folder with the `.sofa` file, where
+  `C:\path\to\makemhr` is the folder makemhr is in:
+
+      "C:\path\to\makemhr\makemhr.exe" -r 44100 -j 8 -i mit_kemar_normal_pinna.sofa -o "MIT KEMAR.mhr"
+
+  `-r 44100` is the game's sample rate. `-j 8` lets makemhr use eight of the
+  processor's threads, which makes it three times quicker than its own two.
+  `-o` names the file, and that name is what the 3D sound list says. It ends
+  with **Operation completed.** The KEMAR file comes to about 320 KB. Leave
+  makemhr's other options as they are: the game takes up to 128 points per ear,
+  which is the most OpenAL Soft takes too.
 
 If a file cannot be used, because it is not an `.mhr` or it is damaged, the
 game says so and keeps the 3D sound it had.
@@ -2082,7 +2092,8 @@ time.
 
 ### What a build carries, and what it does not
 
-The port, the HRTF and the two vendored DLLs go inside the build. `game/` does
+The port, the HRTF and the two vendored DLLs go inside the build, and on
+Windows OpenAL Soft's makemhr too, with its licence, for making 3D sounds. `game/` does
 not — and `game/` is the game's audio: the 918 sound files under `game/sounds/`
 (the narration, the zombies, the weapons, the music), the playlists under
 `game/meta/` that arrange them, the plists and the strings. Every one of those
@@ -2305,5 +2316,7 @@ their work.
 1.25.2: it is under the GNU General Public License, version 2 or any later
 version, whose text is beside it in `COPYING.GPLv2`, and its source is
 [OpenAL Soft 1.25.2's](https://github.com/kcat/openal-soft/tree/1.25.2/utils/makemhr).
-Its `zlib1.dll` is zlib, under the zlib licence. Neither is part of the game,
-and a build does not carry them.
+Its `zlib1.dll` is zlib, under the zlib licence. The Windows build carries
+both, with that text and their `README.txt`, in `_internal\vendor\makemhr`, so
+that the game can make a `.sofa` into a 3D sound; they are separate programs,
+not part of the game's own code.

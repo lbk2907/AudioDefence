@@ -74,6 +74,11 @@ if host.MAC:
     PLAY_PACKAGES = (('pygame', 'pygame-ce'), ('numpy', 'numpy'), ('av', 'av'),
                      ('AppKit', 'pyobjc-framework-cocoa'))
     BINARIES = (('vendor/openal-mac/libopenal.dylib', 'vendor/openal-mac'),)
+else:
+    #: OpenAL Soft's makemhr, with its DLL, its GPL text and its README, so that the game can make a .sofa put
+    #: in its hrtf folder into a 3D sound itself (audiodefence/s3d/makehrtf.py, user request, 2026-10-05).  As
+    #: data rather than binaries: copied as they are, and not looked into for what they would load
+    DATA = DATA + (('vendor/makemhr', 'vendor/makemhr'),)
 #: the Mac app's identity, which LaunchServices and Spotlight key on; PyInstaller's own is the bare name
 BUNDLE_ID = 'com.audiodefence.port'
 #: files of the original bundle a Mac build leaves out of the copy inside its app: the iOS executable and
