@@ -1059,6 +1059,7 @@ class ChallengeGameplayController(GameplayController):
         self.epilogue_told = False                        # PORT ADDITION: see go_to_score_screen
         self.arming = False                               # PORT ADDITION: see hand_over_weapons
         self.draw_left = 0.0
+        self.weapons_after_story = False
 
     def view_did_load(self) -> None:                      # 0x1000da420
         self.init_challenge_modifiers()                   # PORT ADDITION: see below
@@ -1111,6 +1112,9 @@ class ChallengeGameplayController(GameplayController):
             self.arming = self.arm()
         if not self.arming and self.narration is None:    # PORT ADDITION: see tell_story_if_due
             self.tell_story_if_due()
+            if self.narration is None and self.weapons_after_story and not self.paused:
+                self.weapons_after_story = False          # PORT ADDITION: see hand_over_weapons
+                self.announce_weapons()
         if self.narration is not None:                    # PORT ADDITION: see narrate
             self.narrate()
             if self.player is None:                       # the epilogue has been read: the game is over
@@ -1163,7 +1167,9 @@ class ChallengeGameplayController(GameplayController):
 
         A wave that hands over a new set of weapons tells it once they have been read out and the new gun
         drawn and ready (`hand_over_weapons`, `arm`; user request, 2026-10-03), so the order there is the
-        line, the pause, the draw and the gun's name, the story and the wave.
+        line, the pause, the draw and the gun's name, the story and the wave.  The first wave is the other way
+        round (user request, 2026-10-05): its story is the challenge's opening, and its set is read out and
+        drawn once the story has been read.
 
         It is read once what was already being said as the wave began has been heard out (user request,
         2026-10-02): the challenge's start clip, the announcer, a gun naming itself, the revive's answer and
@@ -1295,7 +1301,7 @@ class ChallengeGameplayController(GameplayController):
             return None
         return cost * self.REVIVE_SKIP_FACTOR
 
-    def hand_over_weapons(self, entries: list, announce: bool = True) -> None:
+    def hand_over_weapons(self, entries: list, announce: bool = True, after_story: bool = False) -> None:
         """PORT ADDITION (user request): a wave of a challenge that carries its own `Weapons` - a list in the
         form of the challenge's `weapons` - takes the player's weapons away and hands over those instead,
         so that one long arena can go from the guns of one chapter to the guns of the next.
@@ -1303,7 +1309,8 @@ class ChallengeGameplayController(GameplayController):
         The original's challenges are armed once, for every wave.  Such a challenge lists in its own
         `weapons` every gun any of its waves hands over, because that list is what the overview checks
         (`hasWeaponForChallengeWithName:` 0x10001f868) and names when one is not bought; its first wave
-        then carries the first set, handed over before anything is heard.
+        then carries the first set, in hand before anything is heard and read out after the wave's story
+        (`after_story`, below).
 
         The new guns are made before the old ones are let go: a gun of the same name shares its playlist
         (`Weapon.__init__` activates it, `dealloc` deactivates it), and activating one again is not
@@ -1334,8 +1341,16 @@ class ChallengeGameplayController(GameplayController):
         manager's 0x1000c7558) sends nothing to the weapons, and `deploy` 0x1000166e4 is sent by
         `selectNextWeapon` 0x1000a9e04 alone, so nothing is drawn or named as play resumes, and nothing
         waits.  A set that differs from the one in hand - a wave that changes the weapons, a skip to it
-        included - is read out and drawn as above.  The first wave's set, which says nothing, is in hand at
-        once, as before."""
+        included - is read out and drawn as above.
+
+        The first wave's set is held back until that wave's story has been read (`after_story`; user request,
+        2026-10-05): the story opens the challenge, and the set was in hand at once with nothing said, so
+        a player starting Reprise was never told what they had.  It is in hand and holstered from the start,
+        the wave held (`holds_the_wave`), and once the story has been read or skipped it is read out and
+        drawn as any other (`announce_weapons`), the wave beginning when the gun is ready.  A wave with no
+        story reads it out at once.  A revive into the first wave gives back the set in hand and says
+        nothing, as above; with no screen (the referee) the set is in hand at once and nothing is drawn, as
+        before."""
         from .weapon_manager import WeaponManager
         old = self.weapon_manager
         new = WeaponManager.with_challenge_weapon_array(entries)
@@ -1367,11 +1382,22 @@ class ChallengeGameplayController(GameplayController):
         if not announce or same:
             return
         if self.host is None:                             # nowhere to read it out: drawn at once
-            new.current_weapon.deploy()
+            if not after_story:
+                new.current_weapon.deploy()
             return
-        names = [WeaponManager.shared().display_name_for_item_with_name(w.name)
-                 for w in list(new.weapons_array) + [new.melee_weapon] if w is not None]
         new.holstered = True
+        if after_story:
+            self.weapons_after_story = True               # read out once the story has been (`update`)
+            return
+        self.announce_weapons()
+
+    def announce_weapons(self) -> None:
+        """PORT ADDITION: the set in hand, holstered, read out - "New weapons: ..." - and its first gun drawn
+        after it (`arm`), the wave held until it is ready (`hand_over_weapons`)."""
+        from .weapon_manager import WeaponManager
+        weapons = self.weapon_manager
+        names = [WeaponManager.shared().display_name_for_item_with_name(w.name)
+                 for w in list(weapons.weapons_array) + [weapons.melee_weapon] if w is not None]
         reading = self.host.announce('New weapons: %s' % ', '.join(names))
         self.draw_left = (reading or 0.0) + self.DRAW_PAUSE
         self.arming = True
@@ -1429,9 +1455,10 @@ class ChallengeGameplayController(GameplayController):
         return weapons.current_weapon.state == 1
 
     def holds_the_wave(self) -> bool:
-        """PORT ADDITION: while a new set of weapons is being handed over (`arm`), and while a part of the
-        story waits to be read or is read (`narrate`)."""
-        return self.arming or self.narration is not None
+        """PORT ADDITION: while a new set of weapons is being handed over (`arm`) or waits to be read out
+        after the story (`hand_over_weapons`), and while a part of the story waits to be read or is read
+        (`narrate`)."""
+        return self.arming or self.weapons_after_story or self.narration is not None
 
     def init_brick_manager(self) -> None:                 # 0x1000daf74
         bm = BrickManager.shared()

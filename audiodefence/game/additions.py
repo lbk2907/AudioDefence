@@ -3166,7 +3166,7 @@ PLISTS['port_closingtime'] = {
 #: ..."), and draws its first gun once that has been said, the wave waiting until it is in hand
 #: (`ChallengeGameplayController.hand_over_weapons`).  The challenge's own `weapons` names every one of
 #: them, because that is the list the overview checks; the first wave's set replaces it before anything is
-#: heard.
+#: heard, and is read out and drawn once the first part of the story has been (user request, 2026-10-05).
 #:
 #: It is long - ten to twelve minutes - and one enemy reaching the player ends it, so every act is a little
 #: gentler than the chapter it remembers, and a death offers the revive, as in every arena of the mode.

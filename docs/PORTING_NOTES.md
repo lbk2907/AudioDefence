@@ -2535,8 +2535,8 @@ they were.
   (`BrickManager.load_brick_with_name` to `ChallengeGameplayController.hand_over_weapons`): the guns in hand
   are taken away and the new ones given, the set read out - "New weapons: Police Shotgun, Revolver, Golf" -
   and the first of them drawn after it as a switch draws it (its deploy sound, and its name if the announcer
-  is on; below).  The first wave's is handed over before anything is heard, and says nothing, and so does
-  one that gives back the set already in hand, as a revive does (below).  The challenge's
+  is on; below).  The first wave's is handed over before anything is heard and read out after that wave's
+  story (below); one that gives back the set already in hand, as a revive does, says nothing (below).  The challenge's
   own `weapons` lists every gun any wave hands over, because that is what the overview checks
   (`hasWeaponForChallengeWithName:` 0x10001f868) and names when one is not bought.  The new guns are made
   before the old are let go, since a gun of the same name shares its playlist and activating one again is
@@ -2568,8 +2568,17 @@ they were.
   wave before is gone by then: a challenge's wave waits for its cows (below).  The wait is counted in the
   update timer's ticks, so a pause holds it and it goes on after.  A story on the wave is told once the
   hand-over is over and the deploy and the name have been heard, so the order is the line, the pause, the
-  draw, the story and the wave.  The first wave's set and a revive's are in hand at once with nothing said or
-  drawn, as before, and with no screen to read the line on (the referee) the gun is drawn at once, as before.
+  draw, the story and the wave.  A revive's set is in hand at once with nothing said or drawn, as before,
+  and with no screen to read the line on (the referee) the gun is drawn at once, as before.
+
+  The first wave's set is read out after its story instead (user request, 2026-10-05): it was in hand at
+  once with nothing said, so a player starting Reprise heard the opening and then the zombies, and was
+  never told what they were holding.  The story is the challenge's opening, so it comes first: the set is
+  in hand and holstered from the start, the wave held, and once the story has been read or skipped
+  (`ChallengeGameplayController.weapons_after_story`, `announce_weapons`) the line, the pause and the draw
+  follow as at any other hand-over, and the wave begins when the gun is ready.  Nothing fires, swings,
+  switches or reloads while the story is read.  A revive into the first wave gives back the set in hand
+  and says nothing, and the referee, with no screen, has the set in hand at once, as before.
   An old gun's reload still sounding is stopped with it: a death puts the gun back at rest (`stop_firing_now`)
   and left its reload playing, which a revive into the same set played on.  Every gun of every set arrives as
   `Weapon.__init__` makes it, a full clip of its capacity after the modifiers and the rounds its entry gives;
