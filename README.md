@@ -160,6 +160,11 @@ changes at once and is kept with your settings; Reset all settings puts the
 game's own back. **Test 3D sound** plays a steady sound once around you,
 starting ahead and turning to your right, so you can compare them by ear.
 
+Every choice plays at the game's own loudness. A set made with makemhr, or
+OpenAL Soft's built-in, comes out about 14 dB louder than the game's own, so
+the game turns it down to match: changing the 3D sound changes where sounds
+seem to be, not how loud the zombies are against the rest of the game.
+
 - **The game's own**, the default: the original game's, built from the set
   inside the original app.
 - **OpenAL Soft's built-in**, on Windows and the Mac only: the one inside the
@@ -172,54 +177,60 @@ bring the file under them.
 
 ### Your own 3D sound
 
-1. **Get a set of recordings.** Research sets come as SOFA files (`.sofa`).
-   Many are gathered in the
-   [SOFA conventions database](https://sofacoustics.org/data/database/), a
-   folder per set. For example:
-   - `mit`: MIT's KEMAR dummy head, `mit_kemar_normal_pinna.sofa`, 1.1 MB.
-     Free to use as long as its authors, Bill Gardner and Keith Martin of the
-     MIT Media Lab, are credited.
-   - `listen (hrtf)`: IRCAM's LISTEN set, one file per listener, such as
-     `IRC_1002_R_44100.sofa`, about 5 MB each.
-   - `sadie`: SADIE II from the University of York, twenty heads. Its own page,
-     [SADIE II](https://www.york.ac.uk/sadie-project/database.html), gives it
-     under the Apache 2.0 licence, which asks that the set is credited.
+**Step 1: get a set of recordings.** Research sets come as SOFA files
+(`.sofa`). Many are gathered in the
+[SOFA conventions database](https://sofacoustics.org/data/database/), a folder
+per set. For example:
 
-   Read a set's terms before you give a file made from it to anyone else.
-2. **Get makemhr**, the tool that turns a set into an `.mhr` file. It comes
-   with OpenAL Soft's Windows download, `openal-soft-<version>-bin.zip`, from
-   [OpenAL Soft's website](https://openal-soft.org/) or its
-   [releases on GitHub](https://github.com/kcat/openal-soft/releases).
-   Unzipped, it is `makemhr\makemhr.exe`, with `zlib1.dll` beside it: keep the
-   two together. Nothing else needs installing. An `.mhr` is the same file on
-   every system, so one made on Windows works on the Mac and the phone too.
-3. **Make the `.mhr`.** In a Command Prompt, in the folder with the `.sofa`
-   file:
+- `mit`: MIT's KEMAR dummy head, `mit_kemar_normal_pinna.sofa`, 1.1 MB. Free
+  to use as long as its authors, Bill Gardner and Keith Martin of the MIT Media
+  Lab, are credited.
+- `listen (hrtf)`: IRCAM's LISTEN set, one file per listener, such as
+  `IRC_1002_R_44100.sofa`, about 5 MB each.
+- `sadie`: SADIE II from the University of York, twenty heads. Its own page,
+  [SADIE II](https://www.york.ac.uk/sadie-project/database.html), gives it
+  under the Apache 2.0 licence, which asks that the set is credited.
 
-       "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i mit_kemar_normal_pinna.sofa -o "MIT KEMAR.mhr"
+Read a set's terms before you give a file made from it to anyone else.
 
-   `-r 44100` is the game's sample rate. `-o` names the file, and that name is
-   what the 3D sound list says. It takes a few seconds and ends with
-   **Operation completed.** The KEMAR file comes to about 320 KB. Leave
-   makemhr's other options as they are: the game takes up to 128 points per
-   ear, which is the most OpenAL Soft takes too.
-4. **Add it to the game.**
-   - **Windows:** put the `.mhr` in the `hrtf` folder in the game's own
-     folder, next to `AudioDefence.exe`. The game makes the folder when it
-     first starts, and a file put there while the game runs is in the list the
-     next time you open it. An update of the game leaves the folder alone.
-   - **Mac:** the same, in the `hrtf` folder next to `AudioDefence.app`.
-   - **The phone:** Android lets the game read only the files it made itself,
-     so a file cannot just be put in a folder. Copy the `.mhr` to the phone
-     first, to the Download folder for example. Then choose **Settings → Sound
-     → Add 3D sound file**: Android's own file picker opens, which TalkBack
-     reads, not the game, so turn TalkBack on, choose the file, and turn
-     TalkBack off again once you are back in the game. The game copies the
-     file in and uses it at once. **Remove 3D sound file** takes the one in
-     use out again. A backup (Export backup) holds your settings and progress,
-     not these files: after a reinstall, add them again.
-5. **Choose it** in **Settings → Sound → 3D sound**, and try it with **Test 3D
-   sound**.
+**Step 2: get makemhr**, the tool that turns a set into an `.mhr` file. It
+comes with OpenAL Soft's Windows download, `openal-soft-<version>-bin.zip`,
+from [OpenAL Soft's website](https://openal-soft.org/) or its
+[releases on GitHub](https://github.com/kcat/openal-soft/releases). Unzipped,
+it is `makemhr\makemhr.exe`, with `zlib1.dll` beside it: keep the two
+together. Nothing else needs installing. An `.mhr` is the same file on every
+system, so one made on Windows works on the Mac and the phone too.
+
+**Step 3: make the `.mhr`.** In a Command Prompt, in the folder with the
+`.sofa` file:
+
+    "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i mit_kemar_normal_pinna.sofa -o "MIT KEMAR.mhr"
+
+`-r 44100` is the game's sample rate. `-o` names the file, and that name is
+what the 3D sound list says. It takes a few seconds and ends with **Operation
+completed.** The KEMAR file comes to about 320 KB. Leave makemhr's other
+options as they are: the game takes up to 128 points per ear, which is the most
+OpenAL Soft takes too.
+
+**Step 4: add it to the game.**
+
+- **Windows:** put the `.mhr` in the `hrtf` folder in the game's own folder,
+  next to `AudioDefence.exe`. The game makes the folder when it first starts,
+  and a file put there while the game runs is in the list the next time you
+  open it. An update of the game leaves the folder alone.
+- **Mac:** the same, in the `hrtf` folder next to `AudioDefence.app`.
+- **The phone:** Android lets the game read only the files it made itself, so
+  a file cannot just be put in a folder. Copy the `.mhr` to the phone first, to
+  the Download folder for example. Then choose **Settings → Sound → Add 3D
+  sound file**: Android's own file picker opens, which TalkBack reads, not the
+  game, so turn TalkBack on, choose the file, and turn TalkBack off again once
+  you are back in the game. The game copies the file in and uses it at once.
+  **Remove 3D sound file** takes the one in use out again. A backup (Export
+  backup) holds your settings and progress, not these files: after a
+  reinstall, add them again.
+
+**Step 5: choose it** in **Settings → Sound → 3D sound**, and try it with
+**Test 3D sound**.
 
 If a file cannot be used, because it is not an `.mhr` or it is damaged, the
 game says so and keeps the 3D sound it had.
@@ -1869,14 +1880,14 @@ the folders this game cares about are:
   is for programmers and for other programs' settings; the game needs none of
   it.
 
-**Updating OpenAL Soft on Windows:**
+**Updating OpenAL Soft on Windows,** in three steps:
 
-1. Download and unzip the binaries, as above.
-2. Copy `bin\Win64\soft_oal.dll` over `vendor\openal\soft_oal.dll`.
-3. Start the game, then look in its log, `audiodefence.log` in
-   `%APPDATA%\AudioDefence`. A line saying `game HRTF audiodefence_ircam1050
-   not in use` means the new version did not take the game's HRTF; no such line
-   means it did.
+- **Step 1:** download and unzip the binaries, as above.
+- **Step 2:** copy `bin\Win64\soft_oal.dll` over `vendor\openal\soft_oal.dll`.
+- **Step 3:** start the game, then look in its log, `audiodefence.log` in
+  `%APPDATA%\AudioDefence`. A line saying `game HRTF audiodefence_ircam1050
+  not in use` means the new version did not take the game's HRTF; no such line
+  means it did.
 
 **Making another HRTF.** `makemhr` turns a recording of how a head hears sound
 from every direction into an `.mhr` file, with no C++ or anything else to
@@ -1884,23 +1895,25 @@ install. Research sets of these usually come as SOFA files (`.sofa`), which
 `makemhr` reads directly; it also reads its own `.def` definition files, like
 the ones in `hrtf_defs`.
 
-1. Download the research set's recordings: each `.def` in `hrtf_defs` says
-   where.
-2. In a Command Prompt, in the folder with the recordings, run `makemhr.exe`
-   at the game's sample rate, 44100. For a SOFA file:
+**Step 1:** download the research set's recordings: each `.def` in
+`hrtf_defs` says where.
 
-       "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i set.sofa -o set.mhr
+**Step 2:** in a Command Prompt, in the folder with the recordings, run
+`makemhr.exe` at the game's sample rate, 44100. For a SOFA file:
 
-   Or with one of the definition files:
+    "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i set.sofa -o set.mhr
 
-       "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i MIT_KEMAR.def -o MIT_KEMAR.mhr
+Or with one of the definition files:
 
-3. Put the `.mhr` in the `hrtf` folder next to the game, not in
-   `assets\hrtf`, and choose it in Settings → Sound → 3D sound. See
-   [Your own 3D sound](#your-own-3d-sound), which goes through all of this
-   for players.
-4. Check the research set's licence before giving the file to anyone: some
-   may not be passed on with a game, which is why none is built into it.
+    "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i MIT_KEMAR.def -o MIT_KEMAR.mhr
+
+**Step 3:** put the `.mhr` in the `hrtf` folder next to the game, not in
+`assets\hrtf`, and choose it in Settings → Sound → 3D sound. See
+[Your own 3D sound](#your-own-3d-sound), which goes through all of this for
+players.
+
+**Step 4:** check the research set's licence before giving the file to anyone:
+some may not be passed on with a game, which is why none is built into it.
 
 ## Building an executable
 
