@@ -110,6 +110,16 @@ SELECT_HINT = 'Press Enter to select.'
 SPEECH_PAGES = (('first', 'First speech settings'), ('second', 'Second speech settings'))
 
 
+def _remove_quietly(path: str) -> None:
+    """PORT ADDITION: a backup's working copy taken away, if there is one (Export backup, Import backup)."""
+    import os
+    if path:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
 class ControlSchemePanel:
     """Accessible_ADControlSchemeViewController (nib view #21, table #13 at 440x244), as categories."""
 
@@ -229,10 +239,41 @@ class ControlSchemePanel:
                    hint='Press Enter to toggle: when on, the main menu looks for a new build and tells '
                         'you only if there is one.',
                    action=self.toggle_check_updates)
+            # PORT ADDITION (user request, 2026-10-05): the player's files as a whole (game/saves.py).  Clearing
+            # and importing are not offered in a pause: the game being played is made of what they replace.
+            in_game = isinstance(self.screen, PauseScreen)
+            if system.ANDROID:
+                t.cell('Export backup',
+                       hint='Press Enter to save your progress, settings and buttons in one file, AudioDefence '
+                            'backup.zip, in the AudioDefence folder in Documents. Each export replaces the last. '
+                            'Import backup brings them back, after the game is installed again or on another '
+                            'phone. Nothing is sent anywhere.',
+                       action=self.export_backup)
+                if not in_game:
+                    t.cell('Import backup',
+                           hint='Press Enter to bring back the backup in the AudioDefence folder in Documents, in '
+                                'place of your progress, settings and buttons. Afterwards the game closes, to start '
+                                'again with the backup. Once the game has been uninstalled, Android no longer lets '
+                                "it see that file, and it is chosen in Android's own file picker, which TalkBack "
+                                'reads, not the game.',
+                           action=self.import_backup)
+            else:
+                t.cell('Open game data folder',
+                       hint='Press Enter to open the folder the game keeps your files in: save.json is your '
+                            'progress, settings.json your settings and keys.json your keys and controller '
+                            'buttons. Close the game before you put files into it, or it writes its own over '
+                            'them as it closes.',
+                       action=self.open_data_folder)
             t.cell('Reset all settings',
                    hint='Press Enter to put every setting back to its default. Your key and controller '
                         'bindings stay as they are.',
                    action=self.reset_all_settings)
+            if not in_game:
+                t.cell('Clear all saves',
+                       hint='Press Enter to start the game again from nothing: your coins, diamonds, weapons, '
+                            'power-ups, missions, challenges, stars and high score are deleted. Your settings '
+                            'and buttons stay. You are asked first.',
+                       action=self.clear_all_saves)
         elif self.category == 'speech' and self.page is not None:   # PORT ADDITION: a speech's own page
             self.speech_page_rows(t, params, self.page == 'second')
         elif self.category == 'speech':                   # PORT ADDITION: who speaks, and how
@@ -651,6 +692,9 @@ class ControlSchemePanel:
                       % ('ON' if params.check_updates() else 'OFF'))
 
     RESET_DONE = 'All settings reset to default. Your key and controller bindings are unchanged.'
+    #: what Import backup says before the game closes, timed by it (said in _import_from, where the
+    #: translators' list finds it)
+    IMPORTED = 'Backup imported. The game closes now: open it again to play with the backup.'
 
     def reset_all_settings(self) -> None:
         """Every setting on these pages back to where a new profile starts, except the key bindings and the
@@ -700,6 +744,147 @@ class ControlSchemePanel:
             self.ask_for_calibration(localization.translate(self.RESET_DONE), row='Reset all settings')
         else:
             self.announce('All settings reset to default. Your key and controller bindings are unchanged.')
+
+    # --- the player's files (PORT ADDITION, user request, 2026-10-05: game/saves.py) ----------------
+    def open_data_folder(self) -> None:
+        from ..game import saves
+        if saves.open_folder():
+            self.announce('Game data folder opened.')
+        else:
+            self.announce('The game data folder could not be opened.')
+
+    def clear_all_saves(self) -> None:
+        """Asked first, No first: what goes cannot be brought back."""
+        from .host import AlertScreen
+        host = self.screen.host
+        host.push_overlay(AlertScreen(
+            host, 'Clear all saves?',
+            'Your coins, diamonds, weapons, power-ups, missions, challenges, stars and high score are deleted and '
+            'cannot be brought back. Your settings and buttons stay. Export backup keeps a copy first.'
+            if system.ANDROID else
+            'Your coins, diamonds, weapons, power-ups, missions, challenges, stars and high score are deleted and '
+            'cannot be brought back. Your settings and buttons stay.',
+            [('No', None), ('Yes, clear all saves', self._clear_all_saves_now)]))
+
+    def _clear_all_saves_now(self) -> None:
+        """The progress goes, and the main menu opens on the new one, saying so as it is named."""
+        from ..game import saves
+        saves.clear_progress()
+        host = self.screen.host
+        self.screen.back_button_pressed()                 # to the main menu, as its Back does
+        menu = host.top()
+        cleared = localization.translate('All saves cleared')
+        pending = getattr(menu, '_pending_focus', None)
+        if pending is not None:
+            menu.post_screen_changed(pending[0], cleared)
+        else:
+            self.screen.speak('All saves cleared')
+
+    def export_backup(self) -> None:
+        """Android: the three files in one zip, over the last one, in the AudioDefence folder in Documents -
+        chosen in Android's file picker on Android 8 and 9, which have no such folder for an app."""
+        import os
+        from .. import paths
+        from ..game import saves
+        from ..platform.jbridge import bridge
+        made = os.path.join(paths.user_dir(), 'export.tmp.zip')
+        try:
+            saves.write_backup(made)
+        except OSError:
+            self.announce('The backup could not be made.')
+            return
+        answer = str(bridge().exportBackup(made) or '')
+        if answer == 'picker':
+            if self._pick_document('create', made, saves.BACKUP_NAME):
+                self.announce("Android's file picker is open, to choose where the backup goes. Turn TalkBack on "
+                              'to use it.')
+            return
+        _remove_quietly(made)
+        state, _newline, rest = answer.partition('\n')
+        if state == 'ok':
+            self.announce('Backup saved in the AudioDefence folder in Documents, as %s.'
+                          % (rest or saves.BACKUP_NAME))
+        else:
+            self.announce('The backup could not be saved: %s.' % rest)
+
+    def import_backup(self) -> None:
+        """Android: asked first, then the backup read from its folder - or chosen in Android's file picker,
+        where the game cannot see one of its own there."""
+        from .host import AlertScreen
+        host = self.screen.host
+        host.push_overlay(AlertScreen(
+            host, 'Import backup?',
+            'The backup takes the place of your progress, settings and buttons, which cannot be brought back. '
+            'Afterwards the game closes, to start again with the backup.',
+            [('No', None), ('Yes, import the backup', self._import_backup_now)]))
+
+    def _import_backup_now(self) -> None:
+        import os
+        from .. import paths
+        from ..platform.jbridge import bridge
+        path = os.path.join(paths.user_dir(), 'import.tmp.zip')
+        state, _newline, why = str(bridge().findBackup(path) or '').partition('\n')
+        if state == 'ok':
+            self._import_from(path)
+        elif state == 'failed':
+            _remove_quietly(path)
+            self.announce('The backup could not be read: %s.' % why)
+        elif not self._pick_document('open', path):
+            pass
+        elif state == 'none':                             # none it can see: installed again since, or none made
+            self.announce('The game cannot see a backup of its own in the AudioDefence folder in Documents: '
+                          "Android shows a game only the files it made, and none once it has been uninstalled. "
+                          "Android's file picker is open instead. Turn TalkBack on and choose AudioDefence "
+                          'backup.zip, in the AudioDefence folder in Documents.')
+        else:                                             # Android 8 and 9: the picker is the only way there
+            self.announce("Android's file picker is open. Turn TalkBack on and choose AudioDefence backup.zip.")
+
+    def _pick_document(self, kind: str, path: str, name: str = '') -> bool:
+        """Android's file picker, for a backup to read into `path` ('open') or to write `path` to ('create',
+        as `name`), and what came of it said when it closes; False if it could not be opened, which has been
+        said.  The game goes on running underneath: the picker's answer is looked for four times a second
+        (Bridge.documentState)."""
+        from ..platform.jbridge import bridge
+        from ..platform.runloop import RunLoop
+        phone = bridge()
+        started = phone.pickFileToOpen(path) if kind == 'open' else phone.pickFileToCreate(name, path)
+        if not started:
+            _remove_quietly(path if kind == 'create' else '')
+            self.announce("Android's file picker could not be opened.")
+            return False
+
+        def look() -> None:
+            state, _newline, why = str(phone.documentState() or '').partition('\n')
+            if state == 'waiting':
+                RunLoop.main().call_later(0.25, look)
+            elif kind == 'create':
+                _remove_quietly(path)
+                self.announce('Backup saved.' if state == 'done' else
+                              'No place chosen. The backup was not saved.' if state == 'cancelled' else
+                              'The backup could not be saved: %s.' % why)
+            elif state == 'done':
+                self._import_from(path)
+            else:
+                _remove_quietly(path)
+                self.announce('No backup chosen. Nothing was changed.' if state == 'cancelled' else
+                              'The backup could not be read: %s.' % why)
+        RunLoop.main().call_later(0.25, look)
+        return True
+
+    def _import_from(self, path: str) -> None:
+        """The chosen file put in place, if it is a backup, and the game closed once that has been said."""
+        from ..game import saves
+        from ..platform.runloop import RunLoop
+        from .reading import reading_seconds
+        found = saves.read_backup(path)
+        _remove_quietly(path)
+        if found is None:
+            self.announce('That file is not an Audio Defence backup. Nothing was changed.')
+            return
+        saves.restore(found)
+        self.announce('Backup imported. The game closes now: open it again to play with the backup.')
+        RunLoop.main().call_later(reading_seconds(localization.translate(self.IMPORTED)) + 0.5,
+                                  self.screen.host.quit_game)
 
     # --- joystick (PORT ADDITION) ----------------------------------------------------------------
     @staticmethod

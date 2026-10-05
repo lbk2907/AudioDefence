@@ -193,6 +193,15 @@ class FakeBridge:
         self.settings_opened = 0
         self.handed = []
         self.install_state = ''
+        # backups: the AudioDefence folder in Documents (a folder on the PC, set by a test), whether the game
+        # can still see its own backup there (False: installed again since), the Android version, and what
+        # the file picker answers - a file's path, or None for Cancel
+        self.documents = None
+        self.own_backup = True
+        self.sdk = 36
+        self.picker_answer = None
+        self.pickers = []
+        self.document_state = ''
 
     # --- decoding -------------------------------------------------------------------------------------
     def decode(self, path):
@@ -379,3 +388,49 @@ class FakeBridge:
 
     def installState(self):
         return self.install_state
+
+    # --- backups --------------------------------------------------------------------------------------
+    def _backup(self):
+        import os
+        return os.path.join(self.documents, 'AudioDefence backup.zip')
+
+    def exportBackup(self, source):
+        import shutil
+        if self.sdk < 29:
+            return 'picker'
+        shutil.copyfile(source, self._backup())
+        self.own_backup = True
+        return 'ok\nAudioDefence backup.zip'
+
+    def findBackup(self, to):
+        import os
+        import shutil
+        if self.sdk < 29:
+            return 'picker'
+        if not self.own_backup or not os.path.exists(self._backup()):
+            return 'none'
+        shutil.copyfile(self._backup(), to)
+        return 'ok'
+
+    def pickFileToOpen(self, to):
+        import shutil
+        self.pickers.append(('open', to))
+        if self.picker_answer is None:
+            self.document_state = 'cancelled'
+        else:
+            shutil.copyfile(self.picker_answer, to)
+            self.document_state = 'done'
+        return True
+
+    def pickFileToCreate(self, name, source):
+        import shutil
+        self.pickers.append(('create', name))
+        if self.picker_answer is None:
+            self.document_state = 'cancelled'
+        else:
+            shutil.copyfile(source, self.picker_answer)
+            self.document_state = 'done'
+        return True
+
+    def documentState(self):
+        return self.document_state

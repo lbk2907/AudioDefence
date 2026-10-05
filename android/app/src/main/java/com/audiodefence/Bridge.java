@@ -1,16 +1,21 @@
 package com.audiodefence;
 
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
+import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInstaller;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.database.Cursor;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -21,6 +26,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.DocumentsContract;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
 import android.util.Log;
@@ -940,6 +947,220 @@ public final class Bridge implements SensorEventListener {
             Thread.currentThread().interrupt();
         }
         return opened[0];
+    }
+
+    // ------------------------------------------------------------------------------------ backups
+    // PORT ADDITION (Settings > Miscellaneous > Export backup and Import backup, user request, 2026-10-05): the
+    // player's three files in one zip, "AudioDefence backup.zip" in Documents/AudioDefence, which Export writes
+    // over and Import reads (game/saves.py).  Nothing goes online.  Android 10 and later let an app write there
+    // and read back what it wrote with no permission at all - but only what this installation wrote: once the
+    // game is uninstalled the file is no longer its own, and the game installed again cannot see it.  Then, and
+    // on Android 8 and 9, which have no such folder for an app, the file is chosen in Android's own file picker.
+    private static final String BACKUP_FOLDER = "Documents/AudioDefence/";
+    private static final String BACKUP_NAME = "AudioDefence backup.zip";
+    private static final int PICK_OPEN = 41;
+    private static final int PICK_CREATE = 42;
+    /** The largest file Import copies: a backup is a few kilobytes. */
+    private static final long BACKUP_MOST = 4L * 1024 * 1024;
+    private volatile String documentState = "";
+    private volatile String documentPath = "";
+
+    /** Python: the zip at `from` written over this installation's backup, or as a new one.  "ok\n" and the name
+     *  it has there; "picker" on Android 8 and 9; "failed\n" and why. */
+    public String exportBackup(String from) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return "picker";
+        }
+        return exportToFolder(from);
+    }
+
+    /** Python: this installation's backup copied to `to`.  "ok"; "none" when it can see none; "picker" on
+     *  Android 8 and 9; "failed\n" and why. */
+    public String findBackup(String to) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return "picker";
+        }
+        return findInFolder(to);
+    }
+
+    @TargetApi(Build.VERSION_CODES.Q)
+    private String exportToFolder(String from) {
+        ContentResolver resolver = context.getContentResolver();
+        Uri collection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY);
+        Uri uri = null;
+        boolean made = false;
+        try {
+            uri = ownBackup(resolver, collection);
+            if (uri == null) {
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.MediaColumns.DISPLAY_NAME, BACKUP_NAME);
+                values.put(MediaStore.MediaColumns.MIME_TYPE, "application/zip");
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, BACKUP_FOLDER);
+                values.put(MediaStore.MediaColumns.IS_PENDING, 1);
+                uri = resolver.insert(collection, values);
+                if (uri == null) {
+                    return "failed\nthe Documents folder could not be written";
+                }
+                made = true;
+            }
+            try (InputStream in = new FileInputStream(from); OutputStream out = resolver.openOutputStream(uri, "wt")) {
+                if (out == null) {
+                    throw new IOException("the backup could not be opened");
+                }
+                copy(in, out, Long.MAX_VALUE);
+            }
+            if (made) {
+                ContentValues done = new ContentValues();
+                done.put(MediaStore.MediaColumns.IS_PENDING, 0);
+                resolver.update(uri, done, null, null);
+            }
+            return "ok\n" + displayName(resolver, uri);
+        } catch (Exception e) {
+            Log.w(TAG, "could not export the backup", e);
+            if (made) {
+                resolver.delete(uri, null, null);
+            }
+            return "failed\n" + oneLine(String.valueOf(e.getMessage()));
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.Q)
+    private String findInFolder(String to) {
+        ContentResolver resolver = context.getContentResolver();
+        try {
+            Uri uri = ownBackup(resolver, MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY));
+            if (uri == null) {
+                return "none";
+            }
+            copyIn(resolver, uri, to);
+            return "ok";
+        } catch (Exception e) {
+            Log.w(TAG, "could not read the backup", e);
+            return "failed\n" + oneLine(String.valueOf(e.getMessage()));
+        }
+    }
+
+    /** The newest backup in the folder that this installation made, or null: the only ones it is shown. */
+    @TargetApi(Build.VERSION_CODES.Q)
+    private static Uri ownBackup(ContentResolver resolver, Uri collection) {
+        String where = MediaStore.MediaColumns.RELATIVE_PATH + "=? AND " + MediaStore.MediaColumns.DISPLAY_NAME
+                + " LIKE ?";
+        String[] args = {BACKUP_FOLDER, "AudioDefence backup%.zip"};   // "(1)" when one not its own was there
+        try (Cursor c = resolver.query(collection, new String[]{MediaStore.MediaColumns._ID}, where, args,
+                MediaStore.MediaColumns.DATE_MODIFIED + " DESC")) {
+            if (c != null && c.moveToFirst()) {
+                return ContentUris.withAppendedId(collection, c.getLong(0));
+            }
+        }
+        return null;
+    }
+
+    private static String displayName(ContentResolver resolver, Uri uri) {
+        try (Cursor c = resolver.query(uri, new String[]{MediaStore.MediaColumns.DISPLAY_NAME}, null, null, null)) {
+            if (c != null && c.moveToFirst()) {
+                return oneLine(c.getString(0));
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "could not read the backup's name", e);
+        }
+        return BACKUP_NAME;
+    }
+
+    private static void copyIn(ContentResolver resolver, Uri uri, String to) throws IOException {
+        try (InputStream in = resolver.openInputStream(uri); OutputStream out = new FileOutputStream(to)) {
+            if (in == null) {
+                throw new IOException("the file could not be read");
+            }
+            copy(in, out, BACKUP_MOST);
+        }
+    }
+
+    private static void copy(InputStream in, OutputStream out, long most) throws IOException {
+        byte[] buf = new byte[16384];
+        long total = 0;
+        int n;
+        while ((n = in.read(buf)) > 0) {
+            total += n;
+            if (total > most) {
+                throw new IOException("the file is too large to be a backup");
+            }
+            out.write(buf, 0, n);
+        }
+    }
+
+    /** Python: Android's file picker, for a backup to copy to `to`; documentState() says how it went. */
+    public boolean pickFileToOpen(String to) {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");                          // a zip is not always called one: Python checks it
+        return startPicker(intent, PICK_OPEN, to);
+    }
+
+    /** Python (Android 8 and 9): the picker, for where the backup at `from` is saved, as `name`. */
+    public boolean pickFileToCreate(String name, String from) {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("application/zip");
+        intent.putExtra(Intent.EXTRA_TITLE, name);
+        return startPicker(intent, PICK_CREATE, from);
+    }
+
+    private boolean startPicker(Intent intent, int code, String path) {
+        Activity a = activity;
+        if (a == null) {
+            return false;
+        }
+        // opened in the backup's folder, where the picker takes the hint
+        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, DocumentsContract.buildDocumentUri(
+                "com.android.externalstorage.documents", "primary:Documents/AudioDefence"));
+        documentPath = path;
+        documentState = "waiting";
+        a.runOnUiThread(() -> {
+            try {
+                a.startActivityForResult(intent, code);
+            } catch (ActivityNotFoundException e) {
+                documentState = "failed\nthis phone has no file picker";
+            }
+        });
+        return true;
+    }
+
+    /** MainActivity: the picker closed, with a file chosen or not. */
+    public void documentPicked(int code, int result, Intent data) {
+        if (code != PICK_OPEN && code != PICK_CREATE) {
+            return;
+        }
+        Uri uri = data == null ? null : data.getData();
+        if (result != Activity.RESULT_OK || uri == null) {
+            documentState = "cancelled";
+            return;
+        }
+        String path = documentPath;
+        new Thread(() -> {
+            ContentResolver resolver = context.getContentResolver();
+            try {
+                if (code == PICK_OPEN) {
+                    copyIn(resolver, uri, path);
+                } else {
+                    try (InputStream in = new FileInputStream(path);
+                         OutputStream out = resolver.openOutputStream(uri, "wt")) {
+                        if (out == null) {
+                            throw new IOException("the file could not be written");
+                        }
+                        copy(in, out, Long.MAX_VALUE);
+                    }
+                }
+                documentState = "done";
+            } catch (Exception e) {
+                Log.w(TAG, "could not use the chosen file", e);
+                documentState = "failed\n" + oneLine(String.valueOf(e.getMessage()));
+            }
+        }, "document").start();
+    }
+
+    /** Python: "", "waiting", "done", "cancelled", or "failed\n" and why. */
+    public String documentState() {
+        return documentState;
     }
 
     // ------------------------------------------------------------------------------------ sensors

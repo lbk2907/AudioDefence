@@ -455,6 +455,17 @@ Settings, saves and the log live in `%APPDATA%\AudioDefence` (on the Mac,
 Deleting the folder starts a fresh profile — the first run then begins on Gyro
 with the default key bindings.
 
+Two rows of **Settings → Miscellaneous** work on these files:
+
+- **Open game data folder** opens the folder in File Explorer, or in the Finder
+  on the Mac. Close the game before you put files into it, or it writes its own
+  over them as it closes.
+- **Clear all saves** starts the game again from nothing, after asking, with No
+  first: your coins, diamonds, weapons, power-ups, missions, challenges and
+  their stars, statistics and Endless high score go, and your settings and
+  buttons stay. The main menu then opens on the fresh start. It is not offered
+  in the pause screen.
+
 ## On the Mac
 
 The Mac build is the same port — the same engine, the same game data, the same
@@ -590,6 +601,33 @@ engine row work with whichever engine speaks. A rate of 0 is the speed set in th
 and 10 is six times that, as far as the engine allows. The second speech has
 an engine, rate, pitch and volume of its own, in Second speech settings; the
 phone starts it only once it has something to say.
+
+### Your progress on the phone
+
+The game keeps its files inside the app, where no other app or file manager can
+reach them, so **Settings → Miscellaneous** has these rows in place of Open game
+data folder:
+
+- **Export backup** puts your progress, settings and buttons in one file,
+  `AudioDefence backup.zip`, in the **AudioDefence** folder in **Documents**.
+  Each export replaces the last. Nothing is sent anywhere.
+- **Import backup** asks first, puts the backup in place of your progress,
+  settings and buttons, and closes the game; start it again to play with the
+  backup. It reads the file straight from that folder, as long as the game has
+  not been uninstalled since the export. Android shows an app only the files
+  it made itself, and none once it has been uninstalled, so after a reinstall,
+  or on another phone, the game opens Android's own file picker instead and says
+  so. That screen is Android's, not the game's: turn TalkBack on, choose
+  `AudioDefence backup.zip` in the AudioDefence folder in Documents, and turn
+  TalkBack off again once you are back in the game. On Android 8 and 9 both
+  rows use the picker. Import is not offered in the pause screen.
+- **Clear all saves**, as on a computer.
+
+The backup is the three files a computer keeps, zipped: unzipped into the game
+data folder on a computer, it carries your progress over, and a computer's
+three files zipped together can be imported on the phone. The game makes no
+backup in the cloud: uninstalling it deletes its files, so export a backup
+first.
 
 ### Controls on the phone
 
@@ -1123,7 +1161,8 @@ says so and opens that setting, **Allow from this source**, and carries on when
 you come back with it on. Neither of those screens is the game's, so it cannot
 read them out — turn TalkBack on for them if you need it. Android closes the
 game while it installs; start it again afterwards. Your progress is kept, since
-an update never touches the app's saves — only uninstalling the app does. If you
+an update never touches the app's saves — only uninstalling the app does (see
+[Your progress on the phone](#your-progress-on-the-phone)). If you
 say no on Android's screen, or answer **Not yet**, the download is kept and the
 next start offers to install it.
 
@@ -1192,7 +1231,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **179 divergences** and **15 original quirks kept on purpose** in the notes, of which 79 are
+There are **180 divergences** and **15 original quirks kept on purpose** in the notes, of which 80 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -1383,6 +1422,9 @@ replacing them.
   and on the pause screen, the keys do nothing and the game's music and ambience are untouched.
 - **Settings → Miscellaneous → Reset all settings** puts every setting back to its default, except your key
   bindings.
+- **Settings → Miscellaneous → Clear all saves** starts the game again from nothing and keeps your settings
+  and buttons; **Open game data folder** opens the folder the game keeps its files in, and on the phone
+  **Export backup** and **Import backup** keep a copy of them in Documents and bring it back.
 - **Play → Extra**, forty-eight arenas written for this port rather than ported, in six chapters of eight,
   gathered in a list of campaigns of which they are the first.
   An arena opens when the one before it is beaten, and a chapter on the stars won in the chapters before

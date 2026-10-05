@@ -1159,6 +1159,25 @@ they were.
   bindings are left alone (Settings -> Keyboard has its own Restore default keys), and so are the
   controllers' buttons (Settings -> Joystick -> Restore default buttons).  The original has no reset; this
   one replaced the port's own Restore aiming defaults and Restore menu defaults rows.
+* PORT ADDITION (user request, 2026-10-05): the player's files as a whole, in Settings -> Miscellaneous
+  (`game/saves.py`).  The original keeps its progress in NSUserDefaults and has no way to clear it but
+  deleting the app.  **Clear all saves**, asked first with No first and not offered in a pause, empties
+  save.json - every key the port does not route to settings.json or keys.json, which is the original's whole
+  plist less the settings - and lets go of the singletons that hold it in memory (`ADInventory`,
+  `ADChallengeData`, `ADMissionManager`, `ADPersistentStats`, `ADWeaponManager`), so each is made again from
+  the empty file when next asked for, as on a first start: 5000 coins and 500 diamonds
+  (`-[ADInventory createOrRestoreWeaponDictionary]` 0x10000c1c4), the first missions, no stars.  The main menu
+  then opens, its name followed by "All saves cleared".  **Open game data folder** (Windows, the Mac) opens
+  `paths.user_dir()` in File Explorer or the Finder.  On Android that folder is inside the app, so
+  **Export backup** zips the three files into "AudioDefence backup.zip" in Documents/AudioDefence, over the
+  last one (MediaStore, no permission: `Bridge.exportBackup`), and **Import backup** reads it back from there
+  (`Bridge.findBackup`), puts each file in place, writes nothing more (`UserDefaults.frozen`) and closes the
+  game, to start again with them.  Android shows an app only the files it made, and none once it has been
+  uninstalled, so where the game sees no backup of its own it opens Android's file picker
+  (`ACTION_OPEN_DOCUMENT`, `Bridge.pickFileToOpen`, polled through `documentState`) and says why, and that
+  TalkBack has to read it; on Android 8 and 9, which have no such folder for an app, both rows use the
+  picker.  A backup is taken by its file names wherever they are in the zip, each a JSON object, save.json
+  required.  Nothing goes online: `allowBackup` stays off at the user's asking.
 * PORT ADDITION: Settings -> Speech -> Speech output (`speechOutput` in settings.json,
   `Speech.choice`, `platform/speech.py OUTPUTS`): Automatic by default - NVDA through its controller
   client, else another screen reader through Prism, else SAPI 5 (`Speech.speak_automatic`) - or one of

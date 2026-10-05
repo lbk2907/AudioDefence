@@ -127,6 +127,10 @@ class SplitDefaults:
 
 class UserDefaults:
     _standard = None
+    #: PORT ADDITION (Settings -> Miscellaneous -> Import backup, user request, 2026-10-05): once a backup is in
+    #: place nothing more is written, so the game closing to start again with it does not write over it what it
+    #: still had in memory - the time played, the last screen's settings (game/saves.py)
+    frozen = False
 
     @classmethod
     def standard(cls):
@@ -168,6 +172,12 @@ class UserDefaults:
     def remove(self, key: str) -> None:
         self.set_object(None, key)
 
+    def replace(self, data: dict) -> None:
+        """PORT ADDITION: the whole file at once - emptied by Clear all saves, a backup's by Import backup
+        (game/saves.py)."""
+        self.data = dict(data)
+        self._dirty = True
+
     # --- getters ---------------------------------------------------------------------------------
     def object(self, key: str):
         return self.data.get(key)
@@ -192,7 +202,7 @@ class UserDefaults:
         return None
 
     def synchronize(self) -> None:
-        if not self._dirty:
+        if not self._dirty or UserDefaults.frozen:
             return
         folder = os.path.dirname(self.path)
         name = os.path.splitext(os.path.basename(self.path))[0]

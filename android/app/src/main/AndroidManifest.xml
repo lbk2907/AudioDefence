@@ -14,6 +14,8 @@
         </intent>
     </queries>
 
+    <!-- allowBackup off: nothing of the player's goes to Google's servers (user request, 2026-10-05).
+         Settings > Miscellaneous > Export backup keeps a copy on the phone instead (Bridge.exportBackup). -->
     <application
         android:name="com.chaquo.python.android.PyApplication"
         android:allowBackup="false"

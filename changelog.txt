@@ -38,6 +38,8 @@ The game no longer keeps its alsoft.ini sound file with your settings. An old on
 A revive stops the ringing from an explosion, so you come back with clear ears.
 Choosing the Control Panel voice in the Speech tab after another voice now really switches back to it.
 A trigger that springs back a little as you let go of it no longer fires an extra shot. The fire key is given the same moment to settle.
+The Miscellaneous tab in Settings can clear all your saves and start the game again from nothing. Your settings and buttons stay.
+The Miscellaneous tab in Settings can open the folder the game keeps your progress and settings in.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.

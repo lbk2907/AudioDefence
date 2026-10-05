@@ -1,6 +1,7 @@
 package com.audiodefence;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -102,6 +103,16 @@ public final class MainActivity extends Activity {
         super.onResume();
         if (bridge != null && started) {
             bridge.appResumed();
+        }
+    }
+
+    /** Android's file picker closed: the backup chosen for Import backup, or where Export backup goes on
+     *  Android 8 and 9 (Bridge.pickFileToOpen, pickFileToCreate). */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (bridge != null) {
+            bridge.documentPicked(requestCode, resultCode, data);
         }
     }
 
