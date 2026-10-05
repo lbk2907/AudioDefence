@@ -46,7 +46,7 @@ class Device:
 
     def use_3d_sound(self, choice: str) -> bool:
         """PORT ADDITION: the mixer hears with the game's own HRTF, which the app carries, or a file of the
-        player's from the game data folder's hrtf folder, where Add 3D sound file put it (Bridge.setHrtf).
+        player's from the hrtf folder in the game's folder, where Add 3D sound file put it (Bridge.setHrtf).
         False, and the one in use kept, where the file cannot be read as an HRTF."""
         if choice != sound3d.usable(choice):
             return False

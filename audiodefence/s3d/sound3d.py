@@ -8,12 +8,15 @@ The original has one, the IRCAM set built into its binary, which the port plays 
 * **The game's own**, the default: the original's.
 * **OpenAL Soft's built-in** (Windows, the Mac): the one compiled into OpenAL Soft.  The phone has no OpenAL
   Soft - its sound is the app's own mixer (s3d/android.py) - and so not this either.
-* **The player's own**: any `.mhr` file in the `hrtf` folder of the game data folder (`folder()`), made with
-  OpenAL Soft's makemhr from a research set of recordings (the README, "Your own 3D sound").  None is built
-  into the game: each set has terms of its own, and the player brings the file under them (user request).
-  On a computer the file is put in the folder; on the phone, where the folder is inside the app and Android
-  shows an app only the files it made, it is added through Android's file picker (Settings -> Sound -> Add
-  3D sound file), and taken out with Remove 3D sound file.
+* **The player's own**: any `.mhr` file in the `hrtf` folder in the game's own folder (`folder()`), made
+  with OpenAL Soft's makemhr from a research set of recordings (the README, "Your own 3D sound").  None is
+  built into the game: each set has terms of its own, and the player brings the file under them (user
+  request).  The folder is beside AudioDefence.exe - beside the app on the Mac - as the `localization`
+  folder is (user request): the updater deletes files only from the folders a build owns (updater.OWNED_DIRS),
+  and the phone's unpacking only from its `game` folder, so a player's files there are left alone.  On a
+  computer the file is put in the folder; on the phone, where the folder is inside the app and Android shows
+  an app only the files it made, it is added through Android's file picker (Settings -> Sound -> Add 3D
+  sound file), and taken out with Remove 3D sound file.
 
 The choice is `sound3d` in settings.json: 'game', 'builtin' or 'file:' and the file's name without `.mhr`.
 A file that has gone is the game's own again.  The device switches as the choice is made, with nothing
@@ -38,9 +41,13 @@ LABELS = {GAME: "The game's own", BUILTIN: "OpenAL Soft's built-in"}
 
 
 def folder() -> str:
-    """The player's own 3D sounds: `hrtf` in the game data folder, made when first asked for."""
-    path = os.path.join(paths.user_dir(), 'hrtf')
-    os.makedirs(path, exist_ok=True)
+    """The player's own 3D sounds: `hrtf` in the game's folder, made when first asked for - where it can be:
+    a game in a folder it may not write to has no such folder, and none of the player's own to offer."""
+    path = os.path.join(paths.EXE_DIR, 'hrtf')
+    try:
+        os.makedirs(path, exist_ok=True)
+    except OSError:
+        pass
     return path
 
 

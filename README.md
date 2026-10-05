@@ -204,13 +204,11 @@ bring the file under them.
    makemhr's other options as they are: the game takes up to 128 points per
    ear, which is the most OpenAL Soft takes too.
 4. **Add it to the game.**
-   - **Windows:** put the `.mhr` in the `hrtf` folder of the game data folder,
-     `%APPDATA%\AudioDefence\hrtf`. **Settings → Miscellaneous → Open game
-     data folder** opens the folder it is in. The game makes the `hrtf` folder
-     when it first starts, and a file put there while the game runs is in the
-     list the next time you open it.
-   - **Mac:** the same, in
-     `~/Library/Application Support/AudioDefence/hrtf`.
+   - **Windows:** put the `.mhr` in the `hrtf` folder in the game's own
+     folder, next to `AudioDefence.exe`. The game makes the folder when it
+     first starts, and a file put there while the game runs is in the list the
+     next time you open it. An update of the game leaves the folder alone.
+   - **Mac:** the same, in the `hrtf` folder next to `AudioDefence.app`.
    - **The phone:** Android lets the game read only the files it made itself,
      so a file cannot just be put in a folder. Copy the `.mhr` to the phone
      first, to the Download folder for example. Then choose **Settings → Sound
@@ -1843,9 +1841,9 @@ Soft's settings file, `alsoft.ini`, to the system's temporary folder
 (`%TEMP%\AudioDefence\alsoft.ini` on Windows), and points OpenAL Soft at it
 with the `ALSOFT_CONF` environment variable, so OpenAL Soft reads the game's
 settings and nobody else's. The file turns HRTF on, says where the game's HRTF
-files are (`hrtf-paths`: the `assets\hrtf` folder, then the `hrtf` folder of
-the game data folder, then OpenAL Soft's own places, which is what brings in
-its built-in HRTF) and which one to start with (`default-hrtf`,
+files are (`hrtf-paths`: the `assets\hrtf` folder, then the player's own
+`hrtf` folder next to the game, then OpenAL Soft's own places, which is what
+brings in its built-in HRTF) and which one to start with (`default-hrtf`,
 `audiodefence_ircam1050`). The game then switches to the one chosen in
 Settings → Sound → 3D sound. Editing the file does nothing: it is written
 again at the next start. Your own OpenAL settings for other programs,
@@ -1897,7 +1895,7 @@ the ones in `hrtf_defs`.
 
        "C:\path\to\openal-soft-<version>-bin\makemhr\makemhr.exe" -r 44100 -i MIT_KEMAR.def -o MIT_KEMAR.mhr
 
-3. Put the `.mhr` in the `hrtf` folder of the game data folder, not in
+3. Put the `.mhr` in the `hrtf` folder next to the game, not in
    `assets\hrtf`, and choose it in Settings → Sound → 3D sound. See
    [Your own 3D sound](#your-own-3d-sound), which goes through all of this
    for players.

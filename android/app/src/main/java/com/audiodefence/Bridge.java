@@ -153,7 +153,7 @@ public final class Bridge implements SensorEventListener {
     // ------------------------------------------------------------------------------------ 3D sound
     // PORT ADDITION (Settings > Sound > 3D sound, user request, 2026-10-05): the mixer hears with the game's own
     // HRTF or with a file of the player's, made with OpenAL Soft's makemhr and added through Android's file picker
-    // into the game data folder's hrtf folder (s3d/sound3d.py).
+    // into the hrtf folder in the game's folder (s3d/sound3d.py).
 
     /** Python: hear with the HRTF in the file at `path`, or with the game's own for "".  "" when it is in use,
      *  else why not, and the one in use is kept. */

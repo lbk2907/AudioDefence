@@ -195,7 +195,7 @@ class ControlSchemePanel:
                          "Which head the game's 3D sound is heard with. Every head hears a little differently: "
                          "choose the one that makes ahead, behind and the sides clearest to you. The game's own is "
                          "the original's, and OpenAL Soft's built-in comes with the sound library. Your own .mhr "
-                         'files are listed too, from the hrtf folder in the game data folder. The README says how '
+                         'files are listed too, from the hrtf folder next to the game. The README says how '
                          'to make one. Press Enter for the list.'),
                    action=self.choose_3d_sound, shift_action=self.choose_3d_sound)
             if not in_game:
@@ -781,7 +781,7 @@ class ControlSchemePanel:
             pl.deactivate()
 
     def add_3d_sound_file(self) -> None:
-        """Android: an .mhr file chosen in Android's file picker, copied into the game data folder's hrtf folder
+        """Android: an .mhr file chosen in Android's file picker, copied into the hrtf folder in the game's folder
         under its own name once the mixer has read it, and used."""
         import os
         from ..s3d import sound3d

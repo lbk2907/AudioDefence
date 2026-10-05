@@ -36,6 +36,10 @@ vendor/build-openal/
 # A language being written: tools/make_language.py writes it, its author renames it when it is ready
 localization/template.json
 
+# The player's own 3D sounds (Settings > Sound > 3D sound): run from source, the hrtf folder beside the game is
+# the repository's top-level one
+/hrtf/
+
 # Android (android/): Gradle's own files (its build/ folders are build/ above), any APK,
 # and what android/app/build.gradle copies in before each build from the repository's own audiodefence,
 # game, assets/hrtf, localization and VERSION - never committed, one copy each

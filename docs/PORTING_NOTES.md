@@ -1181,8 +1181,10 @@ they were.
 * PORT ADDITION (user request, 2026-10-05): Settings -> Sound -> 3D sound, which HRTF the game hears with
   (`s3d/sound3d.py`, `sound3d` in settings.json).  The original has one, the 24 horizontal IRCAM directions in
   its binary, which the port plays as `audiodefence_ircam1050` (tools/build_hrtf.py); it stays the default.
-  Besides it: OpenAL Soft's built-in (Windows, the Mac) and any `.mhr` of the player's in the game data
-  folder's `hrtf` folder, made with OpenAL Soft's makemhr from a research set.  None is built in: each set has
+  Besides it: OpenAL Soft's built-in (Windows, the Mac) and any `.mhr` of the player's in the `hrtf` folder
+  beside the game - beside AudioDefence.exe, or the app on the Mac, as `localization` is (user request): the
+  updater and the phone's unpacking delete only from the folders a build owns - made with OpenAL Soft's
+  makemhr from a research set.  None is built in: each set has
   terms of its own, and the player brings the file under them (user request); the README's "Your own 3D sound"
   goes through it, from where the sets are to the makemhr command, checked on MIT's KEMAR.  Plain stereo was
   offered and not wanted.  On a computer alsoft.ini's `hrtf-paths` lists the game's folder, the player's, and
