@@ -1214,7 +1214,10 @@ they were.
   the chosen in amplitude (`S3DSound._apply_gain`, `S3DEngine.hrtf_level`, the ones playing at once): a file's
   loudness is the power of its horizontal ring, which comes within 0.1 dB of what OpenAL Soft makes of it and
   is what the phone's mixer hears; the built-in, which has no file, is the measured figure
-  (`BUILTIN_LOUDER_DB`).
+  (`BUILTIN_LOUDER_DB`).  The level changes on the safe side of the switch (user report, same day): going to
+  a louder head it comes down before the device is reset, going to a quieter one it goes up after, because the
+  output mixes on throughout and the sounds were brought down only once the louder head was already playing -
+  a moment of the ambience 13 dB too loud on switching to the built-in.
   On Windows the game makes a `.sofa` into an `.mhr` itself (user request, 2026-10-05; `s3d/makehrtf.py`): a
   `.sofa` in the player's `hrtf` folder with no `.mhr` as new as itself is made, when Enter is pressed on 3D
   sound, by OpenAL Soft's makemhr, which the Windows build now carries (vendor/makemhr, GPL 2 or later, with

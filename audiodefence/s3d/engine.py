@@ -238,18 +238,34 @@ class S3DEngine:
         spatialised - every zombie - which kept the HRTF it was opened with until the user heard their loops
         stay with the game's own while their hits changed.  Every spatialised sound then takes the new HRTF's
         level, the ones playing at once (sound3d.level).  False, and nothing changed, where the device cannot
-        have it."""
+        have it.
+
+        The quieter of the two levels is in place while the HRTF changes (user report, 2026-10-05): the output
+        mixes on as the device is reset, and a sound brought down only afterwards played for a moment with the
+        louder head at the quieter one's level - OpenAL Soft's built-in, 13 dB up, was heard as a burst of the
+        ambience.  Going to a louder head, the level comes down first; to a quieter one, it goes up after, so
+        the most there is is a moment's dip."""
+        before, after = self.hrtf_level, sound3d.level(choice)
+        if after < before:
+            self._set_hrtf_level(after)
         if not self.device.use_3d_sound(choice):
+            self._set_hrtf_level(before)
             return False
         use_hrtf = getattr(self.bus, 'use_hrtf', None)          # the phone's bus is the mixer's own context
         if use_hrtf is not None and self.bus.available and not use_hrtf(sound3d.openal_name(choice)):
             log.warning('the reverb bus kept its 3D sound; %s is on the output only', choice)
-        self.hrtf_level = sound3d.level(choice)
+        self._set_hrtf_level(after)
+        return True
+
+    def _set_hrtf_level(self, level: float) -> None:
+        """Every spatialised sound playing, and every one started from now on, at this 3D sound's level."""
+        if level == self.hrtf_level:
+            return
+        self.hrtf_level = level
         for playlist in list(self.dispatcher.play_lists):
             for sound in list(playlist.agent_cache.values()):
                 if sound is not None and sound._source and sound._spatial:
                     sound._apply_gain()
-        return True
 
     @classmethod
     def set_master_spatialised_gain(cls, gain: float) -> None:
