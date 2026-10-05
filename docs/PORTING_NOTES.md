@@ -923,6 +923,15 @@ they were.
   0.2 s (`fireRate` in Weapons.plist), so a tap that ends inside the wait could not have fired anyway, and a
   quick pull that is held starts its burst at most a tenth of a second late.
 
+  The phone's touches settle the same way (user request, 2026-10-05), in Gesture mode and on Button mode's
+  fire quarter: a finger that rolls back onto the glass as it lifts is the same second, short touch.  A touch
+  of fire's that comes down within `FIRE_SETTLE` of fire's last touch ending is begun in the game view only
+  then, if the finger is still down, and ended before then it is no touch at all (`TouchInput._begin_view`,
+  android_main.py).  A finger on the move is a swipe or a turn and begins at once, and Button mode's other
+  three quarters are not held.  Checked with a stand-in view: a bounce of 30 ms, 20 ms after a burst, reached
+  it not at all, a touch held from 30 ms after began at 0.1 s, two taps a quarter of a second apart and the
+  switch quarter straight after fire were as before.
+
 * Escape does nothing on the Endless screen while the cards are being dealt (user request).  The Back
   button is dimmed for those two seconds (`deactivate_buttons`), and so is Play in this port, but
   `-[ADViewController accessibilityPerformEscape]` 0x1000728e4 goes straight to `backButtonPressed` without

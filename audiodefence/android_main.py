@@ -121,6 +121,8 @@ class TouchInput:
         self.view_state = None                             # 'held' (not yet begun), 'began', None
         self.view_end_due = False                          # its finger lifted while others were down
         self.view_down = (0.0, 0.0)                        # where it came down
+        self.view_fires = False                            # it is fire's: Gesture mode, or Button mode's top right
+        self.fire_let_go = float('-inf')                   # PORT ADDITION: when fire's last touch ended (_begin_view)
         self.target = None                                 # the GameplayScreen ('pause'), the opener's controller
 
     # ------------------------------------------------------------------------------------ helpers
@@ -177,7 +179,7 @@ class TouchInput:
                 if kind == CANCEL:
                     self._withdraw()
                 elif self.gesture_max == 1:
-                    self._end_view()
+                    self._end_view(now)
                 else:
                     self.view_end_due = True               # UITapGestureRecognizer delaysTouchesEnded
             if not self.fingers:
@@ -226,6 +228,8 @@ class TouchInput:
         self.view_pid = pid
         self.view_down = (x, y)
         self.view_state = 'held'                           # begun in frame(), unless more fingers come
+        from .game.parameters import GameParameters
+        self.view_fires = not GameParameters.shared().button_mode or (x >= sw * 0.5 and y < sh * 0.5)
 
     def _reset(self) -> None:
         self.kind = None
@@ -245,17 +249,30 @@ class TouchInput:
         screen = self.host.screen
         return isinstance(screen, GameplayScreen) and screen._agv() is self.agv
 
-    def _begin_view(self) -> None:
-        """touchesBegan:withEvent: 0x10008a404, where the finger came down."""
+    def _begin_view(self, now=None) -> None:
+        """touchesBegan:withEvent: 0x10008a404, where the finger came down.
+
+        PORT ADDITION (user request, 2026-10-05): a touch of fire's that comes down within FIRE_SETTLE of
+        fire's last touch ending waits until then, and counts only if the finger is still down: a finger
+        that bounces back onto the glass as it lifts is a second, very short touch, and a short touch is a
+        tap, which fires a shot - the extra shot after a burst that a trigger springing back gave
+        (`GameplayScreen.press`).  Its end before then is no touch at all (`_end_view`).  A finger on the
+        move is a swipe or a turn, not a bounce, and begins at once (`now` None)."""
         if self.view_state == 'held' and self._view_alive():
+            if now is not None and self.view_fires:
+                from .ui.gameplay_screen import FIRE_SETTLE
+                if now < self.fire_let_go + FIRE_SETTLE:
+                    return
             self.view_state = 'began'
             self.agv.touches_began(self.view_down)
 
-    def _end_view(self) -> None:
+    def _end_view(self, now) -> None:
         """touchesEnded:withEvent: 0x10008a50c (a quick tap that was still held begins first)."""
-        self._begin_view()
+        self._begin_view(now)
         if self.view_state == 'began' and self._view_alive():
             self.agv.touches_ended()
+            if self.view_fires:
+                self.fire_let_go = now
         self.view_state = None
 
     def _withdraw(self) -> None:
@@ -374,7 +391,7 @@ class TouchInput:
                 self._withdraw()
                 self.agv.handle_triple_tap()
             elif self.view_end_due:
-                self._end_view()                           # not a three-finger tap: the touch ends as one
+                self._end_view(now)                        # not a three-finger tap: the touch ends as one
         elif self.kind == 'pause':
             if self.gesture_max == 1 and f.moved <= TAP_MAX_MOVE:
                 p = self.pending_tap
@@ -409,10 +426,10 @@ class TouchInput:
             f = self.fingers[self.view_pid]
             if self.gesture_max == 1:
                 if now - f.t0 >= MULTI_FINGER_GRACE:
-                    self._begin_view()
+                    self._begin_view(now)
             elif self.gesture_max > 3 or now - self.gesture_t0 > MULTI_TAP_WINDOW \
                     or self.gesture_moved > TAP_MAX_MOVE * 2:
-                self._begin_view()                         # no three-finger tap: the touch is the view's
+                self._begin_view(now)                      # no three-finger tap: the touch is the view's
         if self.kind == 'menu' and self.second_tap and not self.long_done and len(self.fingers) == 1 \
                 and self.gesture_max == 1:
             f = next(iter(self.fingers.values()))

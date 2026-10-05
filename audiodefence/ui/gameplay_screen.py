@@ -38,8 +38,9 @@ SWIPE_POINTS_PER_SECOND = 600.0     # PORT INPUT: arrow keys in the swipe scheme
 #: sooner waits until then and counts only if it is still held: a trigger that springs back past half way
 #: as it is let go - a worn spring, or a trigger lock that makes a short pull a whole one - was read as a
 #: second, very short press, and a short press is a tap, which fires a shot (heard as an extra shot after a
-#: burst of the Machine Gun).  Keys go through the same wait.  No gun fires faster than every 0.2 s
-#: (Weapons.plist `fireRate`), so a tap that ends inside this would not have fired anyway.
+#: burst of the Machine Gun).  Keys go through the same wait, and so do the phone's touches of fire, for a
+#: finger rolling back onto the glass (`android_main.TouchInput._begin_view`).  No gun fires faster than
+#: every 0.2 s (Weapons.plist `fireRate`), so a tap that ends inside this would not have fired anyway.
 FIRE_SETTLE = 0.1
 
 
