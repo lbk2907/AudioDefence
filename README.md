@@ -2257,8 +2257,41 @@ were already dead.
 
 ## Licence
 
-The port's own code — everything in `audiodefence/`, `tools/`, `compiler.py` and
-the documentation — is the author's to license.
+The port's own code — everything in `audiodefence/`, `tools/`, `android/`,
+`compiler.py` and the documentation — is free software: you can share it and
+change it under the terms of the **GNU General Public License, version 3 or
+(at your option) any later version**, as published by the Free Software
+Foundation. The licence is in `LICENSE`, and a built game carries it as
+`license.txt`. It comes with no warranty, to the extent the law allows.
+
+Copyright (C) 2026 Loh Boon Keat and the port's contributors, who are named
+under [Credits](#credits).
+
+Until 5 October 2026 the port was under the MIT License. A copy of the port
+from before then stays under that licence for whoever has it, and the MIT
+notice the code written until then came with is kept here:
+
+    MIT License
+
+    Copyright (c) 2026 Loh Boon Keat
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
 
 `game/` is the original game: Somethin' Else's data, audio and layouts. It is
 not ours and it is not covered by the port's licence. `analysis/` is derived

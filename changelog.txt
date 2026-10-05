@@ -41,6 +41,7 @@ A trigger that springs back a little as you let go of it no longer fires an extr
 The Miscellaneous tab in Settings can clear all your saves and start the game again from nothing. Your settings and buttons stay.
 The Miscellaneous tab in Settings can open the folder the game keeps your progress and settings in.
 The Sound tab in Settings can change the game's 3D sound to OpenAL Soft's own or to one you make yourself, and Test 3D sound plays a sound once around you to compare them.
+The port is now free software under the GNU General Public License, version 3 or later, instead of the MIT License. The original game's own files are still Somethin' Else's.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.
