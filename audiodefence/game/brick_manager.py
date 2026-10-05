@@ -102,6 +102,7 @@ class BrickManager:
         self.time_elapsed = 0.0
         self.started_main_menu_music = False
         self.passers_by_wait = None                       # PORT DIVERGENCE: see current_brick_is_cleared
+        self.weapons_at_wave_start = None                 # PORT ADDITION: see retry_current_brick
         # PORT ADDITION: Air Drop Inbound.  This runs once per game, which the power-up manager's own
         # init does not - it is built with the brick manager and lives as long as the app - so the card
         # is spent here rather than there, and only the first drop of the game is the free one.
@@ -254,6 +255,10 @@ class BrickManager:
             name = self.scenario_brick_name_for_wave_number(self.current_wave)
         notify_stats('SET_BRICK_NAME', name)
         self.load_brick_with_name(name)
+        # PORT ADDITION (user request, 2026-10-05): the weapons as this wave finds them, a set it hands over
+        # included, for a revive to put back (`retry_current_brick`)
+        keep = getattr(self.gameplay_view_controller, 'weapons_now', None)
+        self.weapons_at_wave_start = keep() if keep is not None else None
 
     def clear_current_brick(self) -> None:                      # 0x1000c3364
         b = self.current_brick()
@@ -623,8 +628,10 @@ class BrickManager:
         a challenge it is a skip bought with diamonds - past the hardest wave, or, from the last one, past
         `challenge_is_over` to the first wave again, since `scenario_brick_name_for_wave_number` wraps.  So
         the wave is loaded again from its beginning; the skip is a choice of its own, dearer and never from
-        the last wave (`skip_current_brick`).  The weapons are given back fresh and without a word
-        (`hand_back_weapons`).
+        the last wave (`skip_current_brick`).  The weapons are given back without a word (`hand_back_weapons`),
+        and then as the wave found them (user request, 2026-10-05): each gun's clip and spare rounds, and the
+        gun that was in hand then in hand again (`put_weapons_back`) - not fresh, with every clip full and
+        every round back, which made a revive a free reload of everything.
 
         The challenge clock goes back to where it stood as the wave began, and the wave's story is told again
         (user request, 2026-10-04): the revive is another go at the wave, and a go that ended in a death, with
@@ -636,10 +643,13 @@ class BrickManager:
         told = getattr(gvc, 'stories_told', None)
         if told is not None and brick is not None:
             told.discard(brick.name)
+        # as the wave began: loading it again takes them again, as the death left them
+        kept = getattr(self, 'weapons_at_wave_start', None)
         self.clear_current_brick()
         self.current_wave -= 1
         self.load_next_brick()
         self.hand_back_weapons()
+        self.put_weapons_back(kept)
 
     def skip_current_brick(self) -> None:
         """PORT ADDITION (user request, 2026-10-01): the revive's other choice in the Extra mode - the wave
@@ -649,11 +659,25 @@ class BrickManager:
 
         A skip gives up the time star for the rest of the run (user request, 2026-10-04): the time it shows is
         a challenge with a wave not played, which would otherwise buy the star.  The time itself goes on being
-        kept and shown as before.  The next wave's story is told as it begins, as any wave's."""
+        kept and shown as before.  The next wave's story is told as it begins, as any wave's.
+
+        The next wave starts with the weapons as the wave skipped found them, as a revive's replay does (user
+        request, 2026-10-05) - unless it hands over a set of its own, which is fresh."""
         InGameStats.singleton().time_star_given_up = True
+        kept = getattr(self, 'weapons_at_wave_start', None)
         self.clear_current_brick()
         self.load_next_brick()
+        own = bool((self.current_brick().brick_dictionary or {}).get('Weapons'))
         self.hand_back_weapons()
+        if not own:
+            self.put_weapons_back(kept)
+
+    def put_weapons_back(self, kept) -> None:
+        """The weapons as `kept` at a wave's start, put back without a word, and kept as this wave's start too."""
+        put_back = getattr(self.gameplay_view_controller, 'put_weapons_back', None)
+        if put_back is not None and kept is not None:
+            put_back(kept)
+            self.weapons_at_wave_start = kept
 
     def hand_back_weapons(self) -> None:
         """PORT ADDITION: after a revive the wave is fought with the weapons it was begun with, fresh - its
