@@ -1219,14 +1219,21 @@ they were.
   bindings are left alone (Settings -> Keyboard has its own Restore default keys), and so are the
   controllers' buttons (Settings -> Joystick -> Restore default buttons).  The original has no reset; this
   one replaced the port's own Restore aiming defaults and Restore menu defaults rows.
+* PORT DIVERGENCE (user request, 2026-10-05): a new save starts with no coins and no diamonds
+  (`Inventory.STARTING_COINS`, `STARTING_DIAMONDS`).  `-[ADInventory createOrRestoreWeaponDictionary]`
+  0x10000c1c4 gives a first start 5000 coins and 500 diamonds, enough to buy most of the armory before a
+  game is played, which left the challenges and Endless little to be played for.  Now the guns, the
+  upgrades and the power-ups are earned there and in the missions.  Only a profile being made is
+  touched: a save with a balance keeps it, and so does a backup brought back.
+
 * PORT ADDITION (user request, 2026-10-05): the player's files as a whole, in Settings -> Miscellaneous
   (`game/saves.py`).  The original keeps its progress in NSUserDefaults and has no way to clear it but
   deleting the app.  **Clear all saves**, asked first with No first and not offered in a pause, empties
   save.json - every key the port does not route to settings.json or keys.json, which is the original's whole
   plist less the settings - and lets go of the singletons that hold it in memory (`ADInventory`,
   `ADChallengeData`, `ADMissionManager`, `ADPersistentStats`, `ADWeaponManager`), so each is made again from
-  the empty file when next asked for, as on a first start: 5000 coins and 500 diamonds
-  (`-[ADInventory createOrRestoreWeaponDictionary]` 0x10000c1c4), the first missions, no stars.  The main menu
+  the empty file when next asked for, as on a first start: no coins and no diamonds (above;
+  `-[ADInventory createOrRestoreWeaponDictionary]` 0x10000c1c4), the first missions, no stars.  The main menu
   then opens, its name followed by "All saves cleared".  **Open game data folder** (Windows, the Mac) opens
   `paths.user_dir()` in File Explorer or the Finder.  On Android that folder is inside the app, so
   **Export backup** zips the three files into "AudioDefence backup.zip" in Documents/AudioDefence, over the

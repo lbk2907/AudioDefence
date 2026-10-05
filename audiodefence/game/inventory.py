@@ -25,10 +25,17 @@ class Inventory:
         self._coins = 0
         self._diamonds = 0
         #: PORT ADDITION: true while the save is being restored, so putting the saved balance back is not
-        #: counted as earning it.  A fresh profile's 5000 and 500 are not earnings either.
+        #: counted as earning it.  A fresh profile's balance - none, STARTING_COINS - is not earnings either.
         self._restoring = True
         self.create_or_restore_weapon_dictionary()
         self._restoring = False
+
+    #: PORT DIVERGENCE (user request, 2026-10-05): what a new save starts with.  The original gives a first
+    #: start 5000 coins and 500 diamonds (0x10000c1c4), enough to buy most of the armory before a game is
+    #: played; with none, the guns and upgrades are earned in Endless, the challenges and the missions, so
+    #: there is something to play them for.  A save that has a balance keeps it.
+    STARTING_COINS = 0
+    STARTING_DIAMONDS = 0
 
     def create_or_restore_weapon_dictionary(self) -> None:   # 0x10000c1c4
         d = self.defaults
@@ -44,8 +51,8 @@ class Inventory:
             return
         self.weapons = []
         self.powerups = []
-        self.set_coins(5000)
-        self.set_diamonds(500)
+        self.set_coins(self.STARTING_COINS)               # PORT DIVERGENCE: 5000 in the original
+        self.set_diamonds(self.STARTING_DIAMONDS)         # PORT DIVERGENCE: 500 in the original
         for w in weapons_plist()['Weapons']:
             if ns_int_value(w.get('price')) == 0:
                 purchased = ns_int_value(w.get('priceInDiamonds')) == 0
