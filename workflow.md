@@ -72,8 +72,10 @@ file, **at the end of that block** - it reads in the order things were done.
 ## Commits
 
 * One piece of work per commit, with a subject line and a body that says **why**, not just what.
-* Pull before you start and push when you are done: more than one person works on this, and a change left
-  uncommitted blocks the others.
+* **Pull, read, fix, commit, push - in that order, for every task** (user request, 2026-10-05).  Pull
+  before reading a line of the code, not just before pushing: more than one person works on this, and a fix
+  worked out on code someone has since changed is a fix to the wrong code.  Then read what you are about to
+  change, change it, commit it, and push when you are done - a change left uncommitted blocks the others.
 * Never commit what the build leaves behind (`build/`, `dist/`, `*.spec` are ignored); the game's own data
   in `game/` *is* committed, so a clone has everything.
 * **When the maintainer asks for pushing to wait** until a set of work is finished, each piece is still
