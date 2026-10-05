@@ -268,9 +268,32 @@ class Enemy:
         return sound.duration if sound is not None else 0.0
 
     # --- state entries ---------------------------------------------------------------------------
+    def kept_away(self) -> bool:
+        """PORT ADDITION (user request, 2026-10-05): whether Empty Chambers keeps this enemy out of an Endless
+        game: a Hulk, a Berserk or the Colossus, which a melee weapon alone could not be expected to bring
+        down (modifiers.KEPT_AWAY_BY_EMPTY_CHAMBERS)."""
+        from .brick_manager import BrickManager
+        from .modifiers import KEPT_AWAY_BY_EMPTY_CHAMBERS, GameModifiers
+        return (self.sounds_prefix in KEPT_AWAY_BY_EMPTY_CHAMBERS and GameModifiers.shared().brokenGuns
+                and BrickManager.shared().mode == 1)
+
+    def stay_away(self) -> None:
+        """PORT ADDITION: an enemy Empty Chambers keeps away, at the moment it would have come in: gone at
+        once, unheard and uncounted, as a Berserk that walks off is (`berserk_go_away`), and as if it had come
+        and gone - what waits on its coming, and what waits on its going, comes when it would have."""
+        from .brick_manager import BrickManager
+        bm = BrickManager.shared()
+        self._life = 0.0
+        self.set_state(-1)
+        bm.check_spawn_on_start(self.name)
+        bm.sound_or_enemy_with_name_was_deactivated(self.name)
+
     def spawn(self) -> None:                              # 0x10005fbc0
         from .ambient import AmbientManager
         from .brick_manager import BrickManager
+        if self.kept_away():                              # PORT ADDITION: Empty Chambers
+            self.stay_away()
+            return
         self.set_state(1)
         self.spawn_sound_duration = self.play_any_sound_containing('_spawn', False, True)
         self.spawned = True
@@ -497,6 +520,10 @@ class Enemy:
         if bm.player_is_dead:
             return
         self.felt_death()                                # PORT ADDITION: a kill, by whatever did it
+        if not self.is_a_bystander():                     # PORT ADDITION: The Magpie's turning ends with a kill
+            stop = getattr(bm.gameplay_view_controller, 'stop_turning_by_itself', None)
+            if stop is not None:
+                stop()
         if self.blast() is not None:                      # PORT ADDITION: see `blast`
             self.explode()
             self.set_state(5)

@@ -153,6 +153,11 @@ class Weapon:
             if self.capacity == 0:
                 self.capacity = 1
             self.bullets_in_clip = self.capacity
+        if mods.brokenGuns and not isinstance(self, MeleeWeapon):
+            # PORT ADDITION (user request, 2026-10-05): Empty Chambers - every gun arrives empty, with no
+            # rounds to reload from, so it only clicks; the melee weapon is untouched
+            self.bullets_in_clip = 0
+            self.bullets_total = 0
         if mods.spread_modifier() != 0.0:
             self.continuous_spread = mods.spread_modifier() + self.continuous_spread
             self._spread = mods.spread_modifier() + self._spread

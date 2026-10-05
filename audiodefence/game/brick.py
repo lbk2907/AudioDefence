@@ -74,6 +74,11 @@ class Brick:
                 e.spawn_after = d.get('spawn_after')
             elif self.brick_dictionary.get('Story'):      # PORT ADDITION: see `held_spawns`
                 self.held_spawns.append(e)
+            elif e.kept_away():
+                # PORT ADDITION: Empty Chambers' enemies go on the wave's first tick, once it is the current
+                # wave, so that what waits on them is looked for in this wave and not the one before
+                e.spawn_time = 0.0
+                e.set_state(0)
             else:
                 e.spawn()
         self.init_passers_by()

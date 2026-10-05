@@ -370,7 +370,7 @@ class BrickManager:
             diff = abs(float(head - a))
             if not (diff < weapon.spread) and abs(float(a - head)) <= 360 - weapon.spread:
                 continue
-            if t.squared_distance > weapon.range * weapon.range:
+            if t.squared_distance > weapon.range * weapon.range and not self._swing_reaches(weapon, t):
                 continue
             if diff < weapon.critical_spread or abs(float(a - head)) > 360 - weapon.critical_spread:
                 if float(crand.c_mod(crand.random(), 100)) < weapon.critical_chance and not mods.noCritical:
@@ -401,6 +401,15 @@ class BrickManager:
                 hits.clear()
                 hits.append(t)
         return hits
+
+    @staticmethod
+    def _swing_reaches(weapon, target) -> bool:
+        """PORT ADDITION (user request, 2026-10-05): under Empty Chambers a melee swing reaches a Diamond or a
+        Power Up wherever it is, in the swing's own cone: with the guns empty, nothing else could."""
+        from .passerby import DiamondDropper, PowerUpContainer
+        from .weapon import MeleeWeapon
+        return (GameModifiers.shared().brokenGuns and isinstance(weapon, MeleeWeapon)
+                and isinstance(target, (DiamondDropper, PowerUpContainer)))
 
     def shot_with_special_weapon(self, weapon) -> None:         # 0x1000c4b38
         from .weapon import MeleeWeapon

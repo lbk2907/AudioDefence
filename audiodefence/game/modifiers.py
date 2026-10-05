@@ -67,7 +67,21 @@ PAIRED_FLAGS = {
     'secondChance': ('freeRevive', 'enragedHorde'),
     'ironSights': ('moreHeadshots', 'narrowedSpread'),
     'houseBand': ('baseComboBonus', 'jukebox'),
+    # PORT ADDITION (user request, 2026-10-05): the third deck's Magpie, which says only the first half
+    'magpie': ('luckyNight', 'looseControl'),
 }
+
+#: PORT ADDITION (user request, 2026-10-05): The Magpie's catch, which its card does not mention: every
+#: Diamond shot down has this chance of setting the player turning by themselves, one way or the other at
+#: random, until they kill a Zombie (`GameplayController.start_turning_by_itself`).
+LOOSE_CONTROL_PERCENT = 50
+#: how fast: a whole turn in six seconds, slower than the turn keys (two radians a second) so that turning
+#: against it with them, or with the phone, wins
+LOOSE_CONTROL_RADIANS_PER_SECOND = 3.14159265 / 3.0
+
+#: PORT ADDITION (user request, 2026-10-05): the enemies Empty Chambers keeps away - the ones a melee weapon
+#: alone could not be expected to bring down (`Enemy.kept_away`)
+KEPT_AWAY_BY_EMPTY_CHAMBERS = ('Hulk', 'HulkB', 'Colossus', 'Berserk')
 
 #: PORT ADDITION (user request): the blast an enemy is given by Chain Reaction, which is one the game
 #: already uses - `enemies.plist` gives the Farty exactly this, FartyB, the Machine and the three Cars a
@@ -79,7 +93,7 @@ PAIRED_FLAGS = {
 CHAIN_REACTION_BLAST = {'radius': 3, 'damages': 50, 'dispersal': 75}
 
 PORT_FLAGS = ('earlyPowerUp', 'luckyNight', 'lessPowerUps', 'lessCoins', 'alwaysCritical',
-              'everythingExplodes', 'noFartyBlast') + tuple(PAIRED_FLAGS)
+              'everythingExplodes', 'noFartyBlast', 'looseControl', 'brokenGuns') + tuple(PAIRED_FLAGS)
 
 
 class GameModifiers:

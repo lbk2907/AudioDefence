@@ -346,6 +346,15 @@ class DiamondDropper(Enemy):
         mods = GameModifiers.shared()
         notify_stats('UPDATE_DIAMONDS', 1 + (1 if mods.fullMoon else 0) + mods.times('luckyNight'))
         Tracker.shared().diamond_acquired()
+        # PORT ADDITION (user request, 2026-10-05): The Magpie's catch - half the Diamonds shot down set the
+        # player turning by themselves, which way at random, until they kill a Zombie (Enemy.die)
+        if mods.looseControl:
+            import random
+            from .brick_manager import BrickManager
+            from .modifiers import LOOSE_CONTROL_PERCENT
+            gvc = BrickManager.shared().gameplay_view_controller
+            if gvc is not None and random.random() * 100 < LOOSE_CONTROL_PERCENT:
+                gvc.start_turning_by_itself(random.choice((-1, 1)))
         # QUIRK: the original then dispatch_after(5 s) a block whose captured receiver is nil
         # (str xzr at 0x10007e950), i.e. [nil deactivatePlaylist] - nothing happens, so nothing is scheduled.
 

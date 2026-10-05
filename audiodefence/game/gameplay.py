@@ -193,6 +193,13 @@ class InfiniteScrollView:
         self.adjust_offset()
         self.send_offset_to_delegate()
 
+    def turn_by(self, radians: float) -> None:
+        """PORT ADDITION (user request, 2026-10-05): the view turned by `radians`, as the gyroscope turns it,
+        whatever is turning it besides (The Magpie, GameplayController.turn_by_itself)."""
+        self.set_content_offset(self.content_offset + f32((radians / 6.28318531) * self.image_width))
+        self.adjust_offset()
+        self.send_offset_to_delegate()
+
     def player_swiped(self, amount: float) -> None:       # 0x10009d278
         radians = f32((f32(f32(amount) / f32(5.68888903)) * 3.14159265) / 180.0)
         delta = f32((radians / 6.28318531) * self.image_width)
@@ -536,6 +543,7 @@ class GameplayController:
         self.pan_array: list = []
         self.pause_view = None
         self.revive_view_controller = None
+        self.turning_by_itself = 0                        # PORT ADDITION: The Magpie, 1 or -1 while it turns you
         self.nb_revives = 0
         self.announcer_value_on_entering_pause = False
         self.accessible_game_view = None
@@ -685,12 +693,38 @@ class GameplayController:
             mm.last_tilt_angle = mm.get_tilt_angle()
         for v in list(self.infinite_scroll_views):
             v.update()
+        self.turn_by_itself(0.05)                         # PORT ADDITION: The Magpie
         BrickManager.shared().update(0.05, hold_current=self.holds_the_wave())   # PORT ADDITION: see there
         if self.player is not None:
             self.player.update(0.05)
         if self.accessible_game_view is not None:
             self.accessible_game_view.update(0.05)
         self.update_score_view_with_animation(True)
+
+    # --- The Magpie (PORT ADDITION, user request, 2026-10-05) -------------------------------------
+    def start_turning_by_itself(self, direction: int) -> None:
+        """The Magpie's catch: the player turns by themselves, `direction` 1 or -1, until they kill a Zombie
+        (`stop_turning_by_itself`).  Already turning, they go on the way they were going."""
+        if not self.turning_by_itself:
+            self.turning_by_itself = direction
+            log.info('The Magpie: turning by itself, %s', 'one way' if direction > 0 else 'the other')
+
+    def stop_turning_by_itself(self) -> None:
+        if self.turning_by_itself:
+            log.info('The Magpie: a kill, and the turning stops')
+        self.turning_by_itself = 0
+
+    def turn_by_itself(self, dt: float) -> None:
+        """One tick of it: the view - and the aim with it - turned by a sixth of a turn a second
+        (modifiers.LOOSE_CONTROL_RADIANS_PER_SECOND), on top of whatever the player is turning by.  Not while
+        paused or dead."""
+        direction = self.turning_by_itself
+        if (not direction or self.paused or getattr(self, 'death_overlay_visible', False)
+                or self.player is None):
+            return
+        from .modifiers import LOOSE_CONTROL_RADIANS_PER_SECOND
+        for v in list(self.infinite_scroll_views):
+            v.turn_by(direction * LOOSE_CONTROL_RADIANS_PER_SECOND * dt)
 
     def holds_the_wave(self) -> bool:
         """PORT ADDITION (user request, 2026-10-03): whether the wave just loaded is kept from beginning while

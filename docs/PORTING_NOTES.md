@@ -3133,6 +3133,39 @@ they were.
   explosive weapon sets one in `targetEnemiForExplosiveWeapon` 0x1000c57b8 without consulting the flag.
   Nothing else can reach it, since all four of these cards are level 3 and a hand holds one of those.
 
+* PORT ADDITION: The Magpie, a level-3 tarot card that hides its catch (user request, 2026-10-05).  It says
+  "Magpies love anything that glitters. Every Diamond you shoot down is worth two." and it is: one flag
+  standing for two (`modifiers.PAIRED_FLAGS`), Lucky Night's `luckyNight` and `looseControl`, which the card
+  never mentions, on purpose - the name and the words are meant to be innocent, so that the player does not
+  suspect a side effect.  Every Diamond shot down has `LOOSE_CONTROL_PERCENT`, half, of setting the player
+  turning by themselves (`DiamondDropper.die` to `GameplayController.start_turning_by_itself`), one way or
+  the other at random, until they kill a Zombie - by anything, a bystander not counting (`Enemy.die`).  The
+  turn is a sixth of a turn a second (`LOOSE_CONTROL_RADIANS_PER_SECOND`), added on every update to the
+  view's offset as the gyroscope's turning is (`InfiniteScrollView.turn_by`), so it is the same under Gyro,
+  Swipe and Tilt, the aim goes with it, and turning against it - the turn keys at two radians a second, a
+  stick, the phone - wins.  It does not run while paused or dead.  A second Diamond while turning keeps the
+  turn as it was.  The rolls are Python's own, not the C `rand()` the original's stream is reproduced
+  with, so a hand without the card draws exactly what it drew before.  It is dealt as a good card.
+  Checked in an Endless game, muted: a Diamond shot down, the heading 64, 123 and 183 degrees round a
+  second apart, and none at all in the second and a half after a WeakZombieD was killed.
+
+* PORT ADDITION: Empty Chambers, a level-3 tarot card for the melee weapon alone (user request,
+  2026-10-05): "Your guns are empty, so your Melee weapon is all you have. No Hulk, Berserk or Colossus will
+  come, and your swing reaches Diamonds and Power Ups."  `brokenGuns` gives every gun no rounds and none to
+  reload from (`Weapon.__init__`), so it only clicks; the melee weapon is as it was, and a power-up's own
+  gun, the Minigun, is the power-up's.  The Hulk, the second Hulk, the Berserk and the Colossus
+  (`KEPT_AWAY_BY_EMPTY_CHAMBERS`) are kept out of an Endless game: each goes at the moment it would have
+  come in, unheard and uncounted, as a Berserk that walks off goes (`Enemy.stay_away`, after
+  `berserk_go_away`), and what waits on its coming and on its going comes when it would have - twenty-eight
+  enemies of the Endless waves wait on one of the four, and a wave of nothing else ends.  One that would
+  come in as its wave is made goes on that wave's first tick instead, once it is the current wave, so that
+  what waits on it is looked for in its own wave and not the one before.  And a melee swing reaches a
+  Diamond or a Power Up wherever it is, in the swing's own cone (`BrickManager._swing_reaches`): a Diamond
+  comes in nine units out and every melee weapon's `range` is 3, so with the guns empty nothing could
+  have reached either.  Checked in an Endless game, muted: the Revolver and the Micro SMG at 0 and 0, the
+  wok taking down a Diamond nine units off, a power-up crate in reach; and level3_brick_18, whose Hulk and
+  second Hulk five enemies wait on, with each Hulk gone at its time and everything waiting on them come.
+
 * PORT DIVERGENCE: Lucky Shot makes half of every hit critical (user request).  `calculateHitEnemies`
   0x1000c2f14 rolls `random() % 100 == 1` - one hit in a hundred, which is a whole game for one extra
   critical, on a card a player gave a tarot slot to.  `modifiers.LUCKY_SHOT_PERCENT` is 50.

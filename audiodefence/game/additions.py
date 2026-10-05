@@ -118,7 +118,9 @@ def _tidy(value: float):
 #: what you brought to it, level 2 is the zombies, and level 3 - the card that is dealt and kept - is your
 #: guns.  A deck gains as many good cards as bad ones wherever it can, so the near-even split that makes
 #: the third card close to a coin flip stays that way; level 3 stands at eight good to seven bad, because
-#: Executioner's opposite was already in the deck as Black Cat and needed no card of its own.
+#: Executioner's opposite was already in the deck as Black Cat and needed no card of its own - and two
+#: more since 2026-10-05 (user request) that are neither: The Magpie, dealt as a good card and hiding its
+#: catch, and Empty Chambers, which is both.
 #:
 #: Every `selector` here is a flag something reads.  Two are the original's own and were never dealt:
 #: `fasterReloadTime` and `slowerReloadTime` are set by nothing in the original, and `reloadTimeModifier`
@@ -208,6 +210,19 @@ NEW_CARDS = {
         {'title': 'Executioner', 'goodbad': 'good', 'selector': 'alwaysCritical',
          'icon': 'Roulette_icon_headshot',
          'description': 'Every hit you land is a critical hit, however you aim.'},
+        # PORT ADDITION (user request, 2026-10-05): Lucky Night's two Diamonds a Dropper, and a catch it does
+        # not mention, on purpose - the player is not meant to suspect one: half the Diamonds shot down set
+        # the player turning by themselves until they kill a Zombie (modifiers.LOOSE_CONTROL_PERCENT)
+        {'title': 'The Magpie', 'goodbad': 'good', 'selector': 'magpie',
+         'icon': 'Roulette_icon_luck',
+         'description': 'Magpies love anything that glitters. Every Diamond you shoot down is worth two.'},
+        # PORT ADDITION (user request, 2026-10-05): melee only - every gun empty, the Hulks, Berserks and the
+        # Colossus kept away (Enemy.kept_away), and a swing that reaches the Diamonds and the Power Ups
+        # wherever they are (BrickManager.calculate_hit_enemies)
+        {'title': 'Empty Chambers', 'goodbad': 'both', 'selector': 'brokenGuns',
+         'icon': 'Roulette_icon_glue',
+         'description': 'Your guns are empty, so your Melee weapon is all you have. No Hulk, Berserk or '
+                        'Colossus will come, and your swing reaches Diamonds and Power Ups.'},
     ),
 }
 
