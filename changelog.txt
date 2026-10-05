@@ -1,6 +1,7 @@
 unrelease:
 The port is now free software under the GNU General Public License, version 3 or later, instead of the MIT License. The original game's own files are still Somethin' Else's.
 Audio Defence runs on Android phones as an app of its own, played by touch, keyboard or controller and spoken by the phone's own voice. Turn TalkBack off while you play.
+A new game starts with no coins and no diamonds, so the armory is earned by playing.
 While a row in Settings has its list of choices open, the OK button no longer closes Settings. Enter takes a choice and Back leaves the list.
 The Powered Power Ups tarot card is worth something to everyone now. It gives a level beyond the highest you can buy, where before it did nothing at all for a fully upgraded player.
 Endless deals three tarot cards instead of two, and sometimes a fourth. Those last cards cannot be changed, so every hand holds something you did not pick.
@@ -42,7 +43,6 @@ A trigger that springs back a little as you let go of it no longer fires an extr
 The Miscellaneous tab in Settings can clear all your saves and start the game again from nothing. Your settings and buttons stay.
 The Miscellaneous tab in Settings can open the folder the game keeps your progress and settings in.
 The Sound tab in Settings can change the game's 3D sound to OpenAL Soft's own or to one you make yourself, and Test 3D sound plays a sound once around you to compare them.
-A new game starts with no coins and no diamonds, so the armory is earned by playing.
 
 26.09.26-1:
 The game runs on the Mac too, in its own build on the same release. It speaks through VoiceOver, or through the system voice when VoiceOver is off.
