@@ -1,6 +1,6 @@
 unrelease:
 The port is now free software under the GNU General Public License, version 3 or later, instead of the MIT License. The original game's own files are still Somethin' Else's.
-Audio Defence runs on Android phones too, as an app of its own: the same game, played by touch and gestures and spoken by the phone's own voice. Turn TalkBack off while you play.
+Audio Defence runs on Android phones as an app of its own, played by touch, keyboard or controller and spoken by the phone's own voice. Turn TalkBack off while you play.
 While a row in Settings has its list of choices open, the OK button no longer closes Settings. Enter takes a choice and Back leaves the list.
 The Powered Power Ups tarot card is worth something to everyone now. It gives a level beyond the highest you can buy, where before it did nothing at all for a fully upgraded player.
 Endless deals three tarot cards instead of two, and sometimes a fourth. Those last cards cannot be changed, so every hand holds something you did not pick.
@@ -14,7 +14,7 @@ Explosions that go off while your ears are still ringing add to the ringing, and
 An explosion is no longer cut off halfway when another one goes off beside it.
 A zombie killed by a Tesla Coil is heard dying, and heard exploding if it was going to. Only the zap was audible before.
 Diamonds and Power Ups are never caught up in the explosions, so they are still there to be shot.
-There is an Extra menu under Play, with chapters of arenas written for this version of the game. They open one after another, and none of them says how it is beaten.
+Once every challenge is unlocked, Play has an Extra menu of arenas written for this version of the game. They open one after another, and none says how it is beaten.
 Pausing holds every sound where it is and picks it up from there, so a Zombie you paused mid-growl finishes that growl. The arena keeps its ambience while you are paused.
 Going back has a sound of its own now, so leaving a screen no longer sounds the same as pressing a button on it.
 Two tarot cards that do the same thing now add up. Ten per cent more damage from each is twenty per cent, not ten, and a card never turns out to be worth nothing because another one got there first.
