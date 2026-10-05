@@ -75,9 +75,11 @@ PAIRED_FLAGS = {
 #: Diamond shot down has this chance of setting the player turning by themselves, one way or the other at
 #: random, until they kill a Zombie (`GameplayController.start_turning_by_itself`).
 LOOSE_CONTROL_PERCENT = 50
-#: how fast: a whole turn in six seconds, slower than the turn keys (two radians a second) so that turning
-#: against it with them, or with the phone, wins
-LOOSE_CONTROL_RADIANS_PER_SECOND = 3.14159265 / 3.0
+#: how fast: a whole turn a second, spun round on the spot, three times as fast as the turn keys (two
+#: radians a second) - and nothing the player does turns them meanwhile (`InfiniteScrollView.spun`).  It was
+#: a sixth of a turn a second, which turning against it won; the user asked for it faster, and funny, and
+#: for no way out but the kill.
+LOOSE_CONTROL_RADIANS_PER_SECOND = 2.0 * 3.14159265
 
 #: PORT ADDITION (user request, 2026-10-05): the enemies Empty Chambers keeps away - the ones a melee weapon
 #: alone could not be expected to bring down (`Enemy.kept_away`)

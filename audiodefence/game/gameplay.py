@@ -115,6 +115,10 @@ class InfiniteScrollView:
         self._delegate_set = True
         self.current_control_scheme = GameParameters.shared().control_scheme
         self.control_scheme_changed()
+        #: PORT ADDITION (user request, 2026-10-05): The Magpie is turning the player, and nothing else may:
+        #: the gyroscope, the tilt and a swipe - and the turn keys, a stick and a finger moved sideways, which
+        #: all come here as one of those - are let go unread while it is set (`turn_by` alone turns the view)
+        self.spun = False
         # DIVERGENCE: the original sets this offset before it sets the delegate (0x10009c728, then
         # 0x10009c740), so the engine's head orientation stays 0 while the heading is really pi - half a
         # turn out.  On a phone the gyro fires within milliseconds of the game starting and corrects it
@@ -178,7 +182,7 @@ class InfiniteScrollView:
             self.tilt_did_move_from_angle(MotionManager.shared().last_tilt_angle)
 
     def tilt_did_move_from_angle(self, angle: float) -> None:   # 0x10009cfe8
-        if GameParameters.shared().control_scheme != 3:
+        if GameParameters.shared().control_scheme != 3 or self.spun:   # PORT ADDITION: see `spun`
             return
         delta = f32(f32(GameParameters.shared().sensivity * angle) * -15.0)
         self.set_content_offset(delta + self.content_offset)
@@ -186,7 +190,7 @@ class InfiniteScrollView:
         self.send_offset_to_delegate()
 
     def gyro_did_move_from_angle(self, angle: float) -> None:   # 0x10009d148
-        if GameParameters.shared().control_scheme != 1:
+        if GameParameters.shared().control_scheme != 1 or self.spun:   # PORT ADDITION: see `spun`
             return
         delta = f32((angle / -6.28318531) * self.image_width)
         self.set_content_offset(self.content_offset + delta)
@@ -201,6 +205,8 @@ class InfiniteScrollView:
         self.send_offset_to_delegate()
 
     def player_swiped(self, amount: float) -> None:       # 0x10009d278
+        if self.spun:                                     # PORT ADDITION: see `spun`
+            return
         radians = f32((f32(f32(amount) / f32(5.68888903)) * 3.14159265) / 180.0)
         delta = f32((radians / 6.28318531) * self.image_width)
         self.set_content_offset(self.content_offset + delta)
@@ -703,21 +709,27 @@ class GameplayController:
 
     # --- The Magpie (PORT ADDITION, user request, 2026-10-05) -------------------------------------
     def start_turning_by_itself(self, direction: int) -> None:
-        """The Magpie's catch: the player turns by themselves, `direction` 1 or -1, until they kill a Zombie
-        (`stop_turning_by_itself`).  Already turning, they go on the way they were going."""
+        """The Magpie's catch: the player is spun round, `direction` 1 or -1, until they kill a Zombie
+        (`stop_turning_by_itself`), and cannot turn themselves meanwhile - not by a key, a stick, a swipe,
+        the gyroscope or the tilt (`InfiniteScrollView.spun`).  Already turning, they go on the way they were
+        going."""
         if not self.turning_by_itself:
             self.turning_by_itself = direction
             log.info('The Magpie: turning by itself, %s', 'one way' if direction > 0 else 'the other')
+        for v in list(self.infinite_scroll_views):
+            v.spun = True
 
     def stop_turning_by_itself(self) -> None:
         if self.turning_by_itself:
             log.info('The Magpie: a kill, and the turning stops')
         self.turning_by_itself = 0
+        for v in list(self.infinite_scroll_views):
+            v.spun = False
 
     def turn_by_itself(self, dt: float) -> None:
-        """One tick of it: the view - and the aim with it - turned by a sixth of a turn a second
-        (modifiers.LOOSE_CONTROL_RADIANS_PER_SECOND), on top of whatever the player is turning by.  Not while
-        paused or dead."""
+        """One tick of it: the view - and the aim with it - turned by a whole turn a second
+        (modifiers.LOOSE_CONTROL_RADIANS_PER_SECOND), whatever the player does.  Not while paused or dead,
+        when the player cannot turn either."""
         direction = self.turning_by_itself
         if (not direction or self.paused or getattr(self, 'death_overlay_visible', False)
                 or self.player is None):

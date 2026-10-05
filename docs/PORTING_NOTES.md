@@ -3140,14 +3140,21 @@ they were.
   suspect a side effect.  Every Diamond shot down has `LOOSE_CONTROL_PERCENT`, half, of setting the player
   turning by themselves (`DiamondDropper.die` to `GameplayController.start_turning_by_itself`), one way or
   the other at random, until they kill a Zombie - by anything, a bystander not counting (`Enemy.die`).  The
-  turn is a sixth of a turn a second (`LOOSE_CONTROL_RADIANS_PER_SECOND`), added on every update to the
-  view's offset as the gyroscope's turning is (`InfiniteScrollView.turn_by`), so it is the same under Gyro,
-  Swipe and Tilt, the aim goes with it, and turning against it - the turn keys at two radians a second, a
-  stick, the phone - wins.  It does not run while paused or dead.  A second Diamond while turning keeps the
-  turn as it was.  The rolls are Python's own, not the C `rand()` the original's stream is reproduced
+  turn is a whole turn a second (`LOOSE_CONTROL_RADIANS_PER_SECOND`), spun round on the spot, added on
+  every update to the view's offset as the gyroscope's turning is (`InfiniteScrollView.turn_by`), so it is
+  the same under Gyro, Swipe and Tilt and the aim goes with it.  Nothing the player does turns them
+  meanwhile (user request, 2026-10-05): the view's three ways in from the player - the gyroscope's
+  `gyroDidMoveFromAngle:` 0x10009d148, the tilt's `tiltDidMoveFromAngle:` 0x10009cfe8 and a swipe's
+  `playerSwiped:` 0x10009d278, which the turn keys, a stick and a finger moved sideways all come through -
+  let what they are given go unread while it lasts (`InfiniteScrollView.spun`), and the yaw the gyroscope
+  and the keys gather meanwhile is taken and thrown away each update as it always is, so the view does not
+  jump when the turning stops.  It was a sixth of a turn a second at first, which turning against it won;
+  the user asked for it faster, funny, and with no way out but the kill.  It does not run while paused or
+  dead.  A second Diamond while turning keeps the turn as it was.  The rolls are Python's own, not the C `rand()` the original's stream is reproduced
   with, so a hand without the card draws exactly what it drew before.  It is dealt as a good card.
-  Checked in an Endless game, muted: a Diamond shot down, the heading 64, 123 and 183 degrees round a
-  second apart, and none at all in the second and a half after a WeakZombieD was killed.
+  Checked in an Endless game, muted: a Diamond shot down and the heading a whole turn round each second,
+  the same with the turn key held against it, none at all in the second and a half after a Zombie was
+  killed, and the turn key turning the player again after that.
 
 * PORT ADDITION: Empty Chambers, a level-3 tarot card for the melee weapon alone (user request,
   2026-10-05): "Your guns are empty, so your Melee weapon is all you have. No Hulk, Berserk or Colossus will
