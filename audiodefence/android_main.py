@@ -44,6 +44,7 @@ log = logging.getLogger('android')
 # event types from Bridge.pollEvents
 DOWN, MOVE, UP, CANCEL = 0, 1, 2, 3
 PAUSED, RESUMED, BACK, MENU_KEY = 10, 11, 20, 21
+KEY_DOWN, KEY_UP = 30, 31                    # PORT ADDITION: a keyboard's key, with Android's key code
 
 SWIPE_MIN = 56.0            # dp a finger has to travel to be a swipe in a menu
 GAME_SWIPE = 48.0           # dp for the game area's swipe up or down (UISwipeGestureRecognizer)
@@ -64,6 +65,53 @@ PAUSE_BUTTON = (240.0, 1.0, 86.0, 31.0)
 NIB_SIZE = (568.0, 320.0)
 
 
+#: PORT ADDITION (user request, 2026-10-05): a keyboard's keys on the phone, from Android's KeyEvent codes to
+#: the key codes the game's screens read (pygame's, the stand-in's on the phone).  Letters and digits are
+#: worked out (KEYCODE_A 29 to KEYCODE_Z 54, KEYCODE_0 7 to KEYCODE_9 16); a key not here and with no
+#: character is not passed on.
+ANDROID_KEYS = {
+    66: 'K_RETURN', 160: 'K_KP_ENTER', 23: 'K_RETURN', 111: 'K_ESCAPE', 67: 'K_BACKSPACE', 112: 'K_DELETE',
+    61: 'K_TAB', 62: 'K_SPACE', 19: 'K_UP', 20: 'K_DOWN', 21: 'K_LEFT', 22: 'K_RIGHT',
+    122: 'K_HOME', 123: 'K_END', 92: 'K_PAGEUP', 93: 'K_PAGEDOWN', 124: 'K_INSERT',
+    113: 'K_LCTRL', 114: 'K_RCTRL', 59: 'K_LSHIFT', 60: 'K_RSHIFT', 57: 'K_LALT', 58: 'K_RALT',
+    117: 'K_LGUI', 118: 'K_RGUI', 115: 'K_CAPSLOCK', 143: 'K_NUMLOCK', 116: 'K_SCROLLLOCK', 120: 'K_PRINTSCREEN',
+    121: 'K_PAUSE', 82: 'K_MENU',
+    69: 'K_MINUS', 70: 'K_EQUALS', 71: 'K_LEFTBRACKET', 72: 'K_RIGHTBRACKET', 73: 'K_BACKSLASH',
+    74: 'K_SEMICOLON', 75: 'K_QUOTE', 68: 'K_BACKQUOTE', 55: 'K_COMMA', 56: 'K_PERIOD', 76: 'K_SLASH',
+    154: 'K_KP_DIVIDE', 155: 'K_KP_MULTIPLY', 156: 'K_KP_MINUS', 157: 'K_KP_PLUS', 158: 'K_KP_PERIOD',
+}
+ANDROID_KEYS.update({131 + i: 'K_F%d' % (i + 1) for i in range(12)})          # KEYCODE_F1 131 to F12 142
+ANDROID_KEYS.update({144 + i: 'K_KP%d' % i for i in range(10)})                # KEYCODE_NUMPAD_0 144 to 9 153
+#: Android's meta state bits -> pygame's modifier bits, left and right apart as the desktop has them
+ANDROID_MODS = ((0x40, 'KMOD_LSHIFT'), (0x80, 'KMOD_RSHIFT'), (0x2000, 'KMOD_LCTRL'), (0x4000, 'KMOD_RCTRL'),
+                (0x10, 'KMOD_LALT'), (0x20, 'KMOD_RALT'), (0x20000, 'KMOD_LGUI'), (0x40000, 'KMOD_RGUI'))
+#: the same, either side: a key that reports only these is taken as the left one
+ANDROID_EITHER = ((0x1, 0xC0, 'KMOD_LSHIFT'), (0x1000, 0x6000, 'KMOD_LCTRL'), (0x2, 0x30, 'KMOD_LALT'),
+                  (0x10000, 0x60000, 'KMOD_LGUI'))
+
+
+def pygame_key(code: int, meta: int):
+    """An Android key code and meta state as the (key, mod) pygame would give, or None for a key the game
+    has no name for."""
+    import pygame
+    if 29 <= code <= 54:
+        key = ord('a') + code - 29
+    elif 7 <= code <= 16:
+        key = ord('0') + code - 7
+    elif code in ANDROID_KEYS:
+        key = getattr(pygame, ANDROID_KEYS[code])
+    else:
+        return None
+    mod = 0
+    for bit, name in ANDROID_MODS:
+        if meta & bit:
+            mod |= getattr(pygame, name)
+    for either, sides, name in ANDROID_EITHER:
+        if meta & either and not meta & sides:
+            mod |= getattr(pygame, name)
+    return key, mod
+
+
 class _Finger:
     __slots__ = ('x0', 'y0', 't0', 'x', 'y', 'moved')
 
@@ -75,19 +123,30 @@ class _Finger:
 
 
 class PhoneMotion:
-    """MotionManager's source on a phone: the gyroscope (Gyro aiming) and the tilt (Tilt aiming)."""
+    """MotionManager's source on a phone: the gyroscope (Gyro aiming) and the tilt (Tilt aiming).
+
+    PORT ADDITION (user request, 2026-10-05): and the turn keys of a keyboard plugged into it, as they turn on
+    the desktop (KeyboardMotion), added to the phone's own turning: the gyroscope's yaw and the keys' together,
+    and under Tilt the keys' lean while one is held, the phone's otherwise."""
 
     def __init__(self, bridge):
+        from .game.gameplay import KeyboardMotion
         self.b = bridge
-        self.direction = 0
+        self.keys = KeyboardMotion()
 
-    def set_direction(self, direction: int) -> None:      # the screen's stick/keys do not turn a phone
-        self.direction = direction
+    @property
+    def direction(self):
+        return self.keys.direction
+
+    def set_direction(self, direction) -> None:
+        self.keys.set_direction(direction)
 
     def take_yaw_difference(self) -> float:
-        return float(self.b.takeYaw())
+        return float(self.b.takeYaw()) + self.keys.take_yaw_difference()
 
     def tilt_angle(self) -> float:
+        if self.keys.direction:
+            return self.keys.tilt_angle()
         return float(self.b.tiltAngle())
 
 
@@ -125,6 +184,22 @@ class TouchInput:
         self.fire_let_go = float('-inf')                   # PORT ADDITION: when fire's last touch ended (_begin_view)
         self.target = None                                 # the GameplayScreen ('pause'), the opener's controller
 
+    # ------------------------------------------------------------------------------------ a keyboard
+    def keyboard(self, pressed: bool, code: int, meta: int, char: int) -> None:
+        """PORT ADDITION (user request, 2026-10-05): a key of a keyboard plugged into the phone, given to the
+        screens as the desktop's keys are.  Android's own repeats are not passed on: the screens repeat a
+        held key themselves, as on the desktop.  While it is used, the hints name keys (pad.menu_words)."""
+        import pygame
+        found = pygame_key(int(code), int(meta))
+        if found is None:
+            return
+        key, mod = found
+        from .platform import pad
+        pad.keyboard_in_use = True
+        text = chr(int(char)) if pressed and int(char) >= 32 else ''
+        self.host.handle_event(pygame.event.Event(pygame.KEYDOWN if pressed else pygame.KEYUP, key=key, mod=mod,
+                                                  unicode=text, scancode=0))
+
     # ------------------------------------------------------------------------------------ helpers
     def _key(self, code, mod=0) -> None:
         import pygame
@@ -153,6 +228,8 @@ class TouchInput:
                 # not read over it (ui/reading.py), as a key on the desktop takes it away
                 from .ui.reading import Hints
                 Hints.shared().cancel()
+                from .platform import pad
+                pad.keyboard_in_use = False               # the hints name touches again (pad.menu_words)
                 self._start(pid, x, y, now)
             self.fingers[pid] = _Finger(x, y, now)
             self.gesture_max = max(self.gesture_max, len(self.fingers))
@@ -507,6 +584,8 @@ def run(home: str, fake: bool = False) -> int:
                 kind = int(events[i])
                 if kind in (DOWN, MOVE, UP, CANCEL):
                     touch.handle(kind, int(events[i + 1]), float(events[i + 2]), float(events[i + 3]), now)
+                elif kind in (KEY_DOWN, KEY_UP):
+                    touch.keyboard(kind == KEY_DOWN, events[i + 1], events[i + 2], events[i + 3])
                 elif kind == PAUSED:
                     app.application_will_resign_active()
                 elif kind == BACK:

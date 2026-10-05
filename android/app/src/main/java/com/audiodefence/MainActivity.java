@@ -116,6 +116,15 @@ public final class MainActivity extends Activity {
         }
     }
 
+    /** A keyboard plugged into the phone: its keys go to the game (Bridge.keyEvent); the phone's own go on. */
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (bridge != null && started && bridge.keyEvent(event)) {
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {

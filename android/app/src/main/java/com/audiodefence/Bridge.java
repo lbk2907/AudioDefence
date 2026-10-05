@@ -372,6 +372,32 @@ public final class Bridge implements SensorEventListener {
         events.add(new float[]{20, 0, 0, 0, 0});
     }
 
+    /** PORT ADDITION (user request, 2026-10-05): a key of a keyboard plugged into the phone, passed to Python
+     *  (android_main.TouchInput.keyboard) as 30 down and 31 up with its key code, meta state and character.
+     *  Android's own repeats are not: the game repeats a held key itself.  The phone's own keys - Back,
+     *  volume, power, media - and a controller's buttons are left to Android.  True when it was taken. */
+    public boolean keyEvent(android.view.KeyEvent e) {
+        int code = e.getKeyCode();
+        int source = e.getSource();
+        if (e.isSystem() || android.view.KeyEvent.isGamepadButton(code)
+                || (source & android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD
+                || (source & android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK) {
+            return false;
+        }
+        int action = e.getAction();
+        if (action == android.view.KeyEvent.ACTION_DOWN) {
+            if (e.getRepeatCount() == 0) {
+                events.add(new float[]{30, code, e.getMetaState(), e.getUnicodeChar(e.getMetaState()), 0});
+            }
+            return true;
+        }
+        if (action == android.view.KeyEvent.ACTION_UP) {
+            events.add(new float[]{31, code, e.getMetaState(), 0, 0});
+            return true;
+        }
+        return false;
+    }
+
     public void setScreen(float wDp, float hDp) {
         widthDp = wDp;
         heightDp = hDp;

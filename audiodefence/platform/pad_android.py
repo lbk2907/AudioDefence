@@ -19,6 +19,10 @@ def button_words(action, mode=None):
     return None
 
 
+#: PORT ADDITION (user request, 2026-10-05): a keyboard plugged into the phone is being used - its last input
+#: was a key, not a touch (android_main.TouchInput) - so the hints name its keys, as they are written
+keyboard_in_use = False
+
 #: the desktop's key names, as the phone's gestures that do the same in a menu (android_main.TouchInput)
 _TOUCH_WORDS = (
     (r'Shift plus Enter|Shift\+Enter|Shift Enter', 'touch and hold'),
@@ -35,7 +39,7 @@ def menu_words(text, *a, **k):
     FIX: this used to answer None for everything.  Every row marked `label_key_words` (the challenge list,
     the tarot cards, the armory) then lost its whole label, and every hint was read as "None".  The text is
     now given back, with the keyboard's keys named as the gestures that do the same on a touch screen."""
-    if not text:
+    if not text or keyboard_in_use:
         return text
     import re
     text = str(text)

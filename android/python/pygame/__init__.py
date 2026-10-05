@@ -17,6 +17,8 @@ CONTROLLERAXISMOTION, CONTROLLERBUTTONDOWN, CONTROLLERBUTTONUP = 1616, 1617, 161
 CONTROLLERDEVICEADDED, CONTROLLERDEVICEREMOVED, CONTROLLERDEVICEREMAPPED = 1619, 1620, 1621
 
 KMOD_SHIFT, KMOD_CTRL, KMOD_ALT, KMOD_GUI = 3, 192, 768, 3072
+KMOD_LSHIFT, KMOD_RSHIFT, KMOD_LCTRL, KMOD_RCTRL = 1, 2, 64, 128
+KMOD_LALT, KMOD_RALT, KMOD_LGUI, KMOD_RGUI = 256, 512, 1024, 2048
 
 _SCANCODE_MASK = 1 << 30
 _NAMES = {}
@@ -57,6 +59,24 @@ _key('K_RGUI', _SCANCODE_MASK | 231, 'right meta')
 _key('K_CAPSLOCK', _SCANCODE_MASK | 57, 'caps lock')
 _key('K_NUMLOCK', _SCANCODE_MASK | 83, 'numlock')
 _key('K_INSERT', _SCANCODE_MASK | 73, 'insert')
+# PORT ADDITION (user request, 2026-10-05): the rest of a keyboard plugged into the phone, so that any of its
+# keys can be bound in Settings > Keyboard and named as the desktop names it
+for _i in range(1, 13):
+    _key('K_F%d' % _i, _SCANCODE_MASK | (57 + _i), 'f%d' % _i)
+for _const, _char in (('MINUS', '-'), ('EQUALS', '='), ('LEFTBRACKET', '['), ('RIGHTBRACKET', ']'),
+                      ('BACKSLASH', '\\'), ('SEMICOLON', ';'), ('QUOTE', "'"), ('BACKQUOTE', '`'),
+                      ('COMMA', ','), ('PERIOD', '.'), ('SLASH', '/')):
+    _key('K_' + _const, ord(_char), _char)
+for _i in range(1, 10):
+    _key('K_KP%d' % _i, _SCANCODE_MASK | (88 + _i), '[%d]' % _i)
+_key('K_KP0', _SCANCODE_MASK | 98, '[0]')
+for _const, _scan, _name in (('DIVIDE', 84, '[/]'), ('MULTIPLY', 85, '[*]'), ('MINUS', 86, '[-]'),
+                             ('PLUS', 87, '[+]'), ('PERIOD', 99, '[.]')):
+    _key('K_KP_' + _const, _SCANCODE_MASK | _scan, _name)
+_key('K_PRINTSCREEN', _SCANCODE_MASK | 70, 'print screen')
+_key('K_SCROLLLOCK', _SCANCODE_MASK | 71, 'scroll lock')
+_key('K_PAUSE', _SCANCODE_MASK | 72, 'pause')
+_key('K_MENU', _SCANCODE_MASK | 118, 'menu')
 
 # the controller buttons the desktop port's pad module names (unused on Android, kept so imports work)
 for _n, _v in enumerate(('A', 'B', 'X', 'Y', 'BACK', 'GUIDE', 'START', 'LEFTSTICK', 'RIGHTSTICK',
