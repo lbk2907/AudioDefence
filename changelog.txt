@@ -1,4 +1,6 @@
 unrelease:
+
+26.10.05-1:
 The port is now free software under the GNU General Public License, version 3 or later, instead of the MIT License. The original game's own files are still Somethin' Else's.
 Audio Defence runs on Android phones as an app of its own, played by touch, keyboard or controller and spoken by the phone's own voice. Turn TalkBack off while you play.
 A new game starts with no coins and no diamonds, so the armory is earned by playing.
