@@ -226,8 +226,12 @@ they were.
     line after it (user request, 2026-10-05), which only asks for TalkBack to be turned off - "TalkBack is
     on. Please turn it off: the game speaks for itself." - since the game goes on and plays once it is,
     with nothing to open again; it said to open the game again, which was never needed.  The game's start
-    waits for that line to have been read, fifteen seconds at the most (`MainActivity.waitForSpeech`, on
-    `Bridge.speaking`), so the game's first line does not cut it off.
+    waits for that line to have been read, thirty seconds at the most for a phone set to speak slowly
+    (`MainActivity.waitForSpeech`, on `Bridge.speaking`), so nothing the game says first - the Speech
+    calibration a first start asks for, the logo - cuts it off.  A line counts as heard only once the
+    engine says it has ended (`UtteranceProgressListener`: done, stopped, flushed or failed), not once
+    `isSpeaking` is false: on a first start the engine is still starting, and between it taking the lines
+    queued meanwhile and beginning to read them `isSpeaking` is false, which let the game in early.
 * **Sound.**  There is no OpenAL Soft on the phone, so `com.audiodefence.audio.MiniAl` takes its calls - a
   small Java mixer with the game's own HRTF, the same Freeverb and the same per-ear filters - and
   `SoundDecoder` decodes the bundle's files with the phone's MediaCodec.  `s3d/android.py` and

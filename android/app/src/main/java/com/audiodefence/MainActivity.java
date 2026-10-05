@@ -147,13 +147,10 @@ public final class MainActivity extends Activity {
     }
 
     // ------------------------------------------------------------------------------------ start-up
-    /** Waits while the phone's speech has anything still to be heard, for `mostMs` at the most: a little for
-     *  it to begin, then for as long as it reads. */
+    /** Waits while the phone's speech has anything still to be heard - queued while the engine starts, or not
+     *  yet read to its end (Bridge.speaking) - for `mostMs` at the most. */
     private void waitForSpeech(long mostMs) throws InterruptedException {
         long start = SystemClock.uptimeMillis();
-        while (!bridge.speaking() && SystemClock.uptimeMillis() - start < 1500) {
-            Thread.sleep(50);
-        }
         while (bridge.speaking() && SystemClock.uptimeMillis() - start < mostMs) {
             Thread.sleep(100);
         }
@@ -191,11 +188,13 @@ public final class MainActivity extends Activity {
             });
             // TalkBack reads the screen as well as the game speaking: only asked to be turned off, once the data
             // is in place.  The game goes on all the same, and plays once it is off - nothing has to be opened
-            // again.  It is waited for, so the game's own first line does not cut it off.
+            // again.  It is waited for before the game starts, so nothing the game says first - the Speech
+            // calibration a first start asks for, the logo - cuts it off; thirty seconds at the most, for a
+            // phone set to speak slowly.
             AccessibilityManager am = (AccessibilityManager) getSystemService(ACCESSIBILITY_SERVICE);
             if (am != null && am.isTouchExplorationEnabled()) {
                 bridge.speak("TalkBack is on. Please turn it off: the game speaks for itself.", false);
-                waitForSpeech(15000);
+                waitForSpeech(30000);
             }
             Python.getInstance().getModule("audiodefence.android_main")
                     .callAttr("run", home.getAbsolutePath());

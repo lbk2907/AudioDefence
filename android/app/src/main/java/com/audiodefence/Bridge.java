@@ -36,6 +36,7 @@ import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.util.Log;
 import android.view.Display;
 import android.view.InputDevice;
@@ -809,6 +810,8 @@ public final class Bridge implements SensorEventListener {
         private volatile boolean ready;
         private boolean begun;                          // whether a TextToSpeech has been asked for yet
         private final List<Object[]> spokenBeforeReady = new ArrayList<>();
+        /** The lines handed to the engine and not yet done, stopped or failed (speaking). */
+        private final Set<String> pending = new HashSet<>();
         private volatile int rateSetting = 0;
         private volatile int pitchSetting = 0;
         private volatile int volumeSetting = 100;
@@ -845,6 +848,7 @@ public final class Bridge implements SensorEventListener {
                 old = tts;
                 tts = null;
                 start = ++speechStart;
+                pending.clear();                        // the old engine will not say how its lines ended
             }
             if (old != null) {
                 try {
@@ -907,6 +911,32 @@ public final class Bridge implements SensorEventListener {
                 return;
             }
             speakTheLanguage(t);                        // and with it the engine's own voice for that language
+            t.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                @Override
+                public void onStart(String id) {
+                }
+
+                @Override
+                public void onDone(String id) {
+                    ended(id);
+                }
+
+                @Override
+                @SuppressWarnings("deprecation")
+                public void onError(String id) {
+                    ended(id);
+                }
+
+                @Override
+                public void onError(String id, int code) {
+                    ended(id);
+                }
+
+                @Override
+                public void onStop(String id, boolean interrupted) {
+                    ended(id);
+                }
+            });
             List<Object[]> waiting;
             synchronized (spokenBeforeReady) {
                 if (start != speechStart) {
@@ -955,18 +985,26 @@ public final class Bridge implements SensorEventListener {
             }
         }
 
-        /** Whether anything given to this voice is still to be heard: queued while its engine starts, or being
-         *  read. */
+        /** A line the engine has finished with - read to the end, stopped, flushed by a later line, or failed. */
+        private void ended(String id) {
+            synchronized (spokenBeforeReady) {
+                pending.remove(id);
+            }
+        }
+
+        /** Whether anything given to this voice is still to be heard: queued while its engine starts, or handed
+         *  to it and not yet done.  The engine says when each line ends (`ended`), so there is no moment, between
+         *  the queue being handed over and the engine beginning, at which this is wrongly false. */
         boolean speaking() {
             TextToSpeech t;
             synchronized (spokenBeforeReady) {
-                if (!ready || tts == null) {
-                    return !spokenBeforeReady.isEmpty();
+                if (!spokenBeforeReady.isEmpty() || !pending.isEmpty()) {
+                    return true;
                 }
-                t = tts;
+                t = ready ? tts : null;
             }
             try {
-                return t.isSpeaking();
+                return t != null && t.isSpeaking();
             } catch (RuntimeException e) {
                 return false;
             }
@@ -1002,7 +1040,16 @@ public final class Bridge implements SensorEventListener {
             Bundle params = new Bundle();
             params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, Math.max(0f, Math.min(1f, volumeSetting / 100f)));
             int mode = interrupt ? TextToSpeech.QUEUE_FLUSH : TextToSpeech.QUEUE_ADD;
-            return t.speak(text, mode, params, prefix + (utterance++)) == TextToSpeech.SUCCESS;
+            String id;
+            synchronized (spokenBeforeReady) {
+                id = prefix + (utterance++);
+                pending.add(id);                        // before speak: its end may come back before speak does
+            }
+            boolean spoken = t.speak(text, mode, params, id) == TextToSpeech.SUCCESS;
+            if (!spoken) {
+                ended(id);
+            }
+            return spoken;
         }
 
         void stop() {
