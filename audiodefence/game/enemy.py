@@ -524,6 +524,9 @@ class Enemy:
             stop = getattr(bm.gameplay_view_controller, 'stop_turning_by_itself', None)
             if stop is not None:
                 stop()
+            counted = getattr(bm.gameplay_view_controller, 'hot_potato_kill', None)
+            if counted is not None:                       # PORT ADDITION: and Hot Potato counts it
+                counted()
         if self.blast() is not None:                      # PORT ADDITION: see `blast`
             self.explode()
             self.set_state(5)

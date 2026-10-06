@@ -551,6 +551,10 @@ class GameplayController:
         self.revive_view_controller = None
         self.turning_by_itself = 0                        # PORT ADDITION: The Magpie, 1 or -1 while it turns you
         self.turning_left = 0.0                           # and the seconds it has left at the most
+        self.hot_potato = None                            # PORT ADDITION: Hot Potato's own Grenade Launcher,
+        self.hot_potato_kills = 0                         # the Zombies killed so far,
+        self.hot_potatoes_due = 0                         # the grenades waiting to be fired,
+        self.hot_potato_wait = 0.0                        # and the seconds before the next may be
         self.nb_revives = 0
         self.announcer_value_on_entering_pause = False
         self.accessible_game_view = None
@@ -701,6 +705,7 @@ class GameplayController:
         for v in list(self.infinite_scroll_views):
             v.update()
         self.turn_by_itself(0.05)                         # PORT ADDITION: The Magpie
+        self.throw_hot_potatoes()                         # PORT ADDITION: Hot Potato
         BrickManager.shared().update(0.05, hold_current=self.holds_the_wave())   # PORT ADDITION: see there
         if self.player is not None:
             self.player.update(0.05)
@@ -745,6 +750,60 @@ class GameplayController:
         self.turning_left -= dt
         if self.turning_left <= 1e-6:
             self.stop_turning_by_itself('time up')
+
+    # --- Hot Potato (PORT ADDITION, user request, 2026-10-06) --------------------------------------
+    def hot_potato_kill(self) -> None:
+        """A Zombie killed, by anything, counted for Hot Potato: every modifiers.HOT_POTATO_KILLS of them, the
+        Grenade Launcher fired for the player HOT_POTATO_GRENADES times (`throw_hot_potatoes`).  It is a
+        launcher of the card's own, at the player's level for it, made at the first kill so that its sounds
+        are loaded by the time it is wanted, and let go with the game."""
+        from .modifiers import HOT_POTATO_GRENADES, HOT_POTATO_KILLS, GameModifiers
+        if not GameModifiers.shared().hotPotato or self.weapon_manager is None:
+            return
+        if self.hot_potato is None:
+            from .weapon import Weapon
+            self.hot_potato = Weapon(self.weapon_manager.dictionary_for_weapon_with_name('grenade'))
+        self.hot_potato_kills += 1
+        if self.hot_potato_kills % HOT_POTATO_KILLS == 0:
+            log.info('Hot Potato: kill %i, %i grenades', self.hot_potato_kills, HOT_POTATO_GRENADES)
+            self.hot_potatoes_due += HOT_POTATO_GRENADES
+
+    def throw_hot_potatoes(self) -> None:
+        """One tick of it: a grenade due is fired every modifiers.HOT_POTATO_INTERVAL seconds - five in under
+        half a second - each at a Zombie that can be shot, chosen at random, near or far.  With none about
+        they wait for the next.  Not while paused or dead."""
+        from .modifiers import HOT_POTATO_INTERVAL
+        self.hot_potato_wait = max(0.0, self.hot_potato_wait - 0.05)
+        if (not self.hot_potatoes_due or self.hot_potato_wait > 1e-6 or self.paused
+                or getattr(self, 'death_overlay_visible', False) or self.player is None):
+            return
+        zombies = [t for t in BrickManager.shared().all_potential_targets()
+                   if t.can_be_shot_at() and not t.is_a_bystander() and t.squared_distance > 0.0]
+        if not zombies:
+            return
+        import random
+        self._launch_hot_potato(random.choice(zombies))
+        self.hot_potatoes_due -= 1
+        self.hot_potato_wait = HOT_POTATO_INTERVAL
+
+    def _launch_hot_potato(self, target) -> None:
+        """One grenade of the card's, fired at `target` as the Grenade Launcher fires at the Zombie it aims at
+        (`WeaponManager.create_projectile_for_current_weapon`): the launcher's shot heard, and the grenade sent
+        far enough to meet the Zombie as it walks in, then its fuse and its blast, the launcher's own."""
+        from .projectile import Projectile
+        w = self.hot_potato
+        if w is None or w.playlist is None:
+            return
+        w.bullets_in_clip = w.capacity                    # so its shot is not heard as a low clip's
+        w.play_single_shoot_sound()
+        dist = math.sqrt(target.squared_distance)
+        ox, oy = target.position[0] / dist, target.position[1] / dist
+        reach = max(0.0, dist - w.time_before_explode * target.speed) / (target.speed + w.projectile_speed)
+        d = reach * w.projectile_speed
+        p = Projectile(w.projectile_speed, d * d, reach + w.time_before_explode, w.name, (ox, oy))
+        p.weapon = w
+        self.weapon_manager.projectile_array.append(p)
+        p.tag = len(self.weapon_manager.projectile_array)
 
     def holds_the_wave(self) -> bool:
         """PORT ADDITION (user request, 2026-10-03): whether the wave just loaded is kept from beginning while
@@ -951,6 +1010,9 @@ class GameplayController:
             AmbientManager.shared().stop_ambient()
             if self.weapon_manager is not None:
                 self.weapon_manager.clean()
+            if self.hot_potato is not None:               # PORT ADDITION: Hot Potato's own launcher
+                self.hot_potato.dealloc()
+                self.hot_potato = None
             BrickManager.shared().clean()
             # DIVERGENCE: -[ADWeaponManager clean] 0x1000aad50 cleans the power-up of the manager it is sent
             # to, and this block only sends it to the gameplay manager, whose own powerUp is always nil -
