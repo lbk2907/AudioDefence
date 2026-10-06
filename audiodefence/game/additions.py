@@ -120,7 +120,7 @@ def _tidy(value: float):
 #: the third card close to a coin flip stays that way; level 3 stands at eight good to seven bad, because
 #: Executioner's opposite was already in the deck as Black Cat and needed no card of its own - and two
 #: more since 2026-10-05 (user request) that are neither: The Magpie, dealt as a good card and hiding its
-#: catch, and Empty Chambers, which is both - and Hot Potato since 2026-10-06, hiding its catch too.
+#: catch, and Empty Chambers, which is both.
 #:
 #: Every `selector` here is a flag something reads.  Two are the original's own and were never dealt:
 #: `fasterReloadTime` and `slowerReloadTime` are set by nothing in the original, and `reloadTimeModifier`
@@ -223,11 +223,6 @@ NEW_CARDS = {
          'icon': 'Roulette_icon_glue',
          'description': 'Your guns are empty, so your Melee weapon is all you have. No Hulk, Berserk or '
                         'Colossus will come, and your swing reaches Diamonds and Power Ups.'},
-        # PORT ADDITION (user request, 2026-10-06): free grenades, and a catch it does not mention, on purpose
-        # - they go at Zombies chosen at random, and one close by rings the ears (modifiers.HOT_POTATO_KILLS)
-        {'title': 'Hot Potato', 'goodbad': 'good', 'selector': 'hotPotato',
-         'icon': 'Roulette_icon_increase',
-         'description': 'Every twentieth kill fires five free grenades at the Zombies around you.'},
     ),
 }
 

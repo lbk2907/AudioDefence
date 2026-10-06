@@ -86,16 +86,6 @@ LOOSE_CONTROL_RADIANS_PER_SECOND = 2.0 * 3.14159265
 #: cannot turn, and the shot has to be timed as one sweeps past - the price of the card's Diamonds.
 LOOSE_CONTROL_SECONDS = 15.0
 
-#: PORT ADDITION (user request, 2026-10-06): Hot Potato - every HOT_POTATO_KILLS Zombie kills, the Grenade
-#: Launcher fired for the player HOT_POTATO_GRENADES times, one every HOT_POTATO_INTERVAL seconds, each at a
-#: Zombie chosen at random (`GameplayController.hot_potato_kill`).  Its catch, which the card does not
-#: mention, is the launcher's own: a grenade that goes off within five units rings the ears, as one fired
-#: at a Zombie at arm's length always has (`BrickManager.solve_explosion_with_dictionary`), so a Zombie
-#: close by is as likely a target as one far off.
-HOT_POTATO_KILLS = 20
-HOT_POTATO_GRENADES = 5
-HOT_POTATO_INTERVAL = 0.1
-
 #: PORT ADDITION (user request, 2026-10-05): the enemies Empty Chambers keeps away - the ones a melee weapon
 #: alone could not be expected to bring down (`Enemy.kept_away`)
 KEPT_AWAY_BY_EMPTY_CHAMBERS = ('Hulk', 'HulkB', 'Colossus', 'Berserk')
@@ -110,8 +100,7 @@ KEPT_AWAY_BY_EMPTY_CHAMBERS = ('Hulk', 'HulkB', 'Colossus', 'Berserk')
 CHAIN_REACTION_BLAST = {'radius': 3, 'damages': 50, 'dispersal': 75}
 
 PORT_FLAGS = ('earlyPowerUp', 'luckyNight', 'lessPowerUps', 'lessCoins', 'alwaysCritical',
-              'everythingExplodes', 'noFartyBlast', 'looseControl', 'brokenGuns',
-              'hotPotato') + tuple(PAIRED_FLAGS)
+              'everythingExplodes', 'noFartyBlast', 'looseControl', 'brokenGuns') + tuple(PAIRED_FLAGS)
 
 
 class GameModifiers:

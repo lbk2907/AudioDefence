@@ -3180,23 +3180,6 @@ they were.
   killed, and the turn key turning the player again after that; and with no kill, eight turns and then
   none, at the first limit.
 
-* PORT ADDITION: Hot Potato, a level-3 tarot card that hides its catch (user request, 2026-10-06): "Every
-  twentieth kill fires five free grenades at the Zombies around you."  Every `HOT_POTATO_KILLS` Zombie kills,
-  by anything, the Grenade Launcher is fired for the player `HOT_POTATO_GRENADES` times, one every
-  `HOT_POTATO_INTERVAL` - five in under half a second - each at a Zombie that can be shot, chosen at random
-  (`GameplayController.hot_potato_kill`, `throw_hot_potatoes`); with none about they wait for the next.  It
-  is the launcher's own in every way, a launcher of the card's at the player's level for it: its shot heard,
-  the grenade sent as `createProjectileForCurrentWeapon` 0x1000aa3ec sends one at the Zombie it aims at, far
-  enough to meet it walking in, then its fuse and its blast.  The catch is the launcher's own too, which the
-  card does not mention, on purpose: a blast within five units rings the ears
-  (`solveExplosionWithDictionary:` 0x1000c5c40), and a Zombie close by is as likely a target as one far off,
-  so a crowd at arm's length rings them, and rings them again.  The card's first form had the grenades go
-  off in the player's hands one time in four instead of being thrown; the user asked for the launcher
-  simulated and nothing more.  The rolls are Python's own, so the original's random stream is untouched.
-  Checked in an Endless game, muted, at two kills rather than twenty: five shots 0.1 s apart at two
-  Zombies near and far, the Hulk taking 45 from each grenade, and the ringing 4.9, 10.7 and 16.4 s long as
-  the close ones went off, the far ones adding nothing.
-
 * PORT ADDITION: Empty Chambers, a level-3 tarot card for the melee weapon alone (user request,
   2026-10-05): "Your guns are empty, so your Melee weapon is all you have. No Hulk, Berserk or Colossus will
   come, and your swing reaches Diamonds and Power Ups."  `brokenGuns` gives every gun no rounds and none to
