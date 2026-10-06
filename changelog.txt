@@ -5,11 +5,10 @@ The port is now free software under the GNU General Public License, version 3 or
 Audio Defence runs on Android phones as an app of its own, played by touch, keyboard or controller and spoken by the phone's own voice. Turn TalkBack off while you play.
 A new game starts with no coins and no diamonds, so the armory is earned by playing.
 The Powered Power Ups tarot card is worth something to everyone now. It gives a level beyond the highest you can buy, where before it did nothing at all for a fully upgraded player.
-Endless deals three tarot cards instead of two, and sometimes a fourth. Those last cards cannot be changed, so every hand holds something you did not pick.
+Endless deals three tarot cards instead of two, and sometimes a fourth. A Shuffle button deals the cards for diamonds and coins. It gives you a new set, not a choice, so it may be worse.
 New tarot cards, good and bad, have joined Dr. Bastard's decks.
 While the cards are being dealt you can no longer change one. They come alive with the Play button.
 Each card arrives with its own sound, and you can reach exactly the cards you have heard arrive.
-A Shuffle button deals the cards you cannot change again, for diamonds and coins. It gives you a new set, not a choice, so it may be worse.
 A shuffle sounds once for each card it moves, and reads them out when the last one has landed.
 When a card changes, only the new card is read out, not the price of changing it again.
 Explosions that go off while your ears are still ringing add to the ringing, and it keeps sounding for as long as it lasts.
