@@ -1,5 +1,8 @@
-# Text files are stored with LF, whatever the machine that commits them uses.
+# Text files are LF on every machine, whatever the machine that commits them uses: Windows' own tools all read LF.
 * text=auto eol=lf
+# Except a Windows batch file, should one be added: Command Prompt can miss a "call :label" in one with LF endings.
+*.cmd text eol=crlf
+*.bat text eol=crlf
 
 # The original game, the vendored DLLs and everything pulled out of the binary are kept byte for byte:
 # no line-ending conversion, no diffing.

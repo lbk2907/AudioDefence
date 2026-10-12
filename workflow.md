@@ -83,10 +83,14 @@ file, **at the end of that block** - it reads in the order things were done.
 * **No GitHub workflows** (user request, 2026-10-01).  The repository is on a free account, and every
   build - Windows, Mac and the Android APK - is made by hand with `compiler.py` and the tools.  A build
   step belongs in the README, not in `.github/`.
-* **Files are LF.**  On Windows, Python's text mode writes CRLF: a script that edits a file opens it with
-  `newline=''` or writes with `newline='\n'`.  On 2026-10-02 a script rewrote ten files as CRLF, and the
-  diff showed every line of them changed.  Check `git diff --stat` before committing: it should show only
-  the lines you meant.
+* **Files are LF** (user request, 2026-10-13: Windows' own tools all read LF nowadays).  `.gitattributes`
+  keeps them LF on every machine (`* text=auto eol=lf`), whatever the machine's own Git settings.  The one
+  exception is a Windows batch file (`.cmd`, `.bat`): Command Prompt can miss a `call :label` in a batch file
+  with LF endings, so `.gitattributes` keeps those CRLF.  A file that must keep its endings, or its bytes,
+  gets its own line there; the game's data and the vendored files are `binary`.  On Windows, Python's text
+  mode writes CRLF: a script that edits a file opens it with `newline=''` or writes with `newline='\n'`.  On
+  2026-10-02 a script rewrote ten files as CRLF, and the diff showed every line of them changed.  Check
+  `git diff --stat` before committing: it should show only the lines you meant.
 * **No signing key in the repository, ever.**  The Android app's key lives outside it (`C:\Android\Keys`),
   `.gitignore` turns away `.p12`, `.jks` and `.keystore` wherever they are, and nobody but the maintainer
   makes or moves a key: a published key lets anyone sign an update every phone accepts as the game's.
