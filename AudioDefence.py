@@ -16,9 +16,8 @@ if HERE not in sys.path:
 #: the packages the source version needs, by the module whose name comes back when one is missing.  A
 #: player who downloads the source zip rather than a release has Python and nothing else, and the traceback
 #: they get says "No module named 'pygame'", which is true and no help at all.
-PACKAGES = {'pygame': 'pygame-ce', 'numpy': 'numpy', 'av': 'av', 'comtypes': 'comtypes',
-            'prism': 'prismatoid'}
-INSTALL = 'py -m pip install pygame-ce numpy av comtypes prismatoid'
+PACKAGES = {'pygame': 'pygame-ce', 'numpy': 'numpy', 'av': 'av', 'comtypes': 'comtypes'}
+INSTALL = 'py -m pip install pygame-ce numpy av comtypes'
 MAC_INSTALL = 'uv run AudioDefence.py'
 
 

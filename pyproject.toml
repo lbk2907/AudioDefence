@@ -6,9 +6,9 @@ dependencies = [
     "av>=14.0.0",
     "numpy>=2.0.0",
     "pygame-ce>=2.5.0",
-    # speech: NVDA and the other screen readers through Prism; SAPI 5 through comtypes
+    # speech: SAPI 5 through comtypes; NVDA and the other screen readers through Prism, whose DLL is
+    # vendored (vendor/prism) and called directly, so it needs no package
     "comtypes>=1.4.0; sys_platform == 'win32'",
-    "prismatoid; sys_platform == 'win32'",
     # speech on the Mac: VoiceOver and the system voice, through pyobjc
     "pyobjc-framework-cocoa>=10.0; sys_platform == 'darwin'",
 ]

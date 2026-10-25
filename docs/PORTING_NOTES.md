@@ -1331,12 +1331,25 @@ they were.
   gone and one library speaks to every screen reader.  Nothing heard changed: NVDA is still tried first and
   still asked before every line whether it is running (0.1 ms through Prism, measured over 200 asks), and a
   player who starts NVDA after the game is heard within a second (`_Nvda.RETRY_EVERY`).  What changed is when
-  Prism is loaded: at `Speech()`, before the window opens and before any sound, for every Windows player -
-  130 ms of held interpreter, measured with the game's modules already loaded, most of it the asyncio that
-  Prism's dispatcher imports (`_prism`).  Before, an NVDA player never loaded it, and a player on another
-  screen reader loaded it at the first line, with the sound already playing.  In a build its library is
-  `_internal/prism/_native/prism.dll`, the one folder prismatoid looks in, so it cannot be moved beside the
-  executable.
+  Prism is loaded: at `Speech()`, before the window opens and before any sound, for every Windows player,
+  since through the package it cost 130 ms of held interpreter, measured with the game's modules already
+  loaded, most of it the asyncio that the prismatoid package's dispatcher imported (`_prism`).  Before, an
+  NVDA player never loaded it, and a player on another screen reader loaded it at the first line, with the
+  sound already playing.
+
+  The same day the package went too (user request): the game calls Prism's DLL itself, through ctypes
+  (`platform/prismdll.py`), declared function by function from Prism 0.18.3's `prism.h`.  The DLL is
+  `vendor/prism/prism.dll`, with its `LICENSES` - the same file the maintainer's AccessDBT carries, so one
+  Prism serves both - and in a build `_internal/vendor/prism`, where the package had kept it out of sight
+  in `_internal/prism/_native`, the one folder prismatoid looked in.  Loading it directly takes 4 ms against
+  the package's 130 (measured), and `prismatoid` and `cffi` are no longer installed to play or to build.
+  What the package did for free is now a chore: when Prism is updated, its new `prism.h` has to be read
+  against `prismdll._declare`, since a function whose shape changed would be called the old way and nothing
+  would say so.  The one guard is the config's version (`PRISM_CONFIG_VERSION`, 4), checked as Prism is
+  loaded: a newer layout refuses to load, and the game speaks with SAPI 5 and says why in the log, rather
+  than handing Prism a config it would read wrongly.  The config is also given 64 bytes of room past its
+  end, because `prism_config_init` returns it by value into memory the caller sizes.
+
   While SAPI 5 is what speaks - chosen, or Automatic with nothing else running
   (`ControlSchemePanel.sapi_speaking`, looked at once a second while the category is open, so the rows come
   and go as a screen reader starts or closes) - rows for SAPI 5 itself follow (`_Sapi`, `sapiVoice` / `sapiRate` /

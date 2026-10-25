@@ -507,19 +507,21 @@ Python, you have what you need.
 
 Then the packages to play:
 
-    py -m pip install pygame-ce numpy av comtypes prismatoid
+    py -m pip install pygame-ce numpy av comtypes
 
 | package | what needs it |
 |---|---|
 | `pygame-ce` | the window, the keyboard and the frame loop (`audiodefence/__main__.py`, `ui/`) |
 | `numpy` | the audio maths: decoding, mixing, the Freeverb reverb (`s3d/`) |
 | `av` (PyAV) | decodes the game's `.m4a` sounds (`s3d/decoder.py`) — without it no sound plays |
-| `comtypes` | the SAPI 5 voice, used when no screen reader is running (`platform/speech.py`); skip it if you always play with NVDA |
-| `prismatoid` | Prism, for speech through a screen reader — NVDA, JAWS, ZoomText, System Access and the rest (`platform/speech.py`); it brings `cffi` with it. Without it every player hears the SAPI 5 voice instead |
+| `comtypes` | the SAPI 5 voice, used when no screen reader is running (`platform/speech.py`); skip it if you always play with a screen reader |
 
 Nothing else is imported outside the standard library. OpenAL Soft
-(`vendor/openal/soft_oal.dll`) ships with the repository, so there is nothing
-to install for it, and no system OpenAL is used.
+(`vendor/openal/soft_oal.dll`) and Prism (`vendor/prism/prism.dll`), which
+speaks to NVDA, JAWS, ZoomText, System Access and every other screen reader,
+ship with the repository, so there is nothing to install for either, and no
+system OpenAL is used. The game calls Prism's DLL directly
+(`platform/prismdll.py`), so Prism needs no Python package.
 
 One more package is needed only to redo the reverse engineering, never to play:
 
@@ -635,8 +637,8 @@ which the repository's `pyproject.toml` and `uv.lock` pin:
 
 `uv run` makes `.venv` with the right Python and packages the first time; the
 options are the same as on Windows. `pygame-ce`, `numpy` and `av` are the same
-three, `pyobjc-framework-cocoa` takes the place of `comtypes` and
-`prismatoid` for speech, and PyInstaller comes with them for building.
+three, `pyobjc-framework-cocoa` takes the place of `comtypes` and Prism for
+speech, and PyInstaller comes with them for building.
 `AudioDefence.command` can be double-clicked in Finder to do the same.
 
 ### Building the app
@@ -1709,7 +1711,9 @@ went with it.
                         which readies a computer to build the Android app, and
                         android_keys.py, which makes and chooses its signing keys
     vendor/             OpenAL Soft (the Windows DLL, and the Mac dylib in
-                        openal-mac/), and makemhr/, OpenAL Soft's tool for
+                        openal-mac/), Prism in prism/ (Windows; the DLL the
+                        game speaks to screen readers through, and its
+                        licences), and makemhr/, OpenAL Soft's tool for
                         making an HRTF
 
 ### `game/` — the original
@@ -2010,9 +2014,9 @@ release build.
 
 PyInstaller is the only extra package, and it goes in the same Python you play
 with: a build is made by following the game's own imports, so `pygame-ce`,
-`numpy`, `av`, `comtypes` and `prismatoid` have to be installed there too.
-`prismatoid` is optional to play from source but not to build: a release has to
-carry it, or JAWS players would hear SAPI 5. The script names
+`numpy`, `av` and `comtypes` have to be installed there too. Prism needs
+nothing installed: its DLL is in `vendor/prism`, and the build carries it from
+there. The script names
 anything that is missing and stops rather than building half a game. 64-bit
 Python on Windows produces a 64-bit Windows executable, and only that — there
 is no cross-compiling to another system.
@@ -2159,21 +2163,20 @@ What no script can check for you is the sound. Start it normally and listen to
 the main menu — once with NVDA, and once with NVDA closed so that SAPI is
 exercised. (SAPI goes through `comtypes`, which builds its COM wrappers in
 memory in a frozen program instead of writing them to disk, so it is worth
-hearing rather than assuming.) If you have another screen reader, such as JAWS,
-listen once with that too: it goes through Prism, whose compiled half the
-build carries in `_internal\prism\_native`.
+hearing rather than assuming.) NVDA, and any other screen reader you have, such
+as JAWS, go through Prism, which the build carries as
+`_internal\vendor\prism\prism.dll`.
 
 ### If something is missing from the build
 
-`av`, `comtypes` and Prism (`prism`) are all imported the first time they are
-needed rather than at the top of a module (`s3d/decoder.py`,
-`platform/speech.py`), so they are what PyInstaller's analysis is likeliest to
-walk past. The script already names them outright — `--collect-all av`,
-`--collect-submodules comtypes`, `--collect-all prism` — so the usual failures
-are covered. Prism needs two more: its compiled Python module,
-`prism\_native\_prism_cffi.pyd`, sits in a folder that is not a package, so
-`--collect-all` leaves it behind and the script adds it by name; and
-`--hidden-import _cffi_backend`, which that module needs and nothing names. For anything else that turns up as a
+`av`, `comtypes` and the game's own Prism module (`platform/prismdll.py`) are
+all imported the first time they are needed rather than at the top of a module
+(`s3d/decoder.py`, `platform/speech.py`), so they are what PyInstaller's
+analysis is likeliest to walk past. The script already names them outright —
+`--collect-all av`, `--collect-submodules comtypes`, `--hidden-import
+audiodefence.platform.prismdll` — so the usual failures are covered. Prism's
+DLL is not found by the analysis at all, since it is loaded by path: the script
+carries it as a file of its own, with its licences, into `_internal\vendor\prism`. For anything else that turns up as a
 `ModuleNotFoundError` in a frozen run, add `--hidden-import NAME` to the list
 in `command()` in `compiler.py`.
 
@@ -2217,11 +2220,11 @@ in the wrong shape: it needs `meta/` and `sounds/` at its top level. Point
 `--game` at another copy if it lives elsewhere.
 
 **Nothing is spoken.** With a screen reader running - NVDA or another - the
-port talks to it through Prism, which needs `prismatoid`; with none it falls
-back to SAPI 5, which needs `comtypes`. The log says which one it took
-("speech: JAWS, through Prism", or "Prism not available" when it could not load
-it). In a build, Prism's library is `_internal\prism\_native\prism.dll`: it has
-to stay in that folder, which is the only place Prism looks for it.
+port talks to it through Prism, `vendor/prism/prism.dll` (in a build,
+`_internal\vendor\prism\prism.dll`); with none it falls back to SAPI 5, which
+needs `comtypes`. The log says which one it took: "Prism 0.18.3, from …" when
+Prism loaded, then "speech: JAWS, through Prism", or "Prism not available" with
+the reason when it could not load it.
 
 **A screen reads in an odd order.** The reading order is reconstructed from the
 NIB frames (`audiodefence/ui/accessibility.py`), so it approximates VoiceOver's
@@ -2344,3 +2347,11 @@ Its `zlib1.dll` is zlib, under the zlib licence. The Windows build carries
 both, with that text and their `README.txt`, in `_internal\vendor\makemhr`, so
 that the game can make a `.sofa` into a 3D sound; they are separate programs,
 not part of the game's own code.
+
+`vendor/prism` is Prism 0.18.3's `prism.dll`, unchanged, which the Windows game
+speaks to every screen reader through. Prism is free software under the Mozilla
+Public License 2.0; its source is at
+[github.com/ethindp/prism](https://github.com/ethindp/prism), where you may
+obtain a copy of it. Its licence, and the licences of the libraries built into
+it, are beside it in `LICENSES`, and the Windows build carries them with it in
+`_internal\vendor\prism\LICENSES`.

@@ -63,12 +63,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 NAME = 'AudioDefence'
 ENTRY = 'AudioDefence.py'
 
-PLAY_PACKAGES = (('pygame', 'pygame-ce'), ('numpy', 'numpy'), ('av', 'av'), ('comtypes', 'comtypes'),
-                 ('prism', 'prismatoid'))
+PLAY_PACKAGES = (('pygame', 'pygame-ce'), ('numpy', 'numpy'), ('av', 'av'), ('comtypes', 'comtypes'))
 DATA = (('assets/hrtf', 'assets/hrtf'),)                       # the game's own HRTF
-#: the audio engine itself.  Speech needs nothing here: Prism, which speaks to NVDA and every other screen
-#: reader, is the prismatoid package and is collected with it (--collect-all prism, below)
-BINARIES = (('vendor/openal/soft_oal.dll', 'vendor/openal'),)
+BINARIES = (('vendor/openal/soft_oal.dll', 'vendor/openal'),)    # the audio engine itself
 if host.MAC:
     # the same OpenAL Soft, built for the Mac by tools/build_openal_mac.sh; speech is VoiceOver and the system
     # voice, through pyobjc, so there is no screen reader's library to carry
@@ -80,6 +77,10 @@ else:
     #: in its hrtf folder into a 3D sound itself (audiodefence/s3d/makehrtf.py, user request, 2026-10-05).  As
     #: data rather than binaries: copied as they are, and not looked into for what they would load
     DATA = DATA + (('vendor/makemhr', 'vendor/makemhr'),)
+    #: Prism, which speaks to NVDA and every other screen reader - its DLL, called directly by
+    #: audiodefence/platform/prismdll.py (user request, 2026-10-25), and the licences that go with it
+    BINARIES = BINARIES + (('vendor/prism/prism.dll', 'vendor/prism'),)
+    DATA = DATA + (('vendor/prism/LICENSES', 'vendor/prism/LICENSES'),)
 #: the Mac app's identity, which LaunchServices and Spotlight key on; PyInstaller's own is the bare name
 BUNDLE_ID = 'com.audiodefence.port'
 #: files of the original bundle a Mac build leaves out of the copy inside its app: the iOS executable and
@@ -338,7 +339,7 @@ def problems_now() -> list[str]:
     if not (host.WINDOWS or host.MAC):
         found.append('this builds the Windows or the Mac game, so it has to run on one of them')
     if sys.maxsize <= 2 ** 32:
-        found.append('use 64-bit Python: the vendored OpenAL Soft DLL is 64-bit')
+        found.append('use 64-bit Python: the vendored OpenAL Soft and Prism DLLs are 64-bit')
     install = 'uv sync' if host.MAC else 'pip install'
     if importlib.util.find_spec('PyInstaller') is None:
         found.append('PyInstaller is not installed in this Python: %s'
@@ -376,17 +377,6 @@ def write_baked_version(version: str) -> str:
     return folder
 
 
-def prism_native_modules() -> list[str]:
-    """Prism's compiled Python modules in its prism/_native folder, which --collect-all leaves behind."""
-    spec = importlib.util.find_spec('prism')
-    if spec is None or not spec.submodule_search_locations:
-        return []
-    folder = os.path.join(list(spec.submodule_search_locations)[0], '_native')
-    if not os.path.isdir(folder):
-        return []
-    return sorted(os.path.join(folder, name) for name in os.listdir(folder) if name.endswith('.pyd'))
-
-
 def command(args, baked_folder: str) -> list[str]:
     cmd = [sys.executable, '-m', 'PyInstaller', '--noconfirm', '--noupx', '--name', NAME]
     for src, dest in DATA:
@@ -402,12 +392,8 @@ def command(args, baked_folder: str) -> list[str]:
                 '--hidden-import', 'audiodefence.platform.macspeech', '--osx-bundle-identifier', BUNDLE_ID]
     else:
         # these are imported only when first needed, so name them outright rather than hope the analysis
-        # finds them.  Prism loads its compiled half from a folder of its own, prism/_native: --collect-all
-        # brings the DLL there but not the Python module beside it (the folder is not a package), so that is
-        # added by name, and it needs cffi's own compiled module, which nothing names either
-        cmd += ['--collect-submodules', 'comtypes', '--collect-all', 'prism', '--hidden-import', '_cffi_backend']
-        for src in prism_native_modules():
-            cmd += ['--add-binary', src + os.pathsep + 'prism/_native']
+        # finds them
+        cmd += ['--collect-submodules', 'comtypes', '--hidden-import', 'audiodefence.platform.prismdll']
     if not args.console:
         # no console window beside the game's own; a failed start-up writes crash.txt and says so instead.
         # On the Mac this is also what makes an .app of it

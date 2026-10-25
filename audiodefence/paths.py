@@ -51,6 +51,8 @@ if not FROZEN:
         logging.getLogger('paths').info('no localization folder, and none could be made: %s', exc)
 OPENAL_DLL = (os.path.join(VENDOR, 'openal-mac', 'libopenal.dylib') if host.MAC else
               os.path.join(VENDOR, 'openal', 'soft_oal.dll'))
+#: PORT ADDITION: Prism, which speaks to NVDA and every other screen reader (platform/prismdll.py); Windows only
+PRISM_DLL = os.path.join(VENDOR, 'prism', 'prism.dll')
 
 GAME_ENV = 'AUDIODEFENCE_GAME'
 APP_NAME = 'audiodefence.app'

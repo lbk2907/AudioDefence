@@ -49,21 +49,21 @@ _context_tried = False
 
 def _prism():
     """Prism's one context, which NVDA and the other screen readers are all reached through, or None where
-    Prism cannot be loaded (the prismatoid package missing, or its library refusing to load).
+    Prism cannot be loaded (vendor/prism/prism.dll missing, refusing to load, or of a newer shape than
+    platform/prismdll.py was written for).
 
     Made once, by the first of `_Nvda` and `_Readers` to ask - which is `Speech()`, made in `__main__` before
-    the window opens and before the engine plays a sound.  It has to be then: importing Prism holds the
-    interpreter for about 130 ms (measured with the game's own modules already loaded, 2026-10-25; most of it
-    is asyncio, which Prism's dispatcher imports), and the game mixes its own sound in Python, so the same
-    130 ms with the arena or the logo playing would be heard as a gap.  Before NVDA came through Prism, a
-    player on another screen reader paid it at the first line, with the sound already going."""
+    the window opens and before the engine plays a sound.  Loading the library directly takes about 4 ms
+    (measured, 2026-10-25), so when hardly matters any more; it was chosen while Prism still came through the
+    prismatoid package, whose import held the interpreter for 130 ms, which the game, mixing its own sound in
+    Python, would have played as a gap."""
     global _context, _context_tried
     if not _context_tried:
         _context_tried = True
         try:
-            from prism import Context
+            from .prismdll import Context
             _context = Context()
-        except Exception as exc:                          # not installed, or its library will not load
+        except Exception as exc:                          # not there, will not load, or the wrong shape
             log.info('Prism not available (%s): SAPI 5 only', exc)
             _context = None
     return _context
@@ -179,7 +179,7 @@ def process_running(exe: str) -> bool:
 
 
 class _Readers:
-    """PORT ADDITION: the screen readers other than NVDA, through Prism (the prismatoid package).
+    """PORT ADDITION: the screen readers other than NVDA, through Prism (vendor/prism/prism.dll).
 
     NVDA is `_Nvda` above, on the same Prism context, and is asked before every line whether it is running.
     The others are tried in Speech output's order (OUTPUTS), not Prism's own.  Prism also offers plain
