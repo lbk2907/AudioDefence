@@ -25,7 +25,7 @@ The log is written to `%APPDATA%\AudioDefence\audiodefence.log`; saves live in t
 |---|---|
 | audio engine (S3D on OpenAL Soft, HRTF from the embedded IRCAM set, original Freeverb reverb) | `s3d/` |
 | run loop, NSTimer, notifications, NSUserDefaults, C rand | `platform/` |
-| speech (NVDA controller client, other screen readers through Prism, SAPI fallback) | `platform/speech.py` |
+| speech (NVDA and the other screen readers through Prism, SAPI fallback) | `platform/speech.py` |
 | parameters, modifiers, inventory, persistent + in-game stats | `game/parameters.py`, `modifiers.py`, `inventory.py`, `persistent_stats.py`, `ingame_stats.py` |
 | enemies, passers-by (cows, cars, jukebox, machine), diamonds, power-up containers | `game/enemy.py`, `passerby.py`, `passerby_manager.py` |
 | bricks, brick manager, scripted sounds | `game/brick.py`, `brick_manager.py`, `adsound.py` |
@@ -1306,8 +1306,8 @@ they were.
   to `.mhr.part` and renamed once whole, so the list never offers half a file.  `tools/make_3d_sounds.py` does the same for whoever has the repository.  The
   Mac and the phone have no makemhr: there an `.mhr` made on Windows is put in or added.
 * PORT ADDITION: Settings -> Speech -> Speech output (`speechOutput` in settings.json,
-  `Speech.choice`, `platform/speech.py OUTPUTS`): Automatic by default - NVDA through its controller
-  client, else another screen reader through Prism, else SAPI 5 (`Speech.speak_automatic`) - or one of
+  `Speech.choice`, `platform/speech.py OUTPUTS`): Automatic by default - NVDA, else another screen reader,
+  both through Prism, else SAPI 5 (`Speech.speak_automatic`) - or one of
   NVDA, JAWS, ZDSR, Narrator, ZoomText, System Access, Window-Eyes, PC-Talker, Boy PC Reader, Sense Reader
   and SAPI 5 only (the Prism ones through `_Readers.current(only)`), with nothing spoken while that one
   cannot speak.  Automatic tries the Prism ones in that same order, not Prism's own (which puts PC-Talker,
@@ -1326,6 +1326,17 @@ they were.
   or that Prism is not installed): said through the choice itself, it would not be heard, and a player
   stepping through would not know where they had landed.  The game reads the choice as it starts
   (`__main__`), and the log says when the chosen one stops being able to speak and when it can again.
+  NVDA has come through Prism like the others since 2026-10-25 (user request; `_Nvda`): Prism carries NVDA's
+  controller client inside it, so the copy the game shipped (`vendor/nvda/nvdaControllerClient64.dll`) is
+  gone and one library speaks to every screen reader.  Nothing heard changed: NVDA is still tried first and
+  still asked before every line whether it is running (0.1 ms through Prism, measured over 200 asks), and a
+  player who starts NVDA after the game is heard within a second (`_Nvda.RETRY_EVERY`).  What changed is when
+  Prism is loaded: at `Speech()`, before the window opens and before any sound, for every Windows player -
+  130 ms of held interpreter, measured with the game's modules already loaded, most of it the asyncio that
+  Prism's dispatcher imports (`_prism`).  Before, an NVDA player never loaded it, and a player on another
+  screen reader loaded it at the first line, with the sound already playing.  In a build its library is
+  `_internal/prism/_native/prism.dll`, the one folder prismatoid looks in, so it cannot be moved beside the
+  executable.
   While SAPI 5 is what speaks - chosen, or Automatic with nothing else running
   (`ControlSchemePanel.sapi_speaking`, looked at once a second while the category is open, so the rows come
   and go as a screen reader starts or closes) - rows for SAPI 5 itself follow (`_Sapi`, `sapiVoice` / `sapiRate` /
@@ -3495,7 +3506,7 @@ they were.
   item's hint was due 1.0 s after it, the three words at 180 a minute and nothing more; measured at 240 a
   minute (0.2497 s a word), 0.749 s after it with SAPI 5, with a stand-in NVDA and on the Android build's
   Python with the fake Bridge, and 1.749 s with the pause at 1.  A braille display is given the item and its
-  hint together as the item is read (`nvdaController_brailleMessage`; Prism's `braille` beside its `speak`),
+  hint together as the item is read (Prism's `braille` beside its `speak`),
   and the spoken hint is not brailled again: a display is read at the reader's own pace, and a second message
   would take the item off it a second after it came, as NVDA itself shows an object's description beside its
   name.  VoiceOver on the Mac speaks and brailles a line as one, so there the display follows the speech.  The
@@ -3658,8 +3669,8 @@ they were.
   Changing either speech's output or voice keeps its measurement (user request).
 
   Two voices at once.  A screen reader is one for the whole system, so when both speeches use it, or the
-  second uses it while the first speaks otherwise, its lines simply go to it: NVDA through the same
-  controller client, the others through the same Prism context (`_Readers`; a first speech on Automatic and
+  second uses it while the first speaks otherwise, its lines simply go to it: NVDA and the others through
+  the same Prism context (`_Nvda`, `_Readers`; a first speech on Automatic and
   a second on one Prism reader by name make it look again for the one asked for as they alternate, which
   costs a millisecond or two and changes nothing heard).  SAPI 5 is two voices: the second is a `_Sapi` of
   its own (`Speech.second_sapi`), with its own SpVoice, its own speaking thread and, for Use modern output,

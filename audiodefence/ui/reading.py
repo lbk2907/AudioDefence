@@ -16,8 +16,8 @@ When the item has been read is predicted, the same way for every voice (user req
 words in the line times the seconds a word the player measured in the Speech tab's Speech calibration row
 (`reading_seconds`), or at DEFAULT_WORDS_PER_MINUTE until they have.  The pause before the hint counts from
 that moment.  The Extra mode's story is timed the same way (`ChallengeGameplayController.narrate`).  A
-screen reader cannot be asked when it has finished - NVDA's controller client only speaks, cancels, brailles
-and says whether NVDA is running, and Prism and VoiceOver's Apple Event only hand a line over - and the game's
+screen reader cannot, as a rule, be asked when it has finished - Prism, which the game reaches every one of
+them through, mostly only hands a line over, and VoiceOver's Apple Event the same - and the game's
 own voices (SAPI 5, the Mac's system voice, the phone's text-to-speech), which can, were followed to their real
 end at first.  That was given up for one rule for every voice: the player's calibration and settings are what
 the game follows, whatever speaks it.

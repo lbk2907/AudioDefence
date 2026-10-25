@@ -515,12 +515,11 @@ Then the packages to play:
 | `numpy` | the audio maths: decoding, mixing, the Freeverb reverb (`s3d/`) |
 | `av` (PyAV) | decodes the game's `.m4a` sounds (`s3d/decoder.py`) — without it no sound plays |
 | `comtypes` | the SAPI 5 voice, used when no screen reader is running (`platform/speech.py`); skip it if you always play with NVDA |
-| `prismatoid` | Prism, for speech through the screen readers other than NVDA — JAWS, ZoomText, System Access and the rest (`platform/speech.py`); it brings `cffi` with it. Without it those players hear the SAPI 5 voice instead; skip it if you always play with NVDA |
+| `prismatoid` | Prism, for speech through a screen reader — NVDA, JAWS, ZoomText, System Access and the rest (`platform/speech.py`); it brings `cffi` with it. Without it every player hears the SAPI 5 voice instead |
 
 Nothing else is imported outside the standard library. OpenAL Soft
-(`vendor/openal/soft_oal.dll`) and the NVDA controller client
-(`vendor/nvda/nvdaControllerClient64.dll`) ship with the repository, so there
-is nothing to install for either, and no system OpenAL is used.
+(`vendor/openal/soft_oal.dll`) ships with the repository, so there is nothing
+to install for it, and no system OpenAL is used.
 
 One more package is needed only to redo the reverse engineering, never to play:
 
@@ -1710,8 +1709,8 @@ went with it.
                         which readies a computer to build the Android app, and
                         android_keys.py, which makes and chooses its signing keys
     vendor/             OpenAL Soft (the Windows DLL, and the Mac dylib in
-                        openal-mac/), the NVDA controller client, and
-                        makemhr/, OpenAL Soft's tool for making an HRTF
+                        openal-mac/), and makemhr/, OpenAL Soft's tool for
+                        making an HRTF
 
 ### `game/` — the original
 
@@ -2217,11 +2216,12 @@ as above; no such line means the game's own HRTF is loaded.
 in the wrong shape: it needs `meta/` and `sounds/` at its top level. Point
 `--game` at another copy if it lives elsewhere.
 
-**Nothing is spoken.** With NVDA running the port talks to it through
-`vendor/nvda/nvdaControllerClient64.dll`; with another screen reader it goes
-through Prism, which needs `prismatoid`; with none it falls back to SAPI 5,
-which needs `comtypes`. The log says which one it took ("speech: JAWS, through
-Prism", or "Prism not available" when it could not load it).
+**Nothing is spoken.** With a screen reader running - NVDA or another - the
+port talks to it through Prism, which needs `prismatoid`; with none it falls
+back to SAPI 5, which needs `comtypes`. The log says which one it took
+("speech: JAWS, through Prism", or "Prism not available" when it could not load
+it). In a build, Prism's library is `_internal\prism\_native\prism.dll`: it has
+to stay in that folder, which is the only place Prism looks for it.
 
 **A screen reads in an odd order.** The reading order is reconstructed from the
 NIB frames (`audiodefence/ui/accessibility.py`), so it approximates VoiceOver's

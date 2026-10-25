@@ -66,8 +66,9 @@ ENTRY = 'AudioDefence.py'
 PLAY_PACKAGES = (('pygame', 'pygame-ce'), ('numpy', 'numpy'), ('av', 'av'), ('comtypes', 'comtypes'),
                  ('prism', 'prismatoid'))
 DATA = (('assets/hrtf', 'assets/hrtf'),)                       # the game's own HRTF
-BINARIES = (('vendor/openal/soft_oal.dll', 'vendor/openal'),    # the audio engine itself
-            ('vendor/nvda/nvdaControllerClient64.dll', 'vendor/nvda'))
+#: the audio engine itself.  Speech needs nothing here: Prism, which speaks to NVDA and every other screen
+#: reader, is the prismatoid package and is collected with it (--collect-all prism, below)
+BINARIES = (('vendor/openal/soft_oal.dll', 'vendor/openal'),)
 if host.MAC:
     # the same OpenAL Soft, built for the Mac by tools/build_openal_mac.sh; speech is VoiceOver and the system
     # voice, through pyobjc, so there is no screen reader's library to carry
@@ -337,7 +338,7 @@ def problems_now() -> list[str]:
     if not (host.WINDOWS or host.MAC):
         found.append('this builds the Windows or the Mac game, so it has to run on one of them')
     if sys.maxsize <= 2 ** 32:
-        found.append('use 64-bit Python: the vendored OpenAL Soft and NVDA DLLs are 64-bit')
+        found.append('use 64-bit Python: the vendored OpenAL Soft DLL is 64-bit')
     install = 'uv sync' if host.MAC else 'pip install'
     if importlib.util.find_spec('PyInstaller') is None:
         found.append('PyInstaller is not installed in this Python: %s'

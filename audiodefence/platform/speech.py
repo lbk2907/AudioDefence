@@ -1,6 +1,6 @@
-"""Screen reader output: NVDA through its controller client; otherwise another screen reader through
-Prism (JAWS, ZoomText, System Access and the rest, and Narrator); otherwise SAPI 5.  On the Mac:
-VoiceOver, otherwise the system voice (platform/macspeech.py), which take NVDA's and SAPI 5's places here.
+"""Screen reader output, all of it through Prism: NVDA first; otherwise another screen reader (JAWS,
+ZoomText, System Access and the rest, and Narrator); otherwise SAPI 5.  On the Mac: VoiceOver, otherwise the
+system voice (platform/macspeech.py), which take NVDA's and SAPI 5's places here.
 
 This replaces VoiceOver's reading of labels and UIAccessibilityPostNotification announcements, and the port
 counts as a VoiceOver player whichever of them is speaking (Speech.screen_reader_running).
@@ -15,7 +15,6 @@ import time
 from ctypes import wintypes
 from xml.sax.saxutils import escape
 
-from .. import paths
 from .. import localization
 from .. import localization
 from .. import localization
@@ -44,40 +43,102 @@ PRISM_NAMES = {'jaws': 'JAWS', 'narrator': 'UIA', 'zoomtext': 'ZoomText', 'syste
                'sensereader': 'SenseReader'}
 
 
-class _Nvda:
-    def __init__(self):
-        self.dll = None
+_context = None
+_context_tried = False
+
+
+def _prism():
+    """Prism's one context, which NVDA and the other screen readers are all reached through, or None where
+    Prism cannot be loaded (the prismatoid package missing, or its library refusing to load).
+
+    Made once, by the first of `_Nvda` and `_Readers` to ask - which is `Speech()`, made in `__main__` before
+    the window opens and before the engine plays a sound.  It has to be then: importing Prism holds the
+    interpreter for about 130 ms (measured with the game's own modules already loaded, 2026-10-25; most of it
+    is asyncio, which Prism's dispatcher imports), and the game mixes its own sound in Python, so the same
+    130 ms with the arena or the logo playing would be heard as a gap.  Before NVDA came through Prism, a
+    player on another screen reader paid it at the first line, with the sound already going."""
+    global _context, _context_tried
+    if not _context_tried:
+        _context_tried = True
         try:
-            self.dll = ctypes.windll.LoadLibrary(str(paths.NVDA_DLL))
-            self.dll.nvdaController_testIfRunning.restype = ctypes.c_ulong
-            self.dll.nvdaController_speakText.argtypes = [ctypes.c_wchar_p]
-            self.dll.nvdaController_speakText.restype = ctypes.c_ulong
-            self.dll.nvdaController_cancelSpeech.restype = ctypes.c_ulong
-            self.dll.nvdaController_brailleMessage.argtypes = [ctypes.c_wchar_p]
-            self.dll.nvdaController_brailleMessage.restype = ctypes.c_ulong
-        except (OSError, AttributeError):
-            log.info('NVDA controller client not available')
-            self.dll = None
+            from prism import Context
+            _context = Context()
+        except Exception as exc:                          # not installed, or its library will not load
+            log.info('Prism not available (%s): SAPI 5 only', exc)
+            _context = None
+    return _context
+
+
+class _Nvda:
+    """NVDA, through Prism's own NVDA backend (user request, 2026-10-25).
+
+    Prism has NVDA's controller client inside it, so the game no longer carries a copy of its own
+    (vendor/nvda, gone): one library speaks to every screen reader, as in the maintainer's other programs.
+    Nothing else about NVDA changed.  It is still tried before every other screen reader, and still asked
+    before every line whether it is running - a tenth of a millisecond through Prism, measured - so NVDA
+    closing mid-game hands the next line straight to the next output, as the client's testIfRunning did.
+
+    The backend is made here, as `Speech()` is - which loads Prism before any sound plays (`_prism`) - and
+    made again, at most once a second, while it cannot be: Prism may refuse to make it with NVDA not running,
+    and a player who starts NVDA after the game is heard by it within a second.  One that fails while
+    speaking is let go and made again the same way."""
+
+    RETRY_EVERY = 1.0                                     # seconds between tries at making the backend
+
+    def __init__(self):
+        self.backend = None
+        self.next_try = 0.0
+        self._backend()
+
+    def _backend(self):
+        if self.backend is None and time.monotonic() >= self.next_try:
+            self.next_try = time.monotonic() + self.RETRY_EVERY
+            ctx = _prism()
+            if ctx is not None:
+                try:
+                    self.backend = ctx.create(ctx.id_of('NVDA'))
+                except Exception as exc:
+                    log.debug('NVDA not reachable through Prism just now: %s', exc)
+        return self.backend
+
+    def _drop(self, why) -> None:
+        log.info('speech: NVDA let go (%s)', why)
+        self.backend = None
+        self.next_try = 0.0                               # made again at the next line
 
     def running(self) -> bool:
-        return bool(self.dll is not None and self.dll.nvdaController_testIfRunning() == 0)
+        backend = self._backend()
+        if backend is None:
+            return False
+        try:
+            return bool(backend.features.is_supported_at_runtime)
+        except Exception:
+            return False
 
     def speak(self, text: str, interrupt: bool, braille=None) -> bool:
         """`braille` is what the display shows, when it is not the line itself; '' leaves the display alone
         (PORT ADDITION: ui/reading.py)."""
         if not self.running():
             return False
-        if interrupt:
-            self.dll.nvdaController_cancelSpeech()
-        self.dll.nvdaController_speakText(text)
+        try:
+            self.backend.speak(text, interrupt)
+        except Exception as exc:
+            self._drop(exc)
+            return False
         braille = text if braille is None else braille
         if braille:
-            self.dll.nvdaController_brailleMessage(braille)
+            try:
+                self.backend.braille(braille)
+            except Exception as exc:                      # the line was spoken: not lost over the display
+                log.debug('NVDA would not braille a line: %s', exc)
         return True
 
     def stop(self) -> None:
         if self.running():
-            self.dll.nvdaController_cancelSpeech()
+            try:
+                self.backend.stop()
+            except Exception as exc:
+                self._drop(exc)
 
 
 class _ProcessEntry(ctypes.Structure):                  # PROCESSENTRY32W
@@ -118,9 +179,9 @@ def process_running(exe: str) -> bool:
 
 
 class _Readers:
-    """PORT ADDITION: the screen readers other than NVDA, through Prism (the prismatoid package, optional).
+    """PORT ADDITION: the screen readers other than NVDA, through Prism (the prismatoid package).
 
-    NVDA keeps its own controller client above, which is asked before every line whether NVDA is running.
+    NVDA is `_Nvda` above, on the same Prism context, and is asked before every line whether it is running.
     The others are tried in Speech output's order (OUTPUTS), not Prism's own.  Prism also offers plain
     voices (OneCore, its own SAPI); those are left out, so with no screen reader running the voice is the
     same SAPI 5 one as before, with its own settings (_Sapi).  Narrator is reached through Prism's UI
@@ -128,8 +189,7 @@ class _Readers:
     Narrator is running or not - sent with nothing listening, a line would be lost - so the game asks
     Windows itself whether Narrator.exe is running, and uses them only then.  A screen reader started
     while the game runs is looked for every few seconds, and one that stops or fails is let go at once and
-    SAPI 5 speaks the line instead.  Prism is loaded only once NVDA is found not to be running, so an NVDA
-    player never loads it."""
+    SAPI 5 speaks the line instead."""
 
     NARRATOR = 'UIA'                                      # Prism's name for what Narrator reads
     PROBE_EVERY = 5.0                                     # seconds between looks, while none is speaking
@@ -142,16 +202,17 @@ class _Readers:
         self.only = None                                  # the one screen reader chosen, or None for any
         self.next_probe = 0.0
         self.checked = 0.0
+        self.ctx = _prism()
+        if self.ctx is None:
+            return
         try:
-            from prism import Context
-            self.ctx = Context()
             present = {self.ctx.name_of(bid): bid
                        for bid in (self.ctx.id_of(i) for i in range(self.ctx.backends_count))}
             self.ids = [present[PRISM_NAMES[key]] for key, _name in OUTPUTS
                         if key in PRISM_NAMES and PRISM_NAMES[key] in present]
             log.info('Prism: %s', ', '.join(self.ctx.name_of(bid) for bid in self.ids))
-        except Exception as exc:                          # not installed, or its library will not load
-            log.info('Prism not available (%s): NVDA and SAPI 5 only', exc)
+        except Exception as exc:
+            log.info('Prism would not list its screen readers (%s): NVDA and SAPI 5 only', exc)
             self.ctx = None
             self.ids = []
 
