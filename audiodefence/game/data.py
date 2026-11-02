@@ -105,7 +105,7 @@ REWORDED = (
     # (additions.FIFTH_POWER_UP_LEVEL) so the card is worth something at the top as well, which makes
     # "fully levelled up" wrong twice over.  This says the one level it has always given.
     ('All Power Ups are fully levelled up for this game.',
-     'All Power Ups go up a level for this game, even beyond the top level you can buy.'),
+     'All Power Ups go up a level for this game.'),
     # Lucky Shot.  The card names its own odds, so the sentence is built from the number the game
     # actually rolls and cannot be left behind when that number is tuned.  "However you aim" is what
     # separates it from Head-Seeking Bullets, whose 50% is half again on the weapon's own chance and only

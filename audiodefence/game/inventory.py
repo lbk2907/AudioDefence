@@ -183,5 +183,11 @@ class Inventory:
         self.defaults.synchronize()
 
 
+#: PORT ADDITION (user request, 2026-11-03): the highest level anything is fought at outside Endless.  The
+#: armory goes on past it (`additions.TOP_LEVEL`), and Endless, whose zombies keep getting tougher, takes the
+#: whole of it; every challenge and Extra arena is tuned at or below this, and is the same for everybody.
+LEVEL_IN_EVERY_MODE = 4
+
+
 def weapons_plist() -> dict:
     return data.plist_ro('Weapons')

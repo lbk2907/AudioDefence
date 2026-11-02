@@ -1227,6 +1227,44 @@ they were.
   bindings are left alone (Settings -> Keyboard has its own Restore default keys), and so are the
   controllers' buttons (Settings -> Joystick -> Restore default buttons).  The original has no reset; this
   one replaced the port's own Restore aiming defaults and Restore menu defaults rows.
+* PORT DIVERGENCE (user request, 2026-11-03): upgrades go on past level 4, which players had asked for.  The
+  original's armory stops at four (`upgradeButtonPressed:` 0x10004e1b4 tests `level > 3` and `loadInformation`
+  0x10004da74 `level >= 4` for a power-up; a weapon's page simply has no next level in its data).  The levels
+  are data like the first four (`additions.upgrades_past_level_four`, `extra_power_up_levels`), up to
+  `TOP_LEVEL`, 99, which at these prices is as good as no limit, so the weapon page, the guns, the power-ups and
+  the cards all read them as they read the rest, and the power-up page now asks whether the next level has a
+  price rather than whether the level is four.
+
+  Guns and melee weapons gain a tenth of their level-4 damage a level (`DAMAGE_STEP`), and a magazine of more
+  than two a twentieth of its level-4 size (`CLIP_STEP`), so one-round and two-barrel guns stay what they are.
+  Nothing else grows: fire rate is tied to the gun's sounds, and melee is at its fastest by level 4.  Each level
+  costs 1.3 times the last (`PRICE_GROWTH`), in what the weapon's upgrades already cost: a gun's go coins, coins,
+  diamonds, as its first three do (the user's point: its fourth is in diamonds), a melee weapon's and a power-up's
+  are all coins, and the Sonic Cannon's all diamonds.  So the Tactical Rifle's level 5 is 8450 coins, 6 is 11000
+  and 7 is 27 diamonds.
+
+  Three power-ups stop where going on would make them a different game (`POWER_UP_TOP`).  Frequency took 15
+  seconds a level off the wait for a crate, which would be none by level 7: past 4 it takes 5, down to 20
+  seconds at level 9.  The Minigun stops at 20 seconds, that same wait, level 7, so it is never simply always in
+  the player's hands.  The Tornado stops at 11 units, a gun's range, level 7, so what it blows back can still be
+  shot.  Tesla and Fireworks go on.  The levels past those limits have no price and only a card reaches them
+  (`EXTRA_POWER_UP_LEVELS`), as the fifth level was before this.
+
+  Levels above 4 only count in Endless (`inventory.LEVEL_IN_EVERY_MODE`): the guns `withWeaponsFromArmory`
+  makes take the level bought, every other gun no more than 4, and `_level_dictionary` holds a power-up to 4
+  outside mode 1.  Every challenge and Extra arena is tuned at or below level 4, and a challenge is meant to be
+  the same for everybody; Endless can take it, its zombies going on getting tougher.  The upgrade button says
+  so as its hint, past level 4.  Powered Power Ups's text loses "even beyond the top level you can buy".
+
+  The prices made here read the Machine Gun's '7,500' and '15,000' as the whole numbers (`additions._number`).
+  Its own levels 2 and 3 still cost 7 and 15 coins, as in the original, whose `intValue` stops at the comma.
+
+  Checked through the real armory screens on a scratch save: the Revolver from level 1 to 10 at the prices above,
+  nothing to pay leaving the level as it is with the alert, the Minigun and Tornado ending at 7 and Frequency at 9
+  on "No Upgrade" with a 20-second wait, Tesla going on, the rows saying upgrade or view to match; a level-10
+  Revolver doing 22.4 in Endless and 14 in a challenge, power-ups the same way, and Powered Power Ups giving a
+  level past what can be bought.  The levels take 8 ms to make, and nothing copies them into the save.
+
 * PORT DIVERGENCE (user request, 2026-10-05): a new save starts with no coins and no diamonds
   (`Inventory.STARTING_COINS`, `STARTING_DIAMONDS`).  `-[ADInventory createOrRestoreWeaponDictionary]`
   0x10000c1c4 gives a first start 5000 coins and 500 diamonds, enough to buy most of the armory before a

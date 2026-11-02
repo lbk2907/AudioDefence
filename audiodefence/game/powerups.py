@@ -24,13 +24,16 @@ def _level_dictionary(name: str) -> dict | None:
     """The level lookup shared by every preload/use:
     level = inventory level; with betterPowerUps, +1 only when "level_<level+1>" exists.
 
-    A fifth level exists for four of the power-ups (`additions.fifth_power_up_level`), so a player who
-    has bought every upgrade gets one from Powered Power Ups where the original gave nothing.  This
-    method is the original's, untouched: the level is in the data it reads."""
-    from .inventory import Inventory
+    Levels past the fourth exist for four of the power-ups (`additions.extra_power_up_levels`), so a player
+    who has bought every upgrade gets one from Powered Power Ups where the original gave nothing, and those
+    bought past the fourth count only in Endless (inventory.LEVEL_IN_EVERY_MODE)."""
+    from .brick_manager import BrickManager
+    from .inventory import LEVEL_IN_EVERY_MODE, Inventory
     from .weapon_manager import WeaponManager
     d = WeaponManager.shared().dictionary_for_powerup_with_name(name) or {}
     level = Inventory.shared().level_for_power_up(name)
+    if BrickManager.shared().mode != 1:                   # PORT ADDITION: as a gun's; see LEVEL_IN_EVERY_MODE
+        level = min(level, LEVEL_IN_EVERY_MODE)
     bonus = 0
     # PORT DIVERGENCE: a level for each card that asked, as far as the data goes.  The original asks only
     # whether one did, so two cards lifted a power-up one level between them.

@@ -92,14 +92,34 @@ EXTRA_POWER_UP_LEVELS = 4
 #: when the data has a next one - so a player who had bought every upgrade got nothing at all from it while
 #: being told it was one of the best cards in the deck.  These are the levels that player gets instead.
 #:
-#: They cannot be bought: the armory stops at four in three places of its own (`upgrade_button_pressed`
-#: tests `level > 3`, two more test `level >= 4`), all of which read the inventory rather than this data.
+#: They are the levels past `POWER_UP_TOP` where a power-up has one; the others can be bought far past any
+#: card's reach (`upgrades_past_level_four`).
 #:
 #: How far to carry them: two cards can ask for two levels - Powered Power Ups in the level-1 deck and
 #: Emergency Supplies in the level-4 one - and a card that asks and is given nothing is the fault this
 #: project has taken out twice already.  So the data goes further than any hand can reach rather than
 #: exactly as far (user request).  Four is well past the two that are possible today.
 EXTRA_POWER_UP_LEVELS = 4
+
+#: PORT ADDITION (user request, 2026-11-03): upgrades past level 4, bought in the armory, which people had
+#: asked for.  The levels are data like the first four, so everything that reads `level_<n>` follows - the
+#: weapon page, the guns, the power-ups, the cards - and TOP_LEVEL is as near to no limit as a table needs:
+#: at these prices the next level is hours of play by level 15 and out of reach long before this.
+TOP_LEVEL = 99
+#: each level dearer than the last by this, so that it never stops being something to play for
+PRICE_GROWTH = 1.3
+#: a gun or melee weapon gains a tenth of its level-4 damage a level, and a magazine of more than two a
+#: twentieth of its level-4 size.  Nothing else grows: fire rate is tied to the gun's sounds, and melee is
+#: at its fastest by level 4.  The Tactical Rifle's 15 goes up 1.5 a level, a Zombie's 35 in one shot at 18.
+DAMAGE_STEP = 0.10
+CLIP_STEP = 0.05
+#: How far a power-up can be bought where going on would make it a different game, and what it gains a
+#: level.  Frequency is the wait for the next crate, 15 seconds less a level up to level 4, which would be
+#: none by level 7: 5 seconds a level from there, down to 20.  The Minigun stops at 20 seconds, that same
+#: wait, so it is never simply always in the player's hands.  The Tornado stops at 11 units, a gun's range, so
+#: what it blows back can still be shot.  Tesla and Fireworks go on.
+POWER_UP_TOP = {'frequency': 9, 'minigun': 7, 'tornado': 7}
+POWER_UP_STEP = {'frequency': {'cooldownTime': -5.0}}
 
 #: `frequency` is deliberately left out.  `resetPowerUpCooldown` 0x10004b640 reads its level straight
 #: from the inventory rather than through `_level_dictionary`, so the tarot has never reached the cooldown,
@@ -264,11 +284,64 @@ def extra_power_up_levels(weapons: dict) -> None:
         stats = [k for k in fourth if k != 'upgradeCost' and k in third]
         if not stats:
             continue
+        name = entry.get('name')
+        top = POWER_UP_TOP.get(name, TOP_LEVEL)
         value = {k: float(fourth[k]) for k in stats}
         step = {k: float(fourth[k]) - float(third[k]) for k in stats}
-        for n in range(5, 5 + EXTRA_POWER_UP_LEVELS):
+        for n in range(5, top + EXTRA_POWER_UP_LEVELS + 1):
             value = {k: value[k] + step[k] for k in stats}
-            new_key(entry, 'level_%i' % n, {k: _tidy(value[k]) for k in stats})
+            level = {k: _tidy(value[k]) for k in stats}
+            if n <= top:                                  # past it, only a card can lift a power-up
+                level['upgradeCost'] = _coins(_number(fourth.get('upgradeCost')) * PRICE_GROWTH ** (n - 4))
+            new_key(entry, 'level_%i' % n, level)
+    frequency = next((e for e in weapons.get('PowerUps') or () if e.get('name') == 'frequency'), None)
+    if isinstance(frequency, dict) and isinstance(frequency.get('level_4'), dict):
+        fourth = frequency['level_4']
+        for n in range(5, POWER_UP_TOP['frequency'] + 1):
+            level = {k: _tidy(float(fourth[k]) + s * (n - 4)) for k, s in POWER_UP_STEP['frequency'].items()}
+            level['upgradeCost'] = _coins(_number(fourth.get('upgradeCost')) * PRICE_GROWTH ** (n - 4))
+            new_key(frequency, 'level_%i' % n, level)
+
+
+def _number(value) -> float:
+    """A price as a person reads it.  `intValue` stops at a comma, so the Machine Gun's '7,500' and '15,000' cost
+    7 and 15 coins in the game, as in the original; the prices made from them here are from the whole number."""
+    try:
+        return float(str(value).replace(',', ''))
+    except ValueError:
+        return 0.0
+
+
+def _coins(value: float) -> int:
+    return max(50, int(round(value / 50.0)) * 50)
+
+
+@adds_to('Weapons')
+def upgrades_past_level_four(weapons: dict) -> None:
+    """Levels 5 to TOP_LEVEL for every gun and melee weapon: level 4 with the damage and the magazine carried
+    on, and a price in what its upgrades already cost.  A gun's go coins, coins, diamonds, as its first three
+    do, and start from those; a melee weapon's are all coins, and the Sonic Cannon's all diamonds."""
+    for entry in weapons.get('Weapons') or ():
+        third, fourth = (entry.get('level_3'), entry.get('level_4')) if isinstance(entry, dict) else (None, None)
+        if not isinstance(third, dict) or not isinstance(fourth, dict):
+            continue
+        coins_third = _number(third.get('upgradeCost'))
+        coins_fourth = _number(fourth.get('upgradeCost'))
+        diamonds_fourth = _number(fourth.get('upgradeCostInDiamonds'))
+        damage = _number(fourth.get('damages'))
+        clip = _number(fourth.get('capacity'))
+        for n in range(5, TOP_LEVEL + 1):
+            level = {k: v for k, v in fourth.items() if k not in ('upgradeCost', 'upgradeCostInDiamonds')}
+            level['damages'] = _tidy(round(damage * (1.0 + DAMAGE_STEP * (n - 4)), 2))
+            if clip > 2:
+                level['capacity'] = int(round(clip * (1.0 + CLIP_STEP * (n - 4))))
+            if coins_fourth:
+                level['upgradeCost'] = _coins(coins_fourth * PRICE_GROWTH ** (n - 4))
+            elif diamonds_fourth and (not coins_third or (n - 4) % 3 == 0):
+                level['upgradeCostInDiamonds'] = int(math.ceil(diamonds_fourth * PRICE_GROWTH ** (n - 4)))
+            else:
+                level['upgradeCost'] = _coins(coins_third * PRICE_GROWTH ** (n - 3))
+            new_key(entry, 'level_%i' % n, level)
 
 
 # ============================================================== plists of the port's own

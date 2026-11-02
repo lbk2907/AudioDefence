@@ -20,7 +20,7 @@ import logging
 
 from ..app import App
 from ..game import data
-from ..game.inventory import Inventory
+from ..game.inventory import LEVEL_IN_EVERY_MODE, Inventory
 from ..game.weapon_manager import WeaponManager
 from ..platform.defaults import ns_float_value, ns_int_value
 from ..platform.runloop import RunLoop
@@ -34,6 +34,8 @@ from .viewcontroller import ViewControllerScreen
 
 log = logging.getLogger('ui.armory')
 
+#: PORT ADDITION (user request, 2026-11-03): said on an upgrade past level 4 (inventory.LEVEL_IN_EVERY_MODE)
+ABOVE_FOUR = 'Levels above 4 only count in Endless.'
 WEAPON_UPGRADE_EVENT = 'WEAPON_UPGRADE_EVENT'
 POWERUP_UPGRADE_EVENT = 'POWERUP_UPGRADE_EVENT'
 PAGE = (0.0, 53.5, 480.0, 234.0)        # a tab's view, centred on the content scroll view's visible page
@@ -128,6 +130,8 @@ class WeaponDescriptionView:
             if self.next_level_dict is None:
                 b.hidden = True                           # the max level: no title change
                 return
+            # PORT ADDITION (user request, 2026-11-03): what a level past 4 is for (inventory.LEVEL_IN_EVERY_MODE)
+            b.hint = ABOVE_FOUR if self.current_level >= LEVEL_IN_EVERY_MODE else ''
             cost = ns_int_value(self.next_level_dict.get('upgradeCost'))
             if cost != 0:
                 _set_title(b, 'Upgrade to level %i for %i coins' % (self.current_level + 1, cost))
@@ -291,11 +295,15 @@ class PowerUpUpgraderView:
         _set_text(self.power_up_title, '%s : level %i' % (d.get('displayName') or '', level))
         _set_text(self.power_up_description, d.get('upgradeText') or '')
         b = self.upgrade_button
-        if level >= 4:
+        # PORT DIVERGENCE (user request, 2026-11-03): the original stops at level 4 here (`level >= 4`) and in
+        # `upgrade_button_pressed` (`level > 3`); now a level with a price is one that can be bought
+        cost = ns_int_value((d.get('level_%i' % (level + 1)) or {}).get('upgradeCost'))
+        if cost == 0:
             b.user_interaction_enabled = False
             _set_title(b, 'No Upgrade')
+            b.hint = ''
             return
-        cost = ns_int_value((d.get('level_%i' % (level + 1)) or {}).get('upgradeCost'))
+        b.hint = ABOVE_FOUR if level >= LEVEL_IN_EVERY_MODE else ''
         # DIVERGENCE: the original's title is "Upgrade for %i" and the currency is a coin image drawn next
         # to it (setCoins: / centerButtonTextWithCoinsImage), which VoiceOver cannot read.  The button keeps
         # the original's text; what is spoken says what the number is.
@@ -307,9 +315,9 @@ class PowerUpUpgraderView:
         d = self.power_up_dictionary
         name = d.get('name')
         level = inv.level_for_power_up(name)
-        if level > 3:
-            return
         cost = ns_int_value((d.get('level_%i' % (level + 1)) or {}).get('upgradeCost'))
+        if cost == 0:                                     # PORT DIVERGENCE: see load_information
+            return
         if inv.coins < cost:
             self.armory.show_not_enough_money_alert(delegate=self.alert_view_delegate)
             return
@@ -499,8 +507,9 @@ class PowerUpTab(_Tab):
             # tableView:cellForRowAtIndexPath: 0x10003a96c
             detail = pu.get('upgradeText') or ''
             # PORT INPUT: the original appends "double tap to view" / "double tap to upgrade"
-            detail = '%s %s' % (detail, 'press Enter to view' if inv.level_for_power_up(pu.get('name')) >= 4
-                                else 'press Enter to upgrade')
+            nxt = pu.get('level_%i' % (inv.level_for_power_up(pu.get('name')) + 1)) or {}
+            detail = '%s %s' % (detail, 'press Enter to upgrade' if nxt.get('upgradeCost')
+                                else 'press Enter to view')
             cell = t.cell(pu.get('displayName'), detail, action=lambda r=row: self.did_select_row(r))
             cell.label_key_words = True                   # PORT ADDITION: or the controller's button
 

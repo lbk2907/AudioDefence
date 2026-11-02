@@ -125,13 +125,13 @@ class WeaponManager:
         self.weapons_array = []
         self.projectile_array = []
         inv = Inventory.shared()
-        w1 = Weapon(self.dictionary_for_weapon_with_name(inv.weapon_slot1))
+        w1 = Weapon(self.dictionary_for_weapon_with_name(inv.weapon_slot1), any_level=True)
         w1.weapon_manager = self
         self.weapons_array.append(w1)
-        w2 = Weapon(self.dictionary_for_weapon_with_name(inv.weapon_slot2))
+        w2 = Weapon(self.dictionary_for_weapon_with_name(inv.weapon_slot2), any_level=True)
         w2.weapon_manager = self
         self.weapons_array.append(w2)
-        melee = MeleeWeapon(self.dictionary_for_weapon_with_name(inv.weapon_slot_melee))
+        melee = MeleeWeapon(self.dictionary_for_weapon_with_name(inv.weapon_slot_melee), any_level=True)
         melee.weapon_manager = self
         self.melee_weapon = melee
         self.set_current_weapon(self.weapons_array[0])

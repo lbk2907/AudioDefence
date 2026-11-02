@@ -80,8 +80,10 @@ def _at_the_sound(sound):
 
 class Weapon:
     # -[ADWeapon initWithDictionary:] 0x100013f94
-    def __init__(self, d: dict | None):
-        from .inventory import Inventory
+    def __init__(self, d: dict | None, any_level: bool = False):
+        """`any_level`, PORT ADDITION: this gun is taken from the armory for Endless, at whatever level it has
+        been bought; anywhere else it is fought at no more than inventory.LEVEL_IN_EVERY_MODE."""
+        from .inventory import LEVEL_IN_EVERY_MODE, Inventory
         self.time_in_continous = 0.0
         self.time_since_last_shot = 0.0
         self.shot_once = False
@@ -108,7 +110,8 @@ class Weapon:
         self.multihit = ns_bool_value(_get(d, 'multihit'))
         self.continuous_fire = ns_bool_value(_get(d, 'continuousFire'))
         self.explosive = ns_bool_value(_get(d, 'explosive'))
-        level = _get(d, f'level_{Inventory.shared().level_for_weapon(self.name)}')
+        bought = Inventory.shared().level_for_weapon(self.name)
+        level = _get(d, f'level_{bought if any_level else min(bought, LEVEL_IN_EVERY_MODE)}')
         self.fire_rate = ns_float_value(_get(level, 'fireRate'))
         self.damages = ns_float_value(_get(level, 'damages'))
         self._spread = ns_float_value(_get(level, 'spread'))
