@@ -3744,9 +3744,6 @@ they were.
   second; its sample read in the phone's words by the second; the story and "New weapons" by the second and
   Continue by the first; Reset all settings put all of it back.  The APK built (`gradle assembleDebug`).
 
-
-## Original quirks kept on purpose
-
   The second speech's SAPI 5 voice is got ready without holding the game (user report, 2026-11-02: a lag once,
   on opening the game).  `Speech.prepare_second` made it on the game's thread half a second into the logo: 450
   ms measured here, and two seconds on the day's first start with the disk cold (from the player's own log), and
@@ -3760,6 +3757,9 @@ they were.
   back onto the game's thread, 70 to 190 ms before "Main Menu" was said.  Checked through a real start-up: the
   holds gone, "Main Menu" said 10 ms after its screen, Play open in 28 ms; and heard through SAPI 5 made the
   usual way, asked for at once while still loading, and with a chosen voice and the boost on.
+
+## Original quirks kept on purpose
+
 
 * Melee cancels a reload.  `shootWithMelee` 0x1000aaa98 interrupts a reload in progress and *then* asks
   `isWeaponReadyToShoot` 0x1000aa350, which by then answers yes because interrupting put the weapon back
