@@ -1,4 +1,5 @@
 unrelease:
+The Lightning Rod arena in Extra is easier: smaller groups with more room between them, and one Colossus fewer in its second wave.
 
 26.10.05-1:
 The port is now free software under the GNU General Public License, version 3 or later, instead of the MIT License. The original game's own files are still Somethin' Else's.

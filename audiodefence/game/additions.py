@@ -2975,17 +2975,25 @@ def _tesla(wave, at, cow=None):
 
 _ROD3 = (('Zombie', 'ZombieB', 'ZombieC'), ('ZombieB', 'Zombie', 'WeakZombie'),
          ('ZombieC', 'WeakZombieB', 'Zombie'))
-_ROD4 = (('Zombie', 'ZombieB', 'ZombieC', 'Zombie'), ('ZombieC', 'Zombie', 'WeakZombieB', 'ZombieB'))
 # ------------------------------------------------------------------------------------------- Lightning Rod
 #: The Tesla (`TeslaPowerUp`): 2.86 s after its crate is opened, and every two seconds after that for as many
 #: kills as its level (one to four), `BrickManager.closest_enemy` - the nearest shootable thing to the
 #: player, whatever it is - has its life set to nought.  That is a Colossus in one stroke, or a Riot Gear
 #: Zombie behind its shield, or a cow.  The rifle is the Tactical, which no arena had handed out (held, a
 #: round every 0.25 s at twenty degrees; 15 a round at level four, forty to a magazine, four seconds to
-#: reload): a Colossus is some forty rounds of it and twelve seconds, and there are one, then two, then two
-#: of them, with a group coming within five units every four to five seconds around them.  A crate is one
-#: zap at level one (four at level four), so in waves 2 and 3 one Colossus is the rifle's whatever happens,
-#: and the second one too if the zap goes astray.
+#: reload): a Colossus is some forty rounds of it and twelve seconds, and there are one, then one, then two
+#: of them, with a group coming within five units about every six seconds around them.  A crate is one zap
+#: at level one (four at level four), so in wave 3 one Colossus is the rifle's whatever happens, and the
+#: second one too if the zap goes astray.
+#:
+#: Rescaled 2026-11-02 (user report: too hard, with every weapon at level four).  It had been two Colossi in
+#: wave 2, and packs of four every four seconds, twelve groups in wave 2 and eighteen in wave 3:
+#: `tools/arena_pressure.py`, which counts no zap, left wave 3 18 seconds short at level four and 68 at level
+#: one, the tightest of its neighbours at every level, with the crate's zap the only way through and that
+#: landing on a Colossus only with nothing smaller nearer.  Now the packs are threes, every five seconds
+#: before the tempo, seven groups and ten, with quiet slots: 15, 7 and 4 seconds to spare at level four,
+#: between Heavyweights' 11.5 and Tempo's 1.8 short, so a zap gone astray no longer loses the arena.  At level
+#: one wave 3 is 34 short, about 10 with a Colossus zapped, as Tempo is at its level one.
 #:
 #: One crate a wave (`PowerUp`'s force_spawn_time; a wave forces one), five units out on a random bearing and
 #: beeping from 6.75 s after its time for fifteen seconds.  Each starts beeping while something smaller is
@@ -3002,16 +3010,15 @@ PLISTS['port_lightningrod_1'] = _tesla(_wave(
              12.0, 5.0),
     no_blast=True), 8.0)
 PLISTS['port_lightningrod_2'] = _tesla(_wave(
-    [('Colossus', 300, 11.0, 0.0), ('Colossus', 120, 11.0, 10.0)]
-    + _slots(((_ROD4[0], 150), ('Shield', 200), (_HH, 60), (_ROD4[1], 240), (_HH, 330), None, ('Runner', 20),
-              None, (_ROD4[0], 100), (_HH, 220), (_ROD4[1], 340),
-              ('Shield', 170)), 12.0, 4.0), no_blast=True),
+    [('Colossus', 300, 11.0, 0.0)]
+    + _slots(((_ROD3[0], 150), ('Shield', 200), (_HH, 60), (_ROD3[1], 240), None, ('Runner', 20),
+              (_ROD3[2], 100), (_HH, 220)), 12.0, 5.0), no_blast=True),
     6.0, cow=80)
 PLISTS['port_lightningrod_3'] = _tesla(_wave(
     [('Colossus', 0, 11.0, 0.0), ('Colossus', 180, 11.0, 12.0)]
-    + _slots(((_ROD4[0], 180), ('Shield', 60), (_HH, 300), (_ROD4[1], 40), (_HH, 200), None, ('Runner', 150),
-              None, ('Shield', 330), (_HH, 90), (_ROD4[0], 210), (_HH, 270 + 15), (_ROD4[1], 20), None,
-              ('RunnerB', 160), None, (_ROD4[0], 250), (_HH, 100)), 12.0, 4.0), no_blast=True),
+    + _slots(((_ROD3[0], 180), ('Shield', 60), (_HH, 300), (_ROD3[1], 40), None, ('Runner', 150),
+              (_ROD3[2], 330), None, ('Shield', 210), (_ROD3[0], 20), ('RunnerB', 160)), 12.0, 5.0),
+     no_blast=True),
     10.0, cow=270 + 20)
 PLISTS['port_lightningrod'] = {
     'challenge_id': 'port_lightningrod',
@@ -3023,7 +3030,7 @@ PLISTS['port_lightningrod'] = {
     'weapons': [{'name': 'tactical', 'ammo': '999'}, {'name': 'wok'}],
     'bricks': ['port_lightningrod_1', 'port_lightningrod_2', 'port_lightningrod_3'],
     'ambient': {'ambientPlaylist': 'ambient_ghosttown', 'gain': 0.5},
-    'time_limit_star': {'reward': 650, 'objective': 225},
+    'time_limit_star': {'reward': 650, 'objective': 180},
     'accuracy_star': {'reward': 650, 'objective': 55},
 }
 

@@ -2943,6 +2943,18 @@ they were.
   above it, lowered to that otherwise, and never above 75: Three Bullets, Crowd Control and Scarecrows 75,
   Shell Shock 60 and Artillery 70.
 
+  Lightning Rod was rescaled afterwards (user report, 2026-11-02: too hard, with every weapon at level 4; the
+  upgrades already count in Extra, so they could not be the way out).  `tools/arena_pressure.py`, which counts
+  no zap, left its last wave 18 seconds short at level 4 and 68 at level 1, the tightest of its neighbours
+  at every level, with the crate's zap the only way through, and that landing on a Colossus only with nothing
+  smaller nearer.  Wave 2 has one Colossus now where it had two, and the packs are threes where they were
+  fours, every five seconds before the tempo where it was four, seven groups in wave 2 and ten in wave 3 where
+  they were twelve and eighteen.  That is 15, 7 and 4 seconds to spare at level 4, between Heavyweights' 11.5
+  and Tempo's 1.8 short, so a zap gone astray no longer loses the arena, and at level 1 wave 3 is 34 short,
+  about 10 with a Colossus zapped.  The waves are about 45 seconds shorter, so the time star goes from 225 to
+  180.  The scripted player of the re-tune was a scratch tool and is gone, so this is measured by the slack
+  alone; the crate, the cow and the Colossi are the arena's as they were.
+
 * PORT ADDITION: an arena of the Extra mode offers a revive (user request, 2026-10-01).  A death there
   offers what Endless offers - the revive for diamonds, twice the price each time (`show_revive_view`
   0x10005ba78), or the failed screen, which is starting over - where `-[ADEnemy afterAttackSound]`
