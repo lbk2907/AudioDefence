@@ -3747,6 +3747,20 @@ they were.
 
 ## Original quirks kept on purpose
 
+  The second speech's SAPI 5 voice is got ready without holding the game (user report, 2026-11-02: a lag once,
+  on opening the game).  `Speech.prepare_second` made it on the game's thread half a second into the logo: 450
+  ms measured here, and two seconds on the day's first start with the disk cold (from the player's own log), and
+  a key pressed meanwhile waited for it.  COM objects belong to the thread that makes them, so the voice the
+  game keeps is still made there; what takes the time needs nothing of it.  `_load_second` loads the library
+  and measures the rate boost on a thread of its own, with a voice of its own (`_Sapi.measure_boost`, the result
+  kept for every `_Sapi`, being the voice's own fact), and then asks the game's thread to make the voice, which
+  is about 25 ms.  comtypes sets COM up only on the thread that first imports it, so `_Sapi.__init__` now does
+  so itself.  The menu music is decoded while the logo shows too (`App.prewarm_menu_music`): its playlist is
+  activated only as the main menu opens, which queued the decoding and had the sting's `play` take it straight
+  back onto the game's thread, 70 to 190 ms before "Main Menu" was said.  Checked through a real start-up: the
+  holds gone, "Main Menu" said 10 ms after its screen, Play open in 28 ms; and heard through SAPI 5 made the
+  usual way, asked for at once while still loading, and with a chosen voice and the boost on.
+
 * Melee cancels a reload.  `shootWithMelee` 0x1000aaa98 interrupts a reload in progress and *then* asks
   `isWeaponReadyToShoot` 0x1000aa350, which by then answers yes because interrupting put the weapon back
   in Idle: melee does not override the check, it clears the state the check reads.  Firing waits instead,

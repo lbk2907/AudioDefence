@@ -598,6 +598,9 @@ class _Sapi:
     SVSF_IS_XML = 8
     SVSF_IS_NOT_XML = 16
     SAS_STOP, SAS_RUN = 1, 3                              # SpeechAudioState: stopping the output stream
+    #: whether each voice takes the rate boost (boost_supported), kept for the session: it is the voice's own
+    #: fact, whichever speech is using it, and `measure_boost` may have found it out on another thread
+    _boost: dict = {}
 
     def __init__(self, player=None):
         #: PORT ADDITION: the device the game plays this voice through (speech_audio.py) - the shared one for the
@@ -609,11 +612,12 @@ class _Sapi:
         self.panel_rate, self.panel_volume = 0, 100
         self.config = dict(SAPI_DEFAULTS)
         self._voices = None
-        self._boost = {}
         self.thread = None                                # the speaking voice lives there (PORT ADDITION)
         self.generation = 0
         try:
-            import comtypes.client
+            import comtypes
+            comtypes.CoInitialize()                       # importing it sets COM up only on the thread that
+            import comtypes.client                        # does so first, which may be Speech._load_second
             self.client = comtypes.client
             self.voice = comtypes.client.CreateObject('SAPI.SpVoice')
             self.panel_rate, self.panel_volume = int(self.voice.Rate), int(self.voice.Volume)
@@ -691,25 +695,32 @@ class _Sapi:
     def _measure_boost(self, voice_id) -> bool:
         if self.voice is None:
             return False
+        return self.measure_boost(voice_id)
+
+    @classmethod
+    def measure_boost(cls, voice_id) -> bool:
+        """Speak a line into memory both ways, on whichever thread asks: every COM object here is made here,
+        so it needs nothing of the thread the voices live on, only COM set up on this one."""
         try:
+            import comtypes.client as client
+            voice = client.CreateObject('SAPI.SpVoice')   # first: on a new install this makes SpeechLib
             from comtypes.gen import SpeechLib
-            voice = self.client.CreateObject('SAPI.SpVoice')
-            token = self._token(voice_id) if voice_id else None
+            token = cls.token_on(voice, voice_id) if voice_id else None
             if token is not None:
                 voice.Voice = token
             voice.Rate = 10
             line = 'Reload your weapon and get ready.'
 
             def length(text, flags) -> int:
-                stream = self.client.CreateObject('SAPI.SpMemoryStream')
-                audio_format = self.client.CreateObject('SAPI.SpAudioFormat')
+                stream = client.CreateObject('SAPI.SpMemoryStream')
+                audio_format = client.CreateObject('SAPI.SpAudioFormat')
                 audio_format.Type = SpeechLib.SAFT22kHz16BitMono
                 stream.Format = audio_format
                 voice.AudioOutputStream = stream
                 voice.Speak(text, flags)
                 return len(bytes(stream.GetData()))
-            plain = length(line, self.SVSF_IS_NOT_XML)
-            boosted = length('<rate speed="10">%s</rate>' % line, self.SVSF_IS_XML)
+            plain = length(line, cls.SVSF_IS_NOT_XML)
+            boosted = length('<rate speed="10">%s</rate>' % line, cls.SVSF_IS_XML)
             log.info('SAPI rate boost for %s: %s', voice_id or 'the Control Panel voice',
                      'yes' if plain and boosted < 0.9 * plain else 'no')
             return bool(plain) and boosted < 0.9 * plain
@@ -903,9 +914,37 @@ class Speech:
         """PORT ADDITION (user report, 2026-10-03): make the second speech's SAPI 5 voice now, while nothing is
         waiting on it, when its Speech output is SAPI 5.  Made on first need, it was made as Second speech
         settings opened - its voice, its device and the rate boost measured, a third of a second on Windows -
-        and the page came up that much late.  The app asks while the logo is showing (`App`)."""
+        and the page came up that much late.  The app asks while the logo is showing (`App`).
+
+        On Windows the slow part is done on a thread of its own (user report, 2026-11-02): done here it held
+        the game for a third of a second, and for two on the day's first start, with the disk cold, and a key
+        pressed meanwhile waited for it - a lag once, on opening the game.  COM objects belong to the thread
+        that makes them, so the voice the game keeps is still made here; what takes the time, loading the
+        library and measuring the rate boost, needs nothing of it (`_load_second`).  What is left here is
+        about 25 ms."""
         if self.second_choice != 'sapi' or self._second_sapi is not None:
             return
+        if host.MAC:                                      # its system voice takes no COM: made as it was
+            self._make_second()
+            return
+        threading.Thread(target=self._load_second, name='second-speech-load', daemon=True).start()
+
+    def _load_second(self) -> None:
+        """On its own thread: the library loaded and the voice's rate boost measured, into `_Sapi._boost`, where
+        the voice about to be made and the page that asks first both find it; then back to the game's thread
+        to make the voice.  Should the game ask for the voice sooner, it is made there as ever, waiting only
+        for the import in progress."""
+        try:
+            import comtypes
+            comtypes.CoInitialize()                       # in case another thread imported it first
+            voice = self.second_config.get('voice')
+            _Sapi._boost[voice or ''] = _Sapi.measure_boost(voice)
+        except Exception:
+            log.exception('the second speech could not be loaded')
+        from .runloop import RunLoop
+        RunLoop.main().call_soon_threadsafe(self._make_second)
+
+    def _make_second(self) -> None:
         try:
             voice = self.second_sapi
             voice.boost_supported(self.second_config.get('voice'))   # what the page asks first

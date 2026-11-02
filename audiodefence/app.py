@@ -62,6 +62,19 @@ class App:
         prepare = getattr(Speech.shared(), 'prepare_second', None)   # the desktop's; the phone makes its own
         if prepare is not None:
             RunLoop.main().call_later(0.5, prepare)
+        self.prewarm_menu_music()
+
+    @staticmethod
+    def prewarm_menu_music() -> None:
+        """PORT ADDITION (user report, 2026-11-02): the menu music decoded on the background threads while the
+        logo shows.  Its playlist is activated only as the main menu opens, so the decoding was queued that
+        moment and taken straight back onto the game's thread by the sting's `play`, which held the game for 70
+        to 190 ms, and "Main Menu" was said that much late."""
+        from .s3d import decoder
+        pl = S3DEngine.engine().play_list_with_name('main_menu')
+        if pl is not None:
+            decoder.prewarm([s.path for s in (pl.sound('main_menu_open'), pl.sound('main_menu_theme'))
+                             if s is not None])
 
     def run_sanity_check(self) -> None:                   # 0x100081014
         from .game.brick_manager import BrickManager
