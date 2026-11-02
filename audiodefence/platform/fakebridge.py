@@ -1,11 +1,12 @@
 """A stand-in for the Java Bridge, for running the Android build's Python on a PC (testing only).
 
 Nothing is heard: sources 'play' by the clock so the game's timing (end of a sound, its offset) behaves as on
-the phone, files are measured with ffprobe, and what the game says is collected in `spoken`.
+the phone, files are measured with PyAV, the computer's own decoder (`decode`), and what the game says is
+collected in `spoken`.
 """
 from __future__ import annotations
 
-import subprocess
+import threading
 import time
 
 AL_PLAYING, AL_PAUSED, AL_STOPPED, AL_INITIAL = 0x1012, 0x1013, 0x1014, 0x1011
@@ -162,6 +163,7 @@ class FakeBridge:
         self.al = FakeAl(self)
         self.sounds = {}
         self.by_path = {}
+        self._decoded = threading.Lock()                  # the phone decodes on two threads (decoder.WORKERS)
         self.spoken = []
         self.speech_config = None
         self.speech_ready = True
@@ -206,22 +208,27 @@ class FakeBridge:
 
     # --- decoding -------------------------------------------------------------------------------------
     def decode(self, path):
-        if path in self.by_path:
-            h = self.by_path[path]
-            f, r, c = self.sounds[h]
-            return [h, f, c, r]
-        out = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'a:0', '-show_entries',
-                              'stream=sample_rate,channels,duration', '-of', 'csv=p=0', path],
-                             capture_output=True, text=True)
+        """{handle, frames, channels, rate}, as `Bridge.decode` answers, from the file's header: nothing here
+        needs the samples.  {-1, 0, 0, 0} when it cannot be read."""
+        with self._decoded:
+            if path in self.by_path:
+                h = self.by_path[path]
+                f, r, c = self.sounds[h]
+                return [h, f, c, r]
         try:
-            rate, ch, dur = out.stdout.strip().split(',')[:3]
-            frames = int(float(dur) * int(rate))
-            h = len(self.sounds) + 1
-            self.sounds[h] = (frames, int(rate), int(ch))
-            self.by_path[path] = h
-            return [h, frames, int(ch), int(rate)]
+            import av
+            with av.open(path) as container:
+                stream = container.streams.audio[0]
+                rate, channels = int(stream.rate), int(stream.codec_context.channels)
+                frames = int(float(stream.duration * stream.time_base) * rate)
         except Exception:
             return [-1, 0, 0, 0]
+        with self._decoded:
+            h = self.by_path.get(path)
+            if h is None:
+                h = self.by_path[path] = len(self.sounds) + 1
+                self.sounds[h] = (frames, rate, channels)
+            return [h, frames, channels, rate]
 
     def leadIn(self, handle, floor, most):
         return 0.0
