@@ -304,11 +304,10 @@ def extra_power_up_levels(weapons: dict) -> None:
 
 
 def _number(value) -> float:
-    """A price as a person reads it.  `intValue` stops at a comma, so the Machine Gun's '7,500' and '15,000' cost
-    7 and 15 coins in the game, as in the original; the prices made from them here are from the whole number."""
+    """A figure from the table, which writes them as text or as numbers; 0 for one that is not there."""
     try:
-        return float(str(value).replace(',', ''))
-    except ValueError:
+        return float(value)
+    except (TypeError, ValueError):
         return 0.0
 
 

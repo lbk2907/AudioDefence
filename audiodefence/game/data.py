@@ -87,6 +87,11 @@ TYPOS = (
     # a word missing, and a word too many.  Meet The Farty says it wrong where tutorial_8 says it right
     ('Shoot it stop it for a while', 'Shoot it to stop it for a while'),   # the Generator Malfunction card
     ('for a few seconds you if they blow up', 'for a few seconds if they blow up'),   # Meet The Farty's tip
+    # PORT DIVERGENCE (user request, 2026-11-04): a comma in a price.  Weapons.plist has the Machine Gun's first
+    # two upgrades as '7,500' and '15,000', the only numbers in the game's data written so, and `intValue` stops
+    # at the comma, so they cost 7 and 15 coins, where the Bazooka, the next gun down, asks 5625 and 11250
+    ('7,500', '7500'),
+    ('15,000', '15000'),
 )
 
 

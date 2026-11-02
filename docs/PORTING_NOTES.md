@@ -1227,6 +1227,13 @@ they were.
   bindings are left alone (Settings -> Keyboard has its own Restore default keys), and so are the
   controllers' buttons (Settings -> Joystick -> Restore default buttons).  The original has no reset; this
   one replaced the port's own Restore aiming defaults and Restore menu defaults rows.
+* PORT DIVERGENCE (user request, 2026-11-04): the Machine Gun's first two upgrades cost 7500 and 15000 coins, as
+  their prices say.  Weapons.plist writes them '7,500' and '15,000', the only numbers in the game's data with a
+  comma, and `intValue` stops at it, so the page offered level 2 for 7 coins and level 3 for 15, where the
+  Bazooka beside it asks 5625 and 11250.  The commas are taken out as the data is read (`data.TYPOS`), so the
+  plist is untouched and the weapon page, the purchase and the levels made from them all read the whole number.
+  A Machine Gun already bought keeps its level.
+
 * PORT DIVERGENCE (user request, 2026-11-03): upgrades go on past level 4, which players had asked for.  The
   original's armory stops at four (`upgradeButtonPressed:` 0x10004e1b4 tests `level > 3` and `loadInformation`
   0x10004da74 `level >= 4` for a power-up; a weapon's page simply has no next level in its data).  The levels
@@ -1255,9 +1262,6 @@ they were.
   outside mode 1.  Every challenge and Extra arena is tuned at or below level 4, and a challenge is meant to be
   the same for everybody; Endless can take it, its zombies going on getting tougher.  The upgrade button says
   so as its hint, past level 4.  Powered Power Ups's text loses "even beyond the top level you can buy".
-
-  The prices made here read the Machine Gun's '7,500' and '15,000' as the whole numbers (`additions._number`).
-  Its own levels 2 and 3 still cost 7 and 15 coins, as in the original, whose `intValue` stops at the comma.
 
   Checked through the real armory screens on a scratch save: the Revolver from level 1 to 10 at the prices above,
   nothing to pay leaving the level as it is with the alert, the Minigun and Tornado ending at 7 and Frequency at 9

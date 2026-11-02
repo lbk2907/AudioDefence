@@ -1364,7 +1364,7 @@ can be checked against the binary or put back. Listed below are the ones you wou
 rest are internal — analytics that only log locally, a sanity check that only printed, an undefined return
 value nothing reads.
 
-There are **185 divergences** and **15 original quirks kept on purpose** in the notes, of which 81 are
+There are **186 divergences** and **15 original quirks kept on purpose** in the notes, of which 82 are
 listed here.
 
 ### 1. Windows standing in for a phone
@@ -1468,6 +1468,8 @@ Faults in the game's own logic, not in how it describes itself. Each was read ag
 - **The post-game statistics show the combo they measured**, not the kill count a second time.
 - **The completed screen reports a failed accuracy objective as failed.**
 - **A weapon at its maximum level says nothing** instead of "Not enough Diamonds!".
+- **The Machine Gun's first two upgrades cost what they should**, 7,500 and 15,000 coins. The original wrote
+  those prices with a comma and read only the part before it, so they cost 7 and 15.
 - **The armory's Currency tab says it is empty**, rather than being a tab you land in with nothing in it.
 - **The enemy unlock gate reads the enemy's name**, not the brick's slot label, so an enemy in a repeat slot
   could not walk through it.

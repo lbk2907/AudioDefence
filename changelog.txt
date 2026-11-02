@@ -2,6 +2,7 @@ unrelease:
 Opening the game no longer holds up your first keys while a SAPI 5 second speech gets ready, and the main menu is read out sooner.
 The Lightning Rod arena in Extra is easier: smaller groups with more room between them, and one Colossus fewer in its second wave.
 Weapons and power-ups can be upgraded past level 4 in the armory, for coins and diamonds. The higher levels count in Endless.
+The Machine Gun's first two upgrades now cost 7,500 and 15,000 coins, as they were meant to, not 7 and 15.
 
 26.10.05-1:
 The port is now free software under the GNU General Public License, version 3 or later, instead of the MIT License. The original game's own files are still Somethin' Else's.
